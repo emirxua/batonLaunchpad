@@ -62,8 +62,7 @@ export const Navbar: React.FC = () => {
               </div>
               <span className="font-archivo text-xl tracking-tight flex items-center select-none">
                 <span className="text-zinc-900 dark:text-white font-extrabold tracking-tight">BATON</span>
-                <span className="text-orange-500 font-extrabold tracking-tight">OUTBID</span>
-                <span className="text-orange-400/80 font-bold text-sm tracking-normal">.icu</span>
+                <span className="text-orange-500 font-extrabold tracking-tight">OUTBID.ICU</span>
               </span>
             </Link>
 
@@ -72,11 +71,10 @@ export const Navbar: React.FC = () => {
               <button
                 type="button"
                 onClick={() => setTimeFilter("all-time")}
-                className={`px-3 py-1 rounded-full transition-all flex items-center gap-1.5 ${
-                  timeFilter === "all-time"
+                className={`px-3 py-1 rounded-full transition-all flex items-center gap-1.5 ${timeFilter === "all-time"
                     ? "bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white shadow-sm"
                     : "text-zinc-500 hover:text-zinc-900 dark:hover:text-white"
-                }`}
+                  }`}
               >
                 <Trophy className="w-3 h-3 text-amber-500" />
                 <span>All-time</span>
@@ -84,11 +82,10 @@ export const Navbar: React.FC = () => {
               <button
                 type="button"
                 onClick={() => setTimeFilter("today")}
-                className={`px-3 py-1 rounded-full transition-all flex items-center gap-1.5 ${
-                  timeFilter === "today"
+                className={`px-3 py-1 rounded-full transition-all flex items-center gap-1.5 ${timeFilter === "today"
                     ? "bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white shadow-sm"
                     : "text-zinc-500 hover:text-zinc-900 dark:hover:text-white"
-                }`}
+                  }`}
               >
                 <span className="w-1.5 h-1.5 rounded-full bg-rose-500" />
                 <span>Today</span>
@@ -159,8 +156,7 @@ export const Navbar: React.FC = () => {
               <div className="flex items-center justify-between pb-4 border-b border-zinc-200 dark:border-zinc-800">
                 <span className="font-archivo text-lg tracking-tight flex items-center select-none">
                   <span className="text-zinc-900 dark:text-white font-extrabold tracking-tight">BATON</span>
-                  <span className="text-orange-500 font-extrabold tracking-tight">OUTBID</span>
-                  <span className="text-orange-400/80 font-bold text-xs tracking-normal">.icu</span>
+                  <span className="text-orange-500 font-extrabold tracking-tight">OUTBID.ICU</span>
                 </span>
                 <button
                   onClick={() => setMobileMenuOpen(false)}

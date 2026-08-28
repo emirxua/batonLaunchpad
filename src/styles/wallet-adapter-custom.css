@@ -4,14 +4,16 @@
    Solana Wallet Adapter - Modern Light & Dark Web3 Overrides
    ========================================================================== */
 
-/* Base Wallet Button */
+/* Light Mode (Solid High-Contrast Zinc-900 with Crisp White Text) */
+html:not(.dark) .wallet-adapter-button,
+.light .wallet-adapter-button,
 .wallet-adapter-button {
   background-color: #18181b !important;
-  border: 1px solid #27272a !important;
+  border: 1px solid #18181b !important;
   color: #ffffff !important;
   font-family: var(--font-mono), monospace !important;
   font-size: 13px !important;
-  font-weight: 600 !important;
+  font-weight: 700 !important;
   letter-spacing: 0.02em !important;
   padding: 0 16px !important;
   height: 40px !important;
@@ -23,13 +25,20 @@
   gap: 8px !important;
   white-space: nowrap !important;
   flex-shrink: 0 !important;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08) !important;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1) !important;
 }
 
-.wallet-adapter-button:hover:not([disabled]) {
-  background-color: #27272a !important;
+html:not(.dark) .wallet-adapter-button *,
+.light .wallet-adapter-button * {
   color: #ffffff !important;
-  border-color: #3f3f46 !important;
+  fill: #ffffff !important;
+}
+
+html:not(.dark) .wallet-adapter-button:hover:not([disabled]),
+.light .wallet-adapter-button:hover:not([disabled]) {
+  background-color: #27272a !important;
+  border-color: #27272a !important;
+  color: #ffffff !important;
   transform: translateY(-1px) !important;
 }
 
@@ -38,14 +47,22 @@
 }
 
 /* Dark Mode Overrides (Lime-400 Web3 Aesthetic) */
-.dark .wallet-adapter-button {
+.dark .wallet-adapter-button,
+html.dark .wallet-adapter-button {
   background-color: rgba(163, 230, 53, 0.1) !important;
   border: 1px solid rgba(163, 230, 53, 0.35) !important;
   color: #a3e635 !important;
   box-shadow: 0 0 14px rgba(163, 230, 53, 0.12) !important;
 }
 
-.dark .wallet-adapter-button:hover:not([disabled]) {
+.dark .wallet-adapter-button *,
+html.dark .wallet-adapter-button * {
+  color: #a3e635 !important;
+  fill: #a3e635 !important;
+}
+
+.dark .wallet-adapter-button:hover:not([disabled]),
+html.dark .wallet-adapter-button:hover:not([disabled]) {
   background-color: rgba(163, 230, 53, 0.2) !important;
   border-color: rgba(163, 230, 53, 0.6) !important;
   color: #bef264 !important;
