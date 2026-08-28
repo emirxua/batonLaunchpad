@@ -6,14 +6,20 @@ const nextConfig = {
   eslint: {
     ignoreDuringBuilds: true,
   },
-  webpack: (config) => {
+  webpack: (config, { isServer }) => {
     config.resolve.fallback = {
       ...config.resolve.fallback,
       fs: false,
       net: false,
       tls: false,
       crypto: false,
+      lokijs: false,
+      'pino-pretty': false,
+      encoding: false,
     };
+    if (!isServer) {
+      config.externals = [...(config.externals || []), 'pino-pretty', 'lokijs', 'encoding'];
+    }
     return config;
   },
   images: {
