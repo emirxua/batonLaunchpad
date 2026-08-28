@@ -4,7 +4,7 @@ import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { useWallet } from "@solana/wallet-adapter-react";
 import dynamic from "next/dynamic";
-import { Menu, X, Wallet, Trophy, Flame, Rocket, Search } from "lucide-react";
+import { Menu, X, Wallet, Trophy, Rocket } from "lucide-react";
 import { ThemeToggle } from "@/components/ThemeToggle";
 
 // Dynamic import for WalletMultiButton to prevent SSR hydration mismatches
@@ -37,9 +37,10 @@ export const Navbar: React.FC = () => {
   }, []);
 
   const navLinks = [
-    { name: "Leaderboard", href: "/leaderboard" },
+    { name: "Directory", href: "/" },
     { name: "Launchpad Hub", href: "/launchpad" },
-    { name: "Submit Project", href: "/submit" },
+    { name: "Leaderboard", href: "/leaderboard" },
+    { name: "Submit Token", href: "/submit" },
   ];
 
   const formattedAddress = publicKey
@@ -48,7 +49,7 @@ export const Navbar: React.FC = () => {
 
   return (
     <>
-      <header className="w-full bg-white/90 dark:bg-[#0B0C0E]/90 backdrop-blur-md border-b border-zinc-200/80 dark:border-white/10 sticky top-0 z-40">
+      <header className="w-full bg-white/90 dark:bg-[#0B0C0E]/90 backdrop-blur-md border-b border-zinc-200 dark:border-white/10 sticky top-0 z-40">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-4">
           {/* Left: Logo & All-time/Today Pill */}
           <div className="flex items-center gap-4">
@@ -59,13 +60,13 @@ export const Navbar: React.FC = () => {
                 <span className="w-4/5 h-1 bg-orange-500 rounded-full transition-transform group-hover:scale-x-125 origin-left" />
                 <span className="w-3/5 h-1 bg-zinc-900 dark:bg-white rounded-full transition-transform group-hover:scale-x-110 origin-left" />
               </div>
-              <span className="font-archivo text-xl font-bold tracking-tight text-zinc-900 dark:text-white flex items-center">
-                outbid<span className="text-orange-500">.baton</span>
+              <span className="font-archivo text-xl font-black tracking-tight text-zinc-900 dark:text-white uppercase flex items-center">
+                BATON<span className="text-orange-500">.OUTBID</span>
               </span>
             </Link>
 
             {/* Pill Filter Toggle: All-time / Today */}
-            <div className="hidden sm:flex items-center p-1 bg-zinc-100 dark:bg-zinc-900/90 border border-zinc-200/80 dark:border-white/10 rounded-full font-mono text-xs font-bold">
+            <div className="hidden lg:flex items-center p-1 bg-zinc-100 dark:bg-zinc-900/90 border border-zinc-200 dark:border-white/10 rounded-full font-mono text-xs font-bold">
               <button
                 type="button"
                 onClick={() => setTimeFilter("all-time")}
@@ -93,7 +94,7 @@ export const Navbar: React.FC = () => {
             </div>
           </div>
 
-          {/* Center / Right Menu Links */}
+          {/* Center: Main Navigation Links */}
           <nav className="hidden md:flex items-center gap-6 text-xs font-mono font-bold tracking-wide">
             {navLinks.map((link) => (
               <Link
@@ -104,19 +105,19 @@ export const Navbar: React.FC = () => {
                 {link.name}
               </Link>
             ))}
-
-            {/* Launchpad Badge Link */}
-            <Link
-              href="/launchpad"
-              className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-orange-50 dark:bg-orange-500/10 border border-orange-200 dark:border-orange-500/20 text-orange-600 dark:text-orange-400 hover:bg-orange-100 dark:hover:bg-orange-500/20 transition-all font-mono text-xs font-bold"
-            >
-              <Rocket className="w-3.5 h-3.5" />
-              <span>Launchpad Hub</span>
-            </Link>
           </nav>
 
           {/* Right Action Icons & Wallet */}
           <div className="flex items-center gap-2 sm:gap-3">
+            {/* Launchpad CTA button */}
+            <Link
+              href="/launchpad"
+              className="hidden sm:inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-orange-500/10 hover:bg-orange-500 text-orange-600 hover:text-white dark:text-orange-400 dark:hover:text-white border border-orange-500/30 text-xs font-mono font-bold transition-all shadow-sm"
+            >
+              <Rocket className="w-3.5 h-3.5" />
+              <span>Launchpad&apos;e Git 🚀</span>
+            </Link>
+
             {/* Theme Toggle Button */}
             <ThemeToggle />
 
@@ -154,8 +155,8 @@ export const Navbar: React.FC = () => {
             <div className="space-y-6">
               {/* Drawer Header */}
               <div className="flex items-center justify-between pb-4 border-b border-zinc-200 dark:border-zinc-800">
-                <span className="font-archivo text-lg font-bold text-zinc-900 dark:text-white">
-                  outbid<span className="text-orange-500">.baton</span>
+                <span className="font-archivo text-lg font-black text-zinc-900 dark:text-white uppercase">
+                  BATON<span className="text-orange-500">.OUTBID</span>
                 </span>
                 <button
                   onClick={() => setMobileMenuOpen(false)}
@@ -167,40 +168,29 @@ export const Navbar: React.FC = () => {
 
               {/* Navigation Links */}
               <div className="flex flex-col space-y-2">
-                <Link
-                  href="/"
-                  onClick={() => setMobileMenuOpen(false)}
-                  className="font-mono text-xs uppercase font-bold tracking-wider text-zinc-700 dark:text-zinc-300 hover:text-orange-500 py-2.5 px-3 rounded-xl hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors"
-                >
-                  Directory / Bidding
-                </Link>
-                <Link
-                  href="/launchpad"
-                  onClick={() => setMobileMenuOpen(false)}
-                  className="font-mono text-xs uppercase font-bold tracking-wider text-orange-600 dark:text-orange-400 py-2.5 px-3 rounded-xl bg-orange-50 dark:bg-orange-500/10 border border-orange-200 dark:border-orange-500/20 flex items-center justify-between"
-                >
-                  <span>Launchpad Hub</span>
-                  <Rocket className="w-3.5 h-3.5" />
-                </Link>
-                <Link
-                  href="/leaderboard"
-                  onClick={() => setMobileMenuOpen(false)}
-                  className="font-mono text-xs uppercase font-bold tracking-wider text-zinc-700 dark:text-zinc-300 hover:text-orange-500 py-2.5 px-3 rounded-xl hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors"
-                >
-                  Leaderboard
-                </Link>
-                <Link
-                  href="/submit"
-                  onClick={() => setMobileMenuOpen(false)}
-                  className="font-mono text-xs uppercase font-bold tracking-wider text-zinc-700 dark:text-zinc-300 hover:text-orange-500 py-2.5 px-3 rounded-xl hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors"
-                >
-                  Submit Coin
-                </Link>
+                {navLinks.map((link) => (
+                  <Link
+                    key={link.name}
+                    href={link.href}
+                    onClick={() => setMobileMenuOpen(false)}
+                    className="font-mono text-xs uppercase font-bold tracking-wider text-zinc-700 dark:text-zinc-300 hover:text-orange-500 py-2.5 px-3 rounded-xl hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors"
+                  >
+                    {link.name}
+                  </Link>
+                ))}
               </div>
             </div>
 
             {/* Bottom Wallet Section */}
             <div className="space-y-3 pt-6 border-t border-zinc-200 dark:border-zinc-800">
+              <Link
+                href="/launchpad"
+                onClick={() => setMobileMenuOpen(false)}
+                className="w-full py-2.5 rounded-xl bg-orange-500 text-white font-mono text-xs font-bold uppercase tracking-wider text-center flex items-center justify-center gap-1.5 shadow-md shadow-orange-500/20"
+              >
+                <Rocket className="w-3.5 h-3.5" />
+                <span>Launchpad&apos;e Git 🚀</span>
+              </Link>
               <div className="w-full flex justify-center">
                 {mounted && <WalletMultiButton />}
               </div>
