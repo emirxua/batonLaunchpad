@@ -118,7 +118,7 @@ export default function OutbidHomePage() {
             className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-white dark:bg-[#15171C] border border-zinc-200 dark:border-white/10 shadow-sm text-xs font-mono text-zinc-600 dark:text-zinc-300 hover:border-orange-500/40 transition-all group"
           >
             <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-            <span className="font-bold text-zinc-900 dark:text-white">168 online</span>
+            <span className="font-bold text-zinc-900 dark:text-white">Live On-Chain Engine</span>
             <span className="text-zinc-400">•</span>
             <span>{Math.round(totalBurned).toLocaleString()} total burned $BATON</span>
             <span className="text-zinc-400">•</span>
@@ -334,7 +334,7 @@ export default function OutbidHomePage() {
                             🏷 {coin.category || "Mascots"}
                           </span>
                           <span>•</span>
-                          <span>{(coin.viewsCount || 12450).toLocaleString()} clicks</span>
+                          <span className="text-emerald-600 dark:text-emerald-400 font-semibold">✓ Verified SPL Asset</span>
                           <span>•</span>
                           <a
                             href={`https://pump.fun/coin/${coin.mintAddress}`}
@@ -502,7 +502,7 @@ export default function OutbidHomePage() {
                         <div className="flex items-center gap-2 text-xs font-mono text-zinc-400 pt-0.5">
                           <span>🏷 {coin.category || "General"}</span>
                           <span>•</span>
-                          <span>{(coin.viewsCount || 4500).toLocaleString()} clicks</span>
+                          <span className="text-emerald-600 dark:text-emerald-400 font-semibold">✓ Verified SPL Asset</span>
                         </div>
                       </div>
                     </div>
