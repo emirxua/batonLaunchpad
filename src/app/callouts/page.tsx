@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { Ticker } from "@/components/Ticker";
@@ -30,13 +30,31 @@ import {
   ArrowUpRight,
   Filter,
   X,
+  Clock,
+  User,
 } from "lucide-react";
 
 type CalloutTab = "trending" | "callers" | "graduated";
 
+function formatTimeAgo(timestamp: number): string {
+  if (!timestamp) return "Just now";
+  const now = Date.now();
+  const diffMs = Math.max(0, now - timestamp);
+  const diffSec = Math.floor(diffMs / 1000);
+  const diffMin = Math.floor(diffSec / 60);
+  const diffHours = Math.floor(diffMin / 60);
+  const diffDays = Math.floor(diffHours / 24);
+
+  if (diffMin < 1) return "Just now";
+  if (diffMin < 60) return `${diffMin}m ago`;
+  if (diffHours < 24) return `${diffHours}h ago`;
+  return `${diffDays}d ago`;
+}
+
 export default function CalloutsPage() {
   const [items, setItems] = useState<CalloutItem[]>([]);
-  const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [isInitialLoading, setIsInitialLoading] = useState<boolean>(true);
+  const [isRefreshing, setIsRefreshing] = useState<boolean>(false);
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [activeTab, setActiveTab] = useState<CalloutTab>("trending");
   const [selectedCoin, setSelectedCoin] = useState<Coin | null>(null);
@@ -44,10 +62,14 @@ export default function CalloutsPage() {
   const [copiedMint, setCopiedMint] = useState<string | null>(null);
   const [lastRefreshed, setLastRefreshed] = useState<Date | null>(null);
 
-  // Fetch callouts from API route
-  const fetchCallouts = useCallback(async () => {
+  const isFirstMount = useRef(true);
+
+  // Fetch callouts from API route with silent polling support
+  const fetchCallouts = useCallback(async (isSilent = false) => {
     try {
-      setIsLoading(true);
+      if (!isSilent) {
+        setIsRefreshing(true);
+      }
       const res = await fetch("/api/callouts", { cache: "no-store" });
       if (res.ok) {
         const json = await res.json();
@@ -59,13 +81,22 @@ export default function CalloutsPage() {
     } catch (err) {
       console.error("Failed to fetch callouts:", err);
     } finally {
-      setIsLoading(false);
+      setIsInitialLoading(false);
+      setIsRefreshing(false);
     }
   }, []);
 
   useEffect(() => {
-    fetchCallouts();
-    const interval = setInterval(fetchCallouts, 20_000);
+    if (isFirstMount.current) {
+      isFirstMount.current = false;
+      fetchCallouts(false);
+    }
+
+    // 20 seconds silent client-side polling interval
+    const interval = setInterval(() => {
+      fetchCallouts(true);
+    }, 20_000);
+
     return () => clearInterval(interval);
   }, [fetchCallouts]);
 
@@ -236,11 +267,11 @@ export default function CalloutsPage() {
 
         {/* Selected Caller Active Filter Badge */}
         {selectedCaller && (
-          <div className="p-3 rounded-2xl bg-orange-500/10 border border-orange-500/30 flex items-center justify-between gap-4 font-mono text-xs">
+          <div className="p-3 rounded-2xl bg-orange-500/10 border border-orange-500/30 flex items-center justify-between gap-4 font-mono text-xs shadow-sm">
             <div className="flex items-center gap-2 text-orange-600 dark:text-orange-400 font-bold">
               <Filter className="w-4 h-4 shrink-0" />
               <span>
-                Showing calls submitted by caller:{" "}
+                Filtered by caller:{" "}
                 <span className="underline">{selectedCaller.slice(0, 6)}...{selectedCaller.slice(-6)}</span>
               </span>
             </div>
@@ -314,12 +345,12 @@ export default function CalloutsPage() {
 
             <button
               type="button"
-              onClick={fetchCallouts}
-              disabled={isLoading}
+              onClick={() => fetchCallouts(false)}
+              disabled={isRefreshing}
               className="p-2.5 rounded-xl bg-white dark:bg-[#15171C] border border-zinc-200 dark:border-white/10 text-zinc-600 dark:text-zinc-400 hover:text-orange-500 transition-colors shadow-sm shrink-0"
               title="Refresh Stream Data"
             >
-              <RefreshCw className={`w-4 h-4 ${isLoading ? "animate-spin text-orange-500" : ""}`} />
+              <RefreshCw className={`w-4 h-4 ${isRefreshing ? "animate-spin text-orange-500" : ""}`} />
             </button>
           </div>
         </div>
@@ -327,12 +358,13 @@ export default function CalloutsPage() {
         {/* 6. Main Tab Content Views */}
         {activeTab === "trending" && (
           <div className="space-y-4">
-            {isLoading && items.length === 0 ? (
+            {/* Loading Skeleton */}
+            {isInitialLoading && items.length === 0 ? (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 {[1, 2, 3, 4, 5, 6].map((idx) => (
                   <div
                     key={idx}
-                    className="h-48 rounded-2xl bg-white/60 dark:bg-[#15171C]/60 border border-zinc-200 dark:border-white/10 p-5 space-y-4 animate-pulse"
+                    className="h-56 rounded-2xl bg-white/60 dark:bg-[#15171C]/60 border border-zinc-200 dark:border-white/10 p-5 space-y-4 animate-pulse"
                   >
                     <div className="flex items-center gap-3">
                       <div className="w-12 h-12 rounded-xl bg-zinc-200 dark:bg-zinc-800" />
@@ -341,6 +373,8 @@ export default function CalloutsPage() {
                         <div className="h-3 w-16 bg-zinc-200 dark:bg-zinc-800 rounded" />
                       </div>
                     </div>
+                    <div className="h-16 bg-zinc-100 dark:bg-zinc-800/60 rounded-xl" />
+                    <div className="h-9 bg-zinc-200 dark:bg-zinc-800 rounded-xl" />
                   </div>
                 ))}
               </div>
@@ -359,59 +393,85 @@ export default function CalloutsPage() {
                 )}
               </div>
             ) : (
+              /* 3-Column Responsive Token Callout Grid */
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 {trendingItems.map((item, index) => {
                   const isPositive = item.priceChange24h >= 0;
+                  const timeAgo = formatTimeAgo(item.lastReply || item.createdTimestamp);
+                  const callerName = item.creator ? `${item.creator.slice(0, 4)}...${item.creator.slice(-4)}` : "AnonCaller";
+
                   return (
                     <div
                       key={item.id}
-                      className="rounded-2xl border border-zinc-200/80 dark:border-white/10 bg-white dark:bg-[#15171C] p-5 flex flex-col justify-between hover:border-orange-500/40 hover:shadow-lg transition-all space-y-4 group"
+                      className="rounded-2xl border border-zinc-200/80 dark:border-white/10 bg-white dark:bg-[#15171C] p-5 flex flex-col justify-between hover:border-orange-500/40 hover:shadow-xl transition-all space-y-4 group"
                     >
                       {/* Top Row: Avatar, Name, Ticker, Badges */}
-                      <div className="flex items-start justify-between gap-3">
-                        <div className="flex items-center gap-3 min-w-0">
-                          <div className="w-12 h-12 rounded-xl overflow-hidden bg-orange-500/10 border border-orange-500/20 flex items-center justify-center font-archivo text-base font-bold text-orange-500 shrink-0 shadow-inner">
-                            {item.imageUri ? (
-                              <Image
-                                src={item.imageUri}
-                                alt={item.name}
-                                width={48}
-                                height={48}
-                                className="w-full h-full object-cover"
-                                unoptimized
-                              />
-                            ) : (
-                              <span>{item.symbol.slice(0, 3)}</span>
-                            )}
+                      <div className="space-y-3">
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="flex items-center gap-3 min-w-0">
+                            {/* Token Logo / Avatar */}
+                            <div className="w-12 h-12 rounded-xl overflow-hidden bg-orange-500/10 border border-orange-500/20 flex items-center justify-center font-archivo text-base font-bold text-orange-500 shrink-0 shadow-inner">
+                              {item.imageUri ? (
+                                <Image
+                                  src={item.imageUri}
+                                  alt={item.name}
+                                  width={48}
+                                  height={48}
+                                  className="w-full h-full object-cover"
+                                  unoptimized
+                                />
+                              ) : (
+                                <span>{item.symbol.slice(0, 3)}</span>
+                              )}
+                            </div>
+
+                            {/* Token Name, Ticker, Copy CA */}
+                            <div className="min-w-0">
+                              <h3 className="font-archivo text-base font-bold text-zinc-900 dark:text-white truncate group-hover:text-orange-500 transition-colors">
+                                {item.name}
+                              </h3>
+                              <div className="flex items-center gap-2 font-mono text-xs text-zinc-400 pt-0.5">
+                                <span className="font-bold text-zinc-600 dark:text-zinc-300">${item.symbol}</span>
+                                <span>•</span>
+                                <button
+                                  type="button"
+                                  onClick={() => handleCopy(item.mint)}
+                                  className="hover:text-orange-500 inline-flex items-center gap-0.5"
+                                  title="Copy Mint Address (CA)"
+                                >
+                                  {copiedMint === item.mint ? (
+                                    <Check className="w-3 h-3 text-emerald-500" />
+                                  ) : (
+                                    <Copy className="w-3 h-3" />
+                                  )}
+                                  <span>{item.mint.slice(0, 4)}...{item.mint.slice(-4)}</span>
+                                </button>
+                              </div>
+                            </div>
                           </div>
 
-                          <div className="min-w-0">
-                            <h3 className="font-archivo text-base font-bold text-zinc-900 dark:text-white truncate group-hover:text-orange-500 transition-colors">
-                              {item.name}
-                            </h3>
-                            <div className="flex items-center gap-2 font-mono text-xs text-zinc-400">
-                              <span>${item.symbol}</span>
-                              <span>•</span>
-                              <button
-                                type="button"
-                                onClick={() => handleCopy(item.mint)}
-                                className="hover:text-orange-500 inline-flex items-center gap-0.5"
-                                title="Copy Mint Address"
-                              >
-                                {copiedMint === item.mint ? (
-                                  <Check className="w-3 h-3 text-emerald-500" />
-                                ) : (
-                                  <Copy className="w-3 h-3" />
-                                )}
-                                <span>{item.mint.slice(0, 4)}...{item.mint.slice(-4)}</span>
-                              </button>
-                            </div>
+                          {/* Trending Rank Badge */}
+                          <div className="shrink-0 px-2.5 py-1 rounded-lg bg-zinc-100 dark:bg-zinc-800 font-mono text-[11px] font-bold text-zinc-600 dark:text-zinc-300">
+                            #{index + 1}
                           </div>
                         </div>
 
-                        {/* Rank / Trending Badge */}
-                        <div className="shrink-0 px-2.5 py-1 rounded-lg bg-zinc-100 dark:bg-zinc-800 font-mono text-[11px] font-bold text-zinc-600 dark:text-zinc-300">
-                          #{index + 1}
+                        {/* Caller Info & Time Badge */}
+                        <div className="flex items-center justify-between text-[11px] font-mono text-zinc-500 dark:text-zinc-400 pt-1 border-t border-zinc-100 dark:border-white/5">
+                          <button
+                            type="button"
+                            onClick={() => handleSelectCaller(item.creator)}
+                            className="inline-flex items-center gap-1 hover:text-orange-500 transition-colors font-medium truncate max-w-[170px]"
+                            title={`Filter calls by ${callerName}`}
+                          >
+                            <User className="w-3 h-3 text-orange-500 shrink-0" />
+                            <span>Callout by <span className="font-bold text-zinc-800 dark:text-zinc-200">{callerName}</span></span>
+                          </button>
+
+                          <div className="inline-flex items-center gap-1 shrink-0 text-zinc-400">
+                            <Clock className="w-3 h-3" />
+                            <span>{timeAgo}</span>
+                          </div>
                         </div>
                       </div>
 
@@ -460,6 +520,16 @@ export default function CalloutsPage() {
                           title="Trade on Pump.fun"
                         >
                           <ExternalLink className="w-4 h-4" />
+                        </a>
+
+                        <a
+                          href={item.dexScreenerUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="p-2 rounded-xl bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-600 dark:text-zinc-300 transition-colors"
+                          title="View on DexScreener"
+                        >
+                          <ArrowUpRight className="w-4 h-4" />
                         </a>
                       </div>
                     </div>
@@ -548,7 +618,7 @@ export default function CalloutsPage() {
           onClose={() => setSelectedCoin(null)}
           onSuccess={() => {
             setSelectedCoin(null);
-            fetchCallouts();
+            fetchCallouts(false);
           }}
         />
       )}
