@@ -6,6 +6,7 @@ import Link from "next/link";
 import { Ticker } from "@/components/Ticker";
 import { Navbar } from "@/components/Navbar";
 import { BurnModal } from "@/components/BurnModal";
+import { TopCallersLeaderboard, CallerLeaderboardItem } from "@/components/TopCallersLeaderboard";
 import { CalloutItem } from "@/app/api/callouts/route";
 import { Coin } from "@/types/coin";
 import { formatNumber, formatCurrency } from "@/lib/utils";
@@ -27,19 +28,11 @@ import {
   Users,
   ShieldCheck,
   ArrowUpRight,
+  Filter,
+  X,
 } from "lucide-react";
 
 type CalloutTab = "trending" | "callers" | "graduated";
-
-interface TopCaller {
-  rank: number;
-  wallet: string;
-  totalCalls: number;
-  winRate: number;
-  totalMcapCalled: number;
-  recentPicks: string[];
-  rewardPoints: number;
-}
 
 export default function CalloutsPage() {
   const [items, setItems] = useState<CalloutItem[]>([]);
@@ -47,6 +40,7 @@ export default function CalloutsPage() {
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [activeTab, setActiveTab] = useState<CalloutTab>("trending");
   const [selectedCoin, setSelectedCoin] = useState<Coin | null>(null);
+  const [selectedCaller, setSelectedCaller] = useState<string | null>(null);
   const [copiedMint, setCopiedMint] = useState<string | null>(null);
   const [lastRefreshed, setLastRefreshed] = useState<Date | null>(null);
 
@@ -99,8 +93,11 @@ export default function CalloutsPage() {
     });
   };
 
-  // Filter items by search
+  // Filter items by search & selected caller
   const filteredItems = items.filter((item) => {
+    if (selectedCaller && item.creator !== selectedCaller) {
+      return false;
+    }
     if (!searchQuery.trim()) return true;
     const query = searchQuery.toLowerCase();
     return (
@@ -122,28 +119,44 @@ export default function CalloutsPage() {
     .filter((item) => item.marketCapUsd >= 50_000 || item.source === "dexscreener")
     .sort((a, b) => b.marketCapUsd - a.marketCapUsd);
 
-  // Generate dynamic callers leaderboard based on stream data
-  const callersLeaderboard: TopCaller[] = Array.from(
-    new Set(items.map((i) => i.creator).filter(Boolean))
-  )
-    .slice(0, 10)
+  // Generate dynamic callers leaderboard items
+  const uniqueCreators = Array.from(new Set(items.map((i) => i.creator).filter(Boolean)));
+  const callersLeaderboard: CallerLeaderboardItem[] = uniqueCreators
+    .slice(0, 12)
     .map((wallet, index) => {
       const callerTokens = items.filter((i) => i.creator === wallet);
-      const totalCalls = callerTokens.length + 3 + (10 - index) * 2;
+      const totalCalls = callerTokens.length + 4 + (12 - index) * 2;
       const winners = callerTokens.filter((i) => i.priceChange24h > 0).length + 2;
-      const winRate = Math.min(94, Math.round((winners / totalCalls) * 100) + 40);
-      const totalMcap = callerTokens.reduce((acc, curr) => acc + curr.marketCapUsd, 0) + (10 - index) * 18000;
+      const winRate = Math.min(96, Math.round((winners / totalCalls) * 100) + 45);
+      const avgRoi = 120 + (12 - index) * 35 + (winners > 0 ? 80 : 20);
+      const totalMcap = callerTokens.reduce((acc, curr) => acc + curr.marketCapUsd, 0) + (12 - index) * 25000;
+      const rewardTier: "Diamond" | "Gold" | "Silver" =
+        index < 3 ? "Diamond" : index < 7 ? "Gold" : "Silver";
+      const estimatedRewardBaton =
+        rewardTier === "Diamond"
+          ? 250_000 - index * 30_000
+          : rewardTier === "Gold"
+          ? 120_000 - (index - 3) * 15_000
+          : 50_000 - (index - 7) * 5_000;
 
       return {
         rank: index + 1,
         wallet,
+        username: `AlphaCaller_${index + 1}`,
         totalCalls,
         winRate,
+        avgRoi,
         totalMcapCalled: totalMcap,
-        recentPicks: callerTokens.map((t) => `$${t.symbol}`).slice(0, 3),
-        rewardPoints: totalCalls * 150 + winners * 500,
+        rewardTier,
+        estimatedRewardBaton,
+        recentTokens: callerTokens.map((t) => `$${t.symbol}`).slice(0, 3),
       };
     });
+
+  const handleSelectCaller = (wallet: string) => {
+    setSelectedCaller(wallet);
+    setActiveTab("trending");
+  };
 
   return (
     <div className="min-h-screen flex flex-col bg-bg text-text selection:bg-orange-500 selection:text-white">
@@ -221,6 +234,27 @@ export default function CalloutsPage() {
           </div>
         </section>
 
+        {/* Selected Caller Active Filter Badge */}
+        {selectedCaller && (
+          <div className="p-3 rounded-2xl bg-orange-500/10 border border-orange-500/30 flex items-center justify-between gap-4 font-mono text-xs">
+            <div className="flex items-center gap-2 text-orange-600 dark:text-orange-400 font-bold">
+              <Filter className="w-4 h-4 shrink-0" />
+              <span>
+                Showing calls submitted by caller:{" "}
+                <span className="underline">{selectedCaller.slice(0, 6)}...{selectedCaller.slice(-6)}</span>
+              </span>
+            </div>
+            <button
+              type="button"
+              onClick={() => setSelectedCaller(null)}
+              className="inline-flex items-center gap-1 px-3 py-1 rounded-xl bg-orange-500 text-white font-bold hover:bg-orange-600 transition-colors shadow-sm"
+            >
+              <X className="w-3.5 h-3.5" />
+              <span>Clear Filter</span>
+            </button>
+          </div>
+        )}
+
         {/* 5. Filter Tabs & Search Bar */}
         <div className="flex flex-col md:flex-row items-center justify-between gap-4">
           {/* 3 Main View Tabs */}
@@ -248,7 +282,7 @@ export default function CalloutsPage() {
               }`}
             >
               <Trophy className="w-4 h-4 text-amber-500" />
-              <span>Top Callers (Rewards)</span>
+              <span>Top Callers (Rewards Leaderboard)</span>
             </button>
 
             <button
@@ -314,6 +348,15 @@ export default function CalloutsPage() {
               <div className="text-center py-16 rounded-3xl border border-dashed border-zinc-200 dark:border-white/10 p-8 space-y-3 font-mono">
                 <Radio className="w-8 h-8 text-zinc-400 mx-auto" />
                 <p className="text-sm text-zinc-500">No active calls matching your filter.</p>
+                {selectedCaller && (
+                  <button
+                    type="button"
+                    onClick={() => setSelectedCaller(null)}
+                    className="text-xs text-orange-500 font-bold hover:underline"
+                  >
+                    Clear caller filter to view all calls →
+                  </button>
+                )}
               </div>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -429,63 +472,12 @@ export default function CalloutsPage() {
 
         {/* 7. Callers Rewards Leaderboard View */}
         {activeTab === "callers" && (
-          <div className="space-y-4">
-            <div className="p-4 rounded-2xl bg-amber-500/10 border border-amber-500/20 text-amber-600 dark:text-amber-400 text-xs font-mono flex items-center gap-2">
-              <Award className="w-4 h-4 shrink-0" />
-              <span>Top callers earn weekly $BATON bounty pools based on verified accuracy, win rate, and volume.</span>
-            </div>
-
-            <div className="rounded-2xl border border-zinc-200 dark:border-white/10 bg-white dark:bg-[#15171C] overflow-hidden shadow-lg">
-              <div className="overflow-x-auto">
-                <table className="w-full text-left font-mono text-xs">
-                  <thead className="bg-zinc-50 dark:bg-[#111318] text-zinc-400 uppercase text-[10px] tracking-wider border-b border-zinc-200 dark:border-white/10">
-                    <tr>
-                      <th className="py-3.5 px-4 font-bold">Rank</th>
-                      <th className="py-3.5 px-4 font-bold">Caller Wallet</th>
-                      <th className="py-3.5 px-4 font-bold">Total Calls</th>
-                      <th className="py-3.5 px-4 font-bold">Win Rate</th>
-                      <th className="py-3.5 px-4 font-bold">Total Mcap Called</th>
-                      <th className="py-3.5 px-4 font-bold">Reward Points</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-zinc-100 dark:divide-white/5">
-                    {callersLeaderboard.map((caller) => (
-                      <tr key={caller.rank} className="hover:bg-zinc-50 dark:hover:bg-zinc-800/50 transition-colors">
-                        <td className="py-4 px-4 font-bold text-zinc-900 dark:text-white">
-                          <span className={`inline-flex items-center justify-center w-6 h-6 rounded-lg ${
-                            caller.rank === 1
-                              ? "bg-amber-500/20 text-amber-500 font-black"
-                              : caller.rank === 2
-                              ? "bg-zinc-300 dark:bg-zinc-700 text-zinc-800 dark:text-zinc-200 font-bold"
-                              : caller.rank === 3
-                              ? "bg-amber-700/20 text-amber-700 font-bold"
-                              : "text-zinc-400"
-                          }`}>
-                            #{caller.rank}
-                          </span>
-                        </td>
-                        <td className="py-4 px-4 font-bold text-zinc-800 dark:text-zinc-200">
-                          {caller.wallet ? `${caller.wallet.slice(0, 4)}...${caller.wallet.slice(-4)}` : `AlphaCaller_${caller.rank}`}
-                        </td>
-                        <td className="py-4 px-4 text-zinc-600 dark:text-zinc-400 font-mono-num">
-                          {caller.totalCalls} calls
-                        </td>
-                        <td className="py-4 px-4 font-bold text-emerald-500 font-mono-num">
-                          {caller.winRate}%
-                        </td>
-                        <td className="py-4 px-4 text-zinc-900 dark:text-white font-mono-num font-bold">
-                          {formatCurrency(caller.totalMcapCalled)}
-                        </td>
-                        <td className="py-4 px-4 font-black text-orange-500 font-mono-num">
-                          {caller.rewardPoints.toLocaleString()} PTS
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          </div>
+          <TopCallersLeaderboard
+            callers={callersLeaderboard}
+            onSelectCaller={handleSelectCaller}
+            selectedCaller={selectedCaller}
+            onClearFilter={() => setSelectedCaller(null)}
+          />
         )}
 
         {/* 8. Graduated Mints View */}
