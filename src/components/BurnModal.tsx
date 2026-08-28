@@ -51,14 +51,20 @@ export const BurnModal: React.FC<BurnModalProps> = ({
   const [txSignature, setTxSignature] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
-  // Reset state on modal open
+  // Prevent background scroll when modal is active
   useEffect(() => {
     if (isOpen) {
+      document.body.style.overflow = "hidden";
       setAmount(10000);
       setTxSignature(null);
       setErrorMessage(null);
       setBurnState("idle");
+    } else {
+      document.body.style.overflow = "";
     }
+    return () => {
+      document.body.style.overflow = "";
+    };
   }, [isOpen, coin]);
 
   if (!isOpen || !coin) return null;
@@ -220,19 +226,25 @@ export const BurnModal: React.FC<BurnModalProps> = ({
     burnState === "awaiting_approval" || burnState === "confirming";
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-4 overflow-y-auto animate-in fade-in duration-200">
-      <div className="w-full max-w-lg bg-bg-card border border-line rounded-3xl p-6 sm:p-8 space-y-6 shadow-2xl relative my-8">
+    <div
+      onClick={onClose}
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md overflow-y-auto animate-in fade-in duration-200"
+    >
+      <div
+        onClick={(e) => e.stopPropagation()}
+        className="w-full max-w-md max-h-[90vh] overflow-y-auto bg-[#111318]/95 border border-white/10 rounded-2xl p-6 sm:p-7 space-y-6 shadow-2xl shadow-black/80 relative my-auto transition-all"
+      >
         {/* Modal Header */}
-        <div className="flex items-center justify-between pb-4 border-b border-line">
+        <div className="flex items-center justify-between pb-4 border-b border-white/10">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-magenta/15 border border-magenta/30 flex items-center justify-center text-magenta shadow-[0_0_15px_rgba(255,61,122,0.2)]">
+            <div className="w-10 h-10 rounded-xl bg-magenta/15 border border-magenta/30 flex items-center justify-center text-magenta shadow-[0_0_15px_rgba(255,61,122,0.25)] shrink-0">
               <Flame className="w-5 h-5 fill-current animate-pulse" />
             </div>
             <div>
-              <h3 className="font-archivo text-lg sm:text-xl text-text tracking-wide uppercase">
-                🔥 Burn $BATON for {coin.name}
+              <h3 className="font-archivo text-base sm:text-lg text-white tracking-wide uppercase leading-tight">
+                Burn $BATON for {coin.name}
               </h3>
-              <p className="font-mono text-xs text-text-dim">
+              <p className="font-mono text-[11px] text-zinc-400">
                 Real Solana On-Chain SPL Token Burn
               </p>
             </div>
@@ -241,7 +253,7 @@ export const BurnModal: React.FC<BurnModalProps> = ({
           <button
             onClick={onClose}
             disabled={isProcessing}
-            className="p-2 rounded-xl border border-line text-text-dim hover:text-text hover:border-text-dim transition-colors disabled:opacity-50"
+            className="p-2 rounded-xl border border-white/10 text-zinc-400 hover:text-white hover:border-white/20 transition-colors disabled:opacity-50"
           >
             <X className="w-4 h-4" />
           </button>
@@ -255,10 +267,10 @@ export const BurnModal: React.FC<BurnModalProps> = ({
             </div>
 
             <div className="space-y-2">
-              <h4 className="font-archivo text-2xl text-text uppercase">
+              <h4 className="font-archivo text-2xl text-white uppercase">
                 BURN CONFIRMED ON SOLANA!
               </h4>
-              <p className="text-xs text-text-dim max-w-sm mx-auto font-space">
+              <p className="text-xs text-zinc-400 max-w-sm mx-auto font-space">
                 <span className="text-acid font-bold">
                   {amount.toLocaleString()} $BATON
                 </span>{" "}
@@ -268,8 +280,8 @@ export const BurnModal: React.FC<BurnModalProps> = ({
             </div>
 
             {/* Solscan Link Box */}
-            <div className="p-3.5 rounded-xl border border-line bg-bg-raised text-xs flex items-center justify-between gap-3">
-              <span className="text-text-faint truncate font-mono text-[11px]">
+            <div className="p-3.5 rounded-xl border border-white/10 bg-zinc-900/60 text-xs flex items-center justify-between gap-3">
+              <span className="text-zinc-400 truncate font-mono text-[11px]">
                 {txSignature.slice(0, 8)}...{txSignature.slice(-8)}
               </span>
               <a
@@ -285,7 +297,7 @@ export const BurnModal: React.FC<BurnModalProps> = ({
 
             <button
               onClick={onClose}
-              className="w-full py-3.5 rounded-xl bg-acid text-bg font-bold uppercase tracking-wider text-xs shadow-[0_0_20px_rgba(212,255,63,0.3)] hover:bg-acid-dim transition-all"
+              className="w-full py-3.5 rounded-xl bg-acid text-black font-bold uppercase tracking-wider text-xs shadow-[0_0_20px_rgba(212,255,63,0.3)] hover:bg-acid-dim transition-all"
             >
               Done &amp; Return
             </button>
@@ -293,39 +305,39 @@ export const BurnModal: React.FC<BurnModalProps> = ({
         ) : (
           <>
             {/* 1. Progress Bar to Next Tier */}
-            <div className="p-4 rounded-2xl border border-line bg-bg-raised/80 space-y-2.5 font-mono">
+            <div className="p-4 rounded-xl border border-white/10 bg-zinc-900/50 space-y-2.5 font-mono">
               <div className="flex items-center justify-between text-xs">
-                <div className="flex items-center gap-1.5 text-text-dim">
-                  <Zap className="w-3.5 h-3.5 text-acid" />
+                <div className="flex items-center gap-1.5 text-zinc-400">
+                  <Zap className="w-3.5 h-3.5 text-lime-400" />
                   <span>Next Tier:</span>
-                  <span className="text-text font-bold uppercase">
+                  <span className="text-white font-bold uppercase">
                     {nextTierName}
                   </span>
                 </div>
-                <span className="text-acid font-bold">
+                <span className="text-lime-400 font-bold">
                   {progressPercent}%
                 </span>
               </div>
 
-              {/* Progress Track */}
-              <div className="w-full h-3 rounded-full bg-bg border border-line/60 overflow-hidden p-0.5 relative">
+              {/* Progress Track with Smooth Gradient */}
+              <div className="w-full h-3 rounded-full bg-zinc-950 border border-white/10 overflow-hidden p-0.5 relative">
                 <div
-                  className="h-full rounded-full bg-gradient-to-r from-acid via-magenta to-acid bg-[length:200%_100%] animate-[gradient_3s_ease_infinite] shadow-[0_0_12px_rgba(212,255,63,0.5)] transition-all duration-500"
+                  className="h-full rounded-full bg-gradient-to-r from-lime-400 via-amber-400 to-rose-500 shadow-[0_0_12px_rgba(212,255,63,0.5)] transition-all duration-500"
                   style={{ width: `${progressPercent}%` }}
                 />
               </div>
 
-              <div className="flex items-center justify-between text-[11px] text-text-faint">
+              <div className="flex items-center justify-between text-[11px] text-zinc-400">
                 <span>Current: {currentBurned.toLocaleString()} $BATON</span>
                 {remainingToNext > 0 ? (
                   <span>
                     Remaining:{" "}
-                    <strong className="text-text">
+                    <strong className="text-white font-semibold">
                       {remainingToNext.toLocaleString()} $BATON
                     </strong>
                   </span>
                 ) : (
-                  <span className="text-acid font-bold">★ Diamond League Reached</span>
+                  <span className="text-lime-400 font-bold">★ Diamond League Reached</span>
                 )}
               </div>
             </div>
@@ -333,12 +345,12 @@ export const BurnModal: React.FC<BurnModalProps> = ({
             {/* 2. Amount Input & Wallet Balance */}
             <div className="space-y-3 font-mono">
               <div className="flex items-center justify-between text-xs">
-                <label className="text-text-dim">Burn Amount ($BATON):</label>
+                <label className="text-zinc-400 font-medium">Burn Amount ($BATON):</label>
                 {connected && (
-                  <div className="text-text-faint flex items-center gap-1 text-[11px]">
+                  <div className="text-zinc-400 flex items-center gap-1 text-[11px]">
                     <Wallet className="w-3 h-3 text-acid" />
                     <span>Balance:</span>
-                    <span className="text-text font-bold">
+                    <span className="text-white font-bold">
                       {balanceLoading
                         ? "..."
                         : `${(batonBalance ?? 0).toLocaleString()} $BATON`}
@@ -355,9 +367,9 @@ export const BurnModal: React.FC<BurnModalProps> = ({
                   onChange={(e) => setAmount(Number(e.target.value) || 0)}
                   placeholder="Enter amount..."
                   disabled={isProcessing}
-                  className="w-full bg-bg border border-line rounded-xl px-4 py-3.5 text-lg font-bold text-text placeholder:text-text-faint focus:border-acid focus:outline-none transition-colors"
+                  className="w-full bg-zinc-950/80 border border-white/10 rounded-xl px-4 py-3.5 text-lg font-bold text-white placeholder:text-zinc-600 focus:border-acid focus:outline-none transition-colors"
                 />
-                <span className="absolute right-4 top-4 text-xs font-black text-acid uppercase tracking-wider">
+                <span className="absolute right-4 top-4 text-xs font-black text-acid uppercase tracking-wider pointer-events-none">
                   $BATON
                 </span>
               </div>
@@ -370,7 +382,7 @@ export const BurnModal: React.FC<BurnModalProps> = ({
                     type="button"
                     onClick={() => setAmount((prev) => prev + q)}
                     disabled={isProcessing}
-                    className="py-1.5 rounded-lg border border-line bg-bg hover:border-text-dim text-text-dim hover:text-text text-xs font-semibold transition-colors"
+                    className="py-1.5 rounded-lg border border-white/10 bg-zinc-900/60 hover:border-white/25 text-zinc-300 hover:text-white text-xs font-semibold transition-colors"
                   >
                     +{q.toLocaleString()}
                   </button>
@@ -379,7 +391,7 @@ export const BurnModal: React.FC<BurnModalProps> = ({
                   type="button"
                   onClick={handleMaxClick}
                   disabled={isProcessing || !batonBalance}
-                  className="py-1.5 rounded-lg border border-acid/40 bg-acid/10 text-acid font-bold text-xs hover:bg-acid hover:text-bg disabled:opacity-50 transition-all"
+                  className="py-1.5 rounded-lg border border-acid/40 bg-acid/10 text-acid font-bold text-xs hover:bg-acid hover:text-black disabled:opacity-40 transition-all"
                 >
                   MAX
                 </button>
@@ -388,7 +400,7 @@ export const BurnModal: React.FC<BurnModalProps> = ({
 
             {/* Error Display */}
             {errorMessage && (
-              <div className="p-3 rounded-xl border border-down/40 bg-down/10 text-down text-xs font-mono flex items-center gap-2">
+              <div className="p-3 rounded-xl border border-rose-500/30 bg-rose-500/10 text-rose-400 text-xs font-mono flex items-center gap-2">
                 <AlertCircle className="w-4 h-4 shrink-0" />
                 <span>{errorMessage}</span>
               </div>
@@ -399,7 +411,7 @@ export const BurnModal: React.FC<BurnModalProps> = ({
               {!connected ? (
                 <div className="w-full flex flex-col items-center gap-2">
                   <WalletMultiButton />
-                  <p className="text-[11px] text-text-faint">
+                  <p className="text-[11px] text-zinc-500">
                     Connect your Solana wallet to execute on-chain burn.
                   </p>
                 </div>
@@ -409,7 +421,7 @@ export const BurnModal: React.FC<BurnModalProps> = ({
                     type="button"
                     onClick={onClose}
                     disabled={isProcessing}
-                    className="flex-1 py-3.5 rounded-xl border border-line bg-bg-raised text-text-dim hover:text-text text-xs font-bold uppercase tracking-wider transition-colors disabled:opacity-50"
+                    className="flex-1 py-3.5 rounded-xl border border-white/10 bg-zinc-900/60 text-zinc-300 hover:text-white text-xs font-bold uppercase tracking-wider transition-colors disabled:opacity-50"
                   >
                     Cancel
                   </button>
@@ -418,17 +430,17 @@ export const BurnModal: React.FC<BurnModalProps> = ({
                     type="button"
                     onClick={handleBurnSubmit}
                     disabled={isProcessing || amount <= 0}
-                    className="flex-[2] py-3.5 rounded-xl bg-acid text-bg text-xs font-black uppercase tracking-wider shadow-[0_0_20px_rgba(212,255,63,0.3)] hover:bg-acid-dim active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center justify-center gap-2"
+                    className="flex-[2] py-3.5 rounded-xl bg-acid text-black text-xs font-black uppercase tracking-wider shadow-[0_0_20px_rgba(212,255,63,0.3)] hover:bg-acid-dim active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center justify-center gap-2"
                   >
                     {burnState === "awaiting_approval" ? (
                       <>
                         <Loader2 className="w-4 h-4 animate-spin" />
-                        <span>Awaiting Wallet Approval...</span>
+                        <span>Awaiting Wallet...</span>
                       </>
                     ) : burnState === "confirming" ? (
                       <>
                         <Loader2 className="w-4 h-4 animate-spin" />
-                        <span>Confirming on Solana...</span>
+                        <span>Confirming On-Chain...</span>
                       </>
                     ) : (
                       <>
