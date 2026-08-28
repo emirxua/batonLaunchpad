@@ -20,6 +20,10 @@ const nextConfig = {
     if (!isServer) {
       config.externals = [...(config.externals || []), 'pino-pretty', 'lokijs', 'encoding'];
     }
+    config.module = {
+      ...config.module,
+      exprContextCritical: false,
+    };
     return config;
   },
   images: {

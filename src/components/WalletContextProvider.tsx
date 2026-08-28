@@ -20,10 +20,8 @@ interface WalletContextProviderProps {
 export const WalletContextProvider: FC<WalletContextProviderProps> = ({
   children,
 }) => {
-  // Network can be set to 'devnet', 'testnet', or 'mainnet-beta'
   const network = WalletAdapterNetwork.Mainnet;
 
-  // Custom RPC URL from environment variable or fallback to Solana mainnet
   const endpoint = useMemo(() => {
     return (
       process.env.NEXT_PUBLIC_SOLANA_RPC_URL ||
@@ -32,14 +30,15 @@ export const WalletContextProvider: FC<WalletContextProviderProps> = ({
     );
   }, [network]);
 
-  // Configure supported wallets (Phantom, Solflare, etc.)
-  const wallets = useMemo(
-    () => [
+  const wallets = useMemo(() => {
+    if (typeof window === "undefined") {
+      return [];
+    }
+    return [
       new PhantomWalletAdapter(),
       new SolflareWalletAdapter(),
-    ],
-    []
-  );
+    ];
+  }, []);
 
   return (
     <ConnectionProvider endpoint={endpoint}>
