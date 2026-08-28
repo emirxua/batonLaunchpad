@@ -10,6 +10,7 @@ import { TopCallersLeaderboard, CallerLeaderboardItem } from "@/components/TopCa
 import { CalloutItem } from "@/app/api/callouts/route";
 import { Coin } from "@/types/coin";
 import { formatNumber, formatCurrency } from "@/lib/utils";
+import confetti from "canvas-confetti";
 import {
   Flame,
   TrendingUp,
@@ -32,9 +33,19 @@ import {
   X,
   Clock,
   User,
+  CheckCircle2,
+  Rocket,
 } from "lucide-react";
 
 type CalloutTab = "trending" | "callers" | "graduated";
+
+interface BoostNotification {
+  id: string;
+  coinName: string;
+  coinTicker: string;
+  amount: number;
+  txHash?: string;
+}
 
 function formatTimeAgo(timestamp: number): string {
   if (!timestamp) return "Just now";
@@ -60,9 +71,26 @@ export default function CalloutsPage() {
   const [selectedCoin, setSelectedCoin] = useState<Coin | null>(null);
   const [selectedCaller, setSelectedCaller] = useState<string | null>(null);
   const [copiedMint, setCopiedMint] = useState<string | null>(null);
+  const [boostedMints, setBoostedMints] = useState<Set<string>>(new Set());
+  const [boostToast, setBoostToast] = useState<BoostNotification | null>(null);
   const [lastRefreshed, setLastRefreshed] = useState<Date | null>(null);
 
   const isFirstMount = useRef(true);
+
+  // Load boosted mints from localStorage and recent burns
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem("baton_boosted_callout_mints");
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed)) {
+          setBoostedMints(new Set(parsed));
+        }
+      }
+    } catch (e) {
+      console.warn("Failed to load boosted mints from storage", e);
+    }
+  }, []);
 
   // Fetch callouts from API route with silent polling support
   const fetchCallouts = useCallback(async (isSilent = false) => {
@@ -124,6 +152,44 @@ export default function CalloutsPage() {
     });
   };
 
+  const handleBurnSuccess = (coinId: string, amount: number) => {
+    if (selectedCoin) {
+      const mint = selectedCoin.mintAddress;
+      setBoostedMints((prev) => {
+        const updated = new Set(prev).add(mint);
+        try {
+          localStorage.setItem("baton_boosted_callout_mints", JSON.stringify(Array.from(updated)));
+        } catch (e) {
+          console.warn("Storage save error", e);
+        }
+        return updated;
+      });
+
+      // Trigger celebratory confetti
+      confetti({
+        particleCount: 80,
+        spread: 70,
+        origin: { y: 0.6 },
+        colors: ["#f97316", "#a3e635", "#ff3d7a"],
+      });
+
+      // Show toast notification
+      setBoostToast({
+        id: Date.now().toString(),
+        coinName: selectedCoin.name,
+        coinTicker: selectedCoin.ticker,
+        amount,
+      });
+
+      setTimeout(() => {
+        setBoostToast(null);
+      }, 7000);
+    }
+
+    setSelectedCoin(null);
+    fetchCallouts(false);
+  };
+
   // Filter items by search & selected caller
   const filteredItems = items.filter((item) => {
     if (selectedCaller && item.creator !== selectedCaller) {
@@ -138,10 +204,12 @@ export default function CalloutsPage() {
     );
   });
 
-  // Top trending items sorted by price change & replies
+  // Top trending items sorted by boosted status, price change & replies
   const trendingItems = [...filteredItems].sort((a, b) => {
-    const scoreA = (a.priceChange24h > 0 ? a.priceChange24h : 0) * 2 + a.replyCount;
-    const scoreB = (b.priceChange24h > 0 ? b.priceChange24h : 0) * 2 + b.replyCount;
+    const isBoostedA = boostedMints.has(a.mint) ? 1000 : 0;
+    const isBoostedB = boostedMints.has(b.mint) ? 1000 : 0;
+    const scoreA = isBoostedA + (a.priceChange24h > 0 ? a.priceChange24h : 0) * 2 + a.replyCount;
+    const scoreB = isBoostedB + (b.priceChange24h > 0 ? b.priceChange24h : 0) * 2 + b.replyCount;
     return scoreB - scoreA;
   });
 
@@ -190,12 +258,39 @@ export default function CalloutsPage() {
   };
 
   return (
-    <div className="min-h-screen flex flex-col bg-bg text-text selection:bg-orange-500 selection:text-white">
+    <div className="min-h-screen flex flex-col bg-bg text-text selection:bg-orange-500 selection:text-white relative">
       {/* 1. Top Live Ticker */}
       <Ticker />
 
       {/* 2. Main Navigation Bar */}
       <Navbar />
+
+      {/* Floating Solscan Boost Confirmation Toast */}
+      {boostToast && (
+        <div className="fixed bottom-6 right-6 z-50 animate-in slide-in-from-bottom-5 duration-300 max-w-md w-full p-4 rounded-2xl bg-[#111318] border border-orange-500/60 shadow-[0_0_30px_rgba(249,115,22,0.35)] text-white font-mono text-xs flex items-center justify-between gap-3">
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="w-9 h-9 rounded-xl bg-orange-500 text-black flex items-center justify-center shrink-0">
+              <Flame className="w-5 h-5 fill-current" />
+            </div>
+            <div className="min-w-0">
+              <div className="font-bold flex items-center gap-1 text-orange-400">
+                <CheckCircle2 className="w-3.5 h-3.5" />
+                <span>Boost Verified on Solana!</span>
+              </div>
+              <p className="text-zinc-300 text-[11px] truncate">
+                Burned {formatNumber(boostToast.amount)} $BATON for ${boostToast.coinTicker}
+              </p>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={() => setBoostToast(null)}
+            className="p-1 rounded-lg text-zinc-400 hover:text-white"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+      )}
 
       <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12 space-y-8">
         {/* 3. Hero Header Section */}
@@ -399,12 +494,25 @@ export default function CalloutsPage() {
                   const isPositive = item.priceChange24h >= 0;
                   const timeAgo = formatTimeAgo(item.lastReply || item.createdTimestamp);
                   const callerName = item.creator ? `${item.creator.slice(0, 4)}...${item.creator.slice(-4)}` : "AnonCaller";
+                  const isBoosted = boostedMints.has(item.mint);
 
                   return (
                     <div
                       key={item.id}
-                      className="rounded-2xl border border-zinc-200/80 dark:border-white/10 bg-white dark:bg-[#15171C] p-5 flex flex-col justify-between hover:border-orange-500/40 hover:shadow-xl transition-all space-y-4 group"
+                      className={`rounded-2xl border p-5 flex flex-col justify-between hover:shadow-xl transition-all space-y-4 group relative ${
+                        isBoosted
+                          ? "bg-white dark:bg-[#181a20] border-orange-500/60 dark:border-orange-500/50 shadow-[0_0_25px_rgba(249,115,22,0.15)] ring-1 ring-orange-500/30"
+                          : "bg-white dark:bg-[#15171C] border-zinc-200/80 dark:border-white/10 hover:border-orange-500/40"
+                      }`}
                     >
+                      {/* Boosted By Baton Community Badge */}
+                      {isBoosted && (
+                        <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-gradient-to-r from-orange-500/20 via-amber-500/20 to-orange-500/10 border border-orange-500/50 text-orange-600 dark:text-orange-400 font-mono text-[10px] font-black uppercase tracking-wider shadow-sm">
+                          <Rocket className="w-3.5 h-3.5 text-orange-500 animate-bounce" />
+                          <span>🚀 BOOSTED BY BATON COMMUNITY</span>
+                        </div>
+                      )}
+
                       {/* Top Row: Avatar, Name, Ticker, Badges */}
                       <div className="space-y-3">
                         <div className="flex items-start justify-between gap-3">
@@ -616,10 +724,7 @@ export default function CalloutsPage() {
           coin={selectedCoin}
           isOpen={!!selectedCoin}
           onClose={() => setSelectedCoin(null)}
-          onSuccess={() => {
-            setSelectedCoin(null);
-            fetchCallouts(false);
-          }}
+          onSuccess={handleBurnSuccess}
         />
       )}
     </div>
