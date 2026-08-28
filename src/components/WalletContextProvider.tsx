@@ -5,13 +5,13 @@ import {
   ConnectionProvider,
   WalletProvider,
 } from "@solana/wallet-adapter-react";
-import { WalletAdapterNetwork } from "@solana/wallet-adapter-base";
 import { WalletModalProvider } from "@solana/wallet-adapter-react-ui";
 import {
   PhantomWalletAdapter,
   SolflareWalletAdapter,
 } from "@solana/wallet-adapter-wallets";
-import { clusterApiUrl } from "@solana/web3.js";
+
+const DEFAULT_RPC = "https://api.mainnet-beta.solana.com";
 
 interface WalletContextProviderProps {
   children: ReactNode;
@@ -20,15 +20,13 @@ interface WalletContextProviderProps {
 export const WalletContextProvider: FC<WalletContextProviderProps> = ({
   children,
 }) => {
-  const network = WalletAdapterNetwork.Mainnet;
-
   const endpoint = useMemo(() => {
-    return (
-      process.env.NEXT_PUBLIC_SOLANA_RPC_URL ||
-      clusterApiUrl(network) ||
-      "https://api.mainnet-beta.solana.com"
-    );
-  }, [network]);
+    const raw = process.env.NEXT_PUBLIC_SOLANA_RPC_URL?.trim();
+    if (raw && (raw.startsWith("http://") || raw.startsWith("https://"))) {
+      return raw;
+    }
+    return DEFAULT_RPC;
+  }, []);
 
   const wallets = useMemo(() => {
     if (typeof window === "undefined") {

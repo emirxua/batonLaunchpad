@@ -28,9 +28,12 @@ export interface TokenStatsResponse {
 // In-memory cache for 15 seconds to protect RPC limits
 let cachedStats: TokenStatsResponse | null = null;
 let lastFetchTime = 0;
-const CACHE_DURATION_MS = 15_000;
+const DEFAULT_RPC = "https://api.mainnet-beta.solana.com";
+const rawRpc = process.env.NEXT_PUBLIC_SOLANA_RPC_URL?.trim();
+const rpcUrl = rawRpc && (rawRpc.startsWith("http://") || rawRpc.startsWith("https://")) ? rawRpc : DEFAULT_RPC;
 
-const DEFAULT_MINT = "2vdc4owf1MPz54jJCN61y3QSKqjcPpr32wJ9qKkmpump";
+const rawMint = process.env.NEXT_PUBLIC_BATON_MINT_ADDRESS?.trim();
+const DEFAULT_MINT = rawMint || "2vdc4owf1MPz54jJCN61y3QSKqjcPpr32wJ9qKkmpump";
 const KNOWN_POOL_ADDRESSES = [
   "5Wg14qETNz2xo1rBCCDUd7PyQKbKo2Luj8nmrtpwimMx", // Raydium / pump swap pool
   "5F5A7EeGqDzhQtQyaGV3vTDxxtxJxwYAhoRFjhYintR5", // Associated bonding curve
@@ -46,10 +49,6 @@ export async function GET() {
       },
     });
   }
-
-  const rpcUrl =
-    process.env.NEXT_PUBLIC_SOLANA_RPC_URL ||
-    "https://api.mainnet-beta.solana.com";
 
   try {
     const connection = new Connection(rpcUrl, "confirmed");
