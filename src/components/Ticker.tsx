@@ -30,10 +30,10 @@ export const Ticker: React.FC = React.memo(() => {
   ];
 
   return (
-    <div className="w-full bg-acid text-bg border-b border-acid-dim/40 h-7 flex items-center overflow-hidden select-none z-50 relative font-mono text-[11px] font-bold">
+    <div className="w-full bg-zinc-900 text-zinc-300 dark:bg-zinc-950 border-b border-zinc-800 h-7 flex items-center overflow-hidden select-none z-50 relative font-mono text-[11px] font-bold">
       {/* Live Badge */}
-      <div className="hidden sm:flex items-center gap-1.5 px-3 h-full bg-[#0a0b0d] text-acid uppercase tracking-wider text-[10px] font-black z-10 shrink-0 border-r border-line">
-        <span className="w-1.5 h-1.5 rounded-full bg-acid animate-ping" />
+      <div className="hidden sm:flex items-center gap-1.5 px-3 h-full bg-black text-emerald-400 dark:text-acid uppercase tracking-wider text-[10px] font-black z-10 shrink-0 border-r border-zinc-800">
+        <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 dark:bg-acid animate-ping" />
         <span>LIVE · 15S SYNC</span>
       </div>
 
@@ -43,38 +43,38 @@ export const Ticker: React.FC = React.memo(() => {
           {/* Render 1 */}
           {tickerSegments.map((seg, idx) => (
             <div key={`seg1-${idx}`} className="flex items-center gap-1.5 px-4 whitespace-nowrap">
-              <span className="text-[#0a0b0d]/70 uppercase text-[10px]">{seg.label}:</span>
+              <span className="text-zinc-400 uppercase text-[10px]">{seg.label}:</span>
               <span
                 className={`font-black ${
                   seg.isChange
                     ? isPositive
-                      ? "text-[#064e3b] bg-[#064e3b]/10 px-1 rounded"
-                      : "text-[#7f1d1d] bg-[#7f1d1d]/10 px-1 rounded"
-                    : "text-[#0a0b0d]"
+                      ? "text-emerald-400 bg-emerald-950/70 px-1.5 py-0.5 rounded border border-emerald-800/40"
+                      : "text-rose-400 bg-rose-950/70 px-1.5 py-0.5 rounded border border-rose-800/40"
+                    : "text-zinc-100"
                 }`}
               >
                 {seg.value}
               </span>
-              <span className="text-[#0a0b0d]/30 ml-2">/</span>
+              <span className="text-zinc-700 ml-2">/</span>
             </div>
           ))}
 
           {/* Render 2 (seamless repeat) */}
           {tickerSegments.map((seg, idx) => (
             <div key={`seg2-${idx}`} className="flex items-center gap-1.5 px-4 whitespace-nowrap">
-              <span className="text-[#0a0b0d]/70 uppercase text-[10px]">{seg.label}:</span>
+              <span className="text-zinc-400 uppercase text-[10px]">{seg.label}:</span>
               <span
                 className={`font-black ${
                   seg.isChange
                     ? isPositive
-                      ? "text-[#064e3b] bg-[#064e3b]/10 px-1 rounded"
-                      : "text-[#7f1d1d] bg-[#7f1d1d]/10 px-1 rounded"
-                    : "text-[#0a0b0d]"
+                      ? "text-emerald-400 bg-emerald-950/70 px-1.5 py-0.5 rounded border border-emerald-800/40"
+                      : "text-rose-400 bg-rose-950/70 px-1.5 py-0.5 rounded border border-rose-800/40"
+                    : "text-zinc-100"
                 }`}
               >
                 {seg.value}
               </span>
-              <span className="text-[#0a0b0d]/30 ml-2">/</span>
+              <span className="text-zinc-700 ml-2">/</span>
             </div>
           ))}
         </div>

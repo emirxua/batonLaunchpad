@@ -203,9 +203,9 @@ export const CoinCard: React.FC<CoinCardProps> = React.memo(({ coin, onBurnClick
         <button
           type="button"
           onClick={() => onBurnClick?.(coin)}
-          className="flex-1 py-2.5 px-3 rounded-xl bg-bg-raised border border-acid/40 text-acid hover:bg-acid hover:text-bg font-mono text-xs font-bold uppercase tracking-wider transition-all duration-150 flex items-center justify-center gap-1.5 shadow-[0_0_12px_rgba(212,255,63,0.1)] active:scale-95"
+          className="flex-1 py-2.5 px-3 rounded-xl bg-zinc-900 dark:bg-bg-raised text-white dark:text-acid border border-zinc-900 dark:border-acid/40 hover:bg-emerald-600 dark:hover:bg-acid dark:hover:text-bg font-mono text-xs font-bold uppercase tracking-wider transition-all duration-150 flex items-center justify-center gap-1.5 shadow-sm active:scale-95"
         >
-          <Flame className="w-3.5 h-3.5 fill-current" />
+          <Flame className="w-3.5 h-3.5 fill-current text-rose-400 dark:text-acid" />
           <span>Burn</span>
         </button>
       </div>

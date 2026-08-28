@@ -194,9 +194,9 @@ export const FeaturedCard: React.FC<FeaturedCardProps> = React.memo(({
             <button
               type="button"
               onClick={onBurnClick}
-              className="flex-1 inline-flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-xl bg-bg-raised border border-acid/40 text-acid font-mono text-xs font-bold uppercase tracking-wider hover:bg-acid hover:text-bg active:scale-95 transition-all duration-200 shadow-[0_0_12px_rgba(212,255,63,0.1)]"
+              className="flex-1 inline-flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-xl bg-zinc-900 dark:bg-bg-raised text-white dark:text-acid border border-zinc-900 dark:border-acid/40 hover:bg-emerald-600 dark:hover:bg-acid dark:hover:text-bg font-mono text-xs font-bold uppercase tracking-wider active:scale-95 transition-all duration-200 shadow-md shadow-zinc-900/10 dark:shadow-[0_0_12px_rgba(212,255,63,0.1)]"
             >
-              <Flame className="w-3.5 h-3.5 fill-current" />
+              <Flame className="w-3.5 h-3.5 fill-current text-rose-400 dark:text-acid" />
               <span>BURN &amp; BOOST</span>
             </button>
 
@@ -204,7 +204,7 @@ export const FeaturedCard: React.FC<FeaturedCardProps> = React.memo(({
               href={`https://solscan.io/token/${mintAddress}`}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex items-center justify-center px-3.5 py-2.5 rounded-xl bg-bg-raised border border-line text-text-dim font-mono text-xs font-bold hover:text-text hover:border-text-dim transition-colors"
+              className="inline-flex items-center justify-center px-3.5 py-2.5 rounded-xl bg-white dark:bg-bg-raised border border-zinc-200/80 dark:border-line text-zinc-600 dark:text-text-dim font-mono text-xs font-bold hover:text-zinc-900 dark:hover:text-text hover:border-zinc-300 dark:hover:border-text-dim transition-colors shadow-sm"
               title="View on Solscan"
             >
               <ExternalLink className="w-3.5 h-3.5" />
