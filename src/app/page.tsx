@@ -1,15 +1,16 @@
 "use client";
 
-import React, { useState, useMemo, useEffect } from "react";
+import React, { useState, useMemo, useEffect, useCallback } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { Navbar } from "@/components/Navbar";
 import { BurnModal } from "@/components/BurnModal";
 import { Coin } from "@/types/coin";
+import { CalloutItem } from "@/app/api/callouts/route";
 import { useCoinsData } from "@/hooks/useCoinsData";
 import { useTokenStats } from "@/hooks/useTokenStats";
 import { useRecentBurns } from "@/hooks/useRecentBurns";
-import { formatNumber } from "@/lib/utils";
+import { formatNumber, formatCurrency } from "@/lib/utils";
 import {
   Flame,
   Search,
@@ -19,6 +20,14 @@ import {
   Minus,
   ArrowRight,
   ShieldCheck,
+  Radio,
+  Zap,
+  TrendingUp,
+  TrendingDown,
+  Copy,
+  Check,
+  Sparkles,
+  ArrowUpRight,
 } from "lucide-react";
 
 const CATEGORIES = [
@@ -36,10 +45,43 @@ export default function OutbidHomePage() {
   const [inputToken, setInputToken] = useState("");
   const [inputCategory, setInputCategory] = useState("Mascots");
   const [selectedCoin, setSelectedCoin] = useState<Coin | null>(null);
+  const [copiedMint, setCopiedMint] = useState<string | null>(null);
+  const [liveCallouts, setLiveCallouts] = useState<CalloutItem[]>([]);
+  const [calloutsLoading, setCalloutsLoading] = useState<boolean>(true);
 
   const { coins, isLoading: coinsLoading, refresh } = useCoinsData(15_000);
   const { totalBurned, refresh: refreshStats } = useTokenStats(15_000);
   const { recentBurns, refresh: refreshBurns } = useRecentBurns(10_000);
+
+  // Fetch live callouts for showcase
+  const fetchTopCallouts = useCallback(async () => {
+    try {
+      const res = await fetch("/api/callouts", { cache: "no-store" });
+      if (res.ok) {
+        const json = await res.json();
+        if (Array.isArray(json.data)) {
+          setLiveCallouts(json.data.slice(0, 3));
+        }
+      }
+    } catch (e) {
+      console.warn("Failed to fetch homepage callouts showcase", e);
+    } finally {
+      setCalloutsLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchTopCallouts();
+    const interval = setInterval(fetchTopCallouts, 25_000);
+    return () => clearInterval(interval);
+  }, [fetchTopCallouts]);
+
+  const handleCopy = (mint: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    navigator.clipboard.writeText(mint);
+    setCopiedMint(mint);
+    setTimeout(() => setCopiedMint(null), 2000);
+  };
 
   // Ranked coins ordered by totalBurnedBaton
   const rankedCoins = useMemo(() => {
@@ -103,6 +145,25 @@ export default function OutbidHomePage() {
     } else if (top1Coin) {
       setSelectedCoin(top1Coin);
     }
+  };
+
+  const handleBoostCallout = (item: CalloutItem, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setSelectedCoin({
+      id: item.id,
+      name: item.name,
+      ticker: item.symbol,
+      mintAddress: item.mint,
+      iconColor: "#f97316",
+      imageUrl: item.imageUri || undefined,
+      marketCap: item.marketCapUsd,
+      volume24h: item.volume24h,
+      change24h: item.priceChange24h,
+      sparkline: [10, 12, 14, 13, 16, 18, 20],
+      totalBurnedBaton: 0,
+      burnLevel: "none",
+      description: item.description,
+    });
   };
 
   return (
@@ -191,7 +252,7 @@ export default function OutbidHomePage() {
               <select
                 value={inputCategory}
                 onChange={(e) => setInputCategory(e.target.value)}
-                className="w-full sm:w-auto appearance-none bg-zinc-100 dark:bg-zinc-800/80 border border-zinc-200 dark:border-white/5 rounded-xl px-4 py-2.5 pr-8 text-xs font-mono font-bold text-zinc-700 dark:text-zinc-300 focus:outline-none cursor-pointer"
+                className="appearance-none w-full sm:w-auto bg-zinc-100 dark:bg-zinc-800/80 border border-zinc-200 dark:border-zinc-700 text-zinc-700 dark:text-zinc-200 text-xs font-mono font-bold py-2 pl-3 pr-8 rounded-xl focus:outline-none focus:border-orange-500 cursor-pointer"
               >
                 <option value="Mascots">Mascots</option>
                 <option value="Agents">AI Agents</option>
@@ -215,7 +276,164 @@ export default function OutbidHomePage() {
           </div>
         </div>
 
-        {/* 4. Category Filter Pills */}
+        {/* 4. ✨ YENİ DEV BÖLÜM: "🔥 PUMP.FUN CALLOUT REWARDS & LIVE ALPHA STREAM" */}
+        <section className="relative rounded-3xl border border-orange-500/30 bg-white/90 dark:bg-[#0E1015]/90 p-5 sm:p-7 shadow-2xl shadow-orange-500/5 backdrop-blur-md space-y-5 overflow-hidden">
+          {/* Ambient glow */}
+          <div
+            className="pointer-events-none absolute -top-16 -right-16 w-64 h-64 rounded-full bg-orange-500/10 dark:bg-orange-500/15 blur-3xl"
+            aria-hidden="true"
+          />
+
+          {/* Section Header */}
+          <div className="relative z-10 flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-zinc-200/80 dark:border-white/10">
+            <div className="space-y-1">
+              <div className="flex items-center gap-2">
+                <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-orange-500/10 border border-orange-500/30 text-orange-600 dark:text-orange-400 font-mono text-[10px] font-bold uppercase tracking-wider">
+                  <Radio className="w-3 h-3 text-rose-500 animate-pulse" />
+                  <span>Live DexScreener Stream</span>
+                </span>
+                <span className="px-2 py-0.5 rounded-md bg-orange-500 text-white font-mono text-[9px] font-black tracking-wider">
+                  10x REWARDS
+                </span>
+              </div>
+
+              <h2 className="font-archivo text-xl sm:text-2xl font-black tracking-tight text-zinc-900 dark:text-white flex items-center gap-2">
+                <span>🔥 Pump.fun Callout Rewards &amp; Alpha Stream</span>
+              </h2>
+              <p className="font-space text-xs text-zinc-500 dark:text-zinc-400">
+                Trending Solana tokens called by verified alpha hunters. Boost rank with $BATON.
+              </p>
+            </div>
+
+            <Link
+              href="/callouts"
+              className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-orange-500/10 hover:bg-orange-500 text-orange-600 hover:text-white dark:text-orange-400 dark:hover:text-white border border-orange-500/30 font-mono text-xs font-bold transition-all shadow-sm shrink-0"
+            >
+              <span>View All Top Callers</span>
+              <ArrowRight className="w-3.5 h-3.5" />
+            </Link>
+          </div>
+
+          {/* Callouts Live Grid */}
+          <div className="relative z-10 grid grid-cols-1 md:grid-cols-3 gap-3.5">
+            {calloutsLoading && liveCallouts.length === 0 ? (
+              [1, 2, 3].map((idx) => (
+                <div
+                  key={idx}
+                  className="h-44 rounded-2xl bg-zinc-100 dark:bg-zinc-800/50 border border-zinc-200 dark:border-white/5 p-4 animate-pulse space-y-3"
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-zinc-200 dark:bg-zinc-700" />
+                    <div className="space-y-1.5 flex-1">
+                      <div className="h-3.5 w-24 bg-zinc-200 dark:bg-zinc-700 rounded" />
+                      <div className="h-2.5 w-14 bg-zinc-200 dark:bg-zinc-700 rounded" />
+                    </div>
+                  </div>
+                  <div className="h-12 bg-zinc-200/60 dark:bg-zinc-700/60 rounded-xl" />
+                </div>
+              ))
+            ) : (
+              liveCallouts.map((item, index) => {
+                const isPositive = item.priceChange24h >= 0;
+                return (
+                  <div
+                    key={item.id}
+                    className="rounded-2xl border border-zinc-200/80 dark:border-white/10 bg-zinc-50/80 dark:bg-[#15171C] p-4 flex flex-col justify-between hover:border-orange-500/40 hover:shadow-lg transition-all space-y-3 group"
+                  >
+                    {/* Top Row: Avatar, Name, Ticker, Copy CA */}
+                    <div className="flex items-start justify-between gap-2.5">
+                      <div className="flex items-center gap-2.5 min-w-0">
+                        <div className="w-10 h-10 rounded-xl overflow-hidden bg-orange-500/10 border border-orange-500/20 flex items-center justify-center font-archivo text-sm font-bold text-orange-500 shrink-0 shadow-inner">
+                          {item.imageUri ? (
+                            <Image
+                              src={item.imageUri}
+                              alt={item.name}
+                              width={40}
+                              height={40}
+                              className="w-full h-full object-cover"
+                              unoptimized
+                            />
+                          ) : (
+                            <span>{item.symbol.slice(0, 3)}</span>
+                          )}
+                        </div>
+
+                        <div className="min-w-0">
+                          <h3 className="font-archivo text-sm font-bold text-zinc-900 dark:text-white truncate group-hover:text-orange-500 transition-colors">
+                            {item.name}
+                          </h3>
+                          <div className="flex items-center gap-1.5 font-mono text-[11px] text-zinc-400">
+                            <span className="font-bold text-zinc-600 dark:text-zinc-300">${item.symbol}</span>
+                            <span>•</span>
+                            <button
+                              type="button"
+                              onClick={(e) => handleCopy(item.mint, e)}
+                              className="hover:text-orange-500 inline-flex items-center gap-0.5"
+                              title="Copy CA"
+                            >
+                              {copiedMint === item.mint ? (
+                                <Check className="w-2.5 h-2.5 text-emerald-500" />
+                              ) : (
+                                <Copy className="w-2.5 h-2.5" />
+                              )}
+                              <span>{item.mint.slice(0, 4)}...{item.mint.slice(-4)}</span>
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+
+                      <span className="shrink-0 px-2 py-0.5 rounded-md bg-zinc-200/80 dark:bg-zinc-800 font-mono text-[10px] font-bold text-zinc-600 dark:text-zinc-300">
+                        #{index + 1}
+                      </span>
+                    </div>
+
+                    {/* Metrics Row */}
+                    <div className="grid grid-cols-2 gap-2 p-2.5 rounded-xl bg-white dark:bg-[#1a1d24] border border-zinc-200/60 dark:border-white/5 font-mono text-xs">
+                      <div>
+                        <div className="text-[10px] text-zinc-400 uppercase">Market Cap</div>
+                        <div className="font-bold text-zinc-900 dark:text-white font-mono-num text-[11px]">
+                          {item.marketCapUsd > 0 ? formatCurrency(item.marketCapUsd) : "$8.4K"}
+                        </div>
+                      </div>
+
+                      <div>
+                        <div className="text-[10px] text-zinc-400 uppercase">24h Gain</div>
+                        <div className={`font-bold flex items-center gap-0.5 text-[11px] ${isPositive ? "text-emerald-500" : "text-rose-500"}`}>
+                          {isPositive ? <TrendingUp className="w-3 h-3" /> : <TrendingDown className="w-3 h-3" />}
+                          <span>{item.priceChange24h > 0 ? `+${item.priceChange24h}%` : `${item.priceChange24h}%`}</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Action button */}
+                    <div className="flex items-center gap-2 pt-1 border-t border-zinc-200/60 dark:border-white/5">
+                      <button
+                        type="button"
+                        onClick={(e) => handleBoostCallout(item, e)}
+                        className="flex-1 py-1.5 px-2.5 rounded-xl bg-orange-500/10 hover:bg-orange-500 text-orange-600 hover:text-white dark:text-orange-400 dark:hover:text-white border border-orange-500/30 text-xs font-mono font-bold transition-all flex items-center justify-center gap-1 shadow-sm"
+                      >
+                        <Flame className="w-3 h-3 fill-current" />
+                        <span>Boost with $BATON</span>
+                      </button>
+
+                      <a
+                        href={item.dexScreenerUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="p-1.5 rounded-xl bg-zinc-200/80 dark:bg-zinc-800 hover:bg-zinc-300 dark:hover:bg-zinc-700 text-zinc-600 dark:text-zinc-300 transition-colors"
+                        title="View DexScreener Chart"
+                      >
+                        <ArrowUpRight className="w-3.5 h-3.5" />
+                      </a>
+                    </div>
+                  </div>
+                );
+              })
+            )}
+          </div>
+        </section>
+
+        {/* 5. Category Filter Pills */}
         <div className="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-none">
           {CATEGORIES.map((cat) => {
             const isActive = selectedCategory.toLowerCase() === cat.id.toLowerCase();
@@ -236,7 +454,7 @@ export default function OutbidHomePage() {
           })}
         </div>
 
-        {/* 5. Top Featured Outbid Podium Cards */}
+        {/* 6. Top Featured Outbid Podium Cards */}
         <div className="space-y-4">
           {top3Coins.length === 0 ? (
             <div className="p-8 sm:p-12 rounded-2xl bg-white dark:bg-[#15171C] border border-dashed border-zinc-300 dark:border-white/10 text-center space-y-4">
@@ -313,52 +531,43 @@ export default function OutbidHomePage() {
                         )}
                       </div>
 
-                      {/* Info */}
+                      {/* Name, Category, Links */}
                       <div className="min-w-0 space-y-1">
                         <div className="flex items-center gap-2 flex-wrap">
-                          <h3 className="font-archivo text-base sm:text-lg font-bold text-zinc-900 dark:text-white truncate group-hover:text-orange-500 transition-colors">
+                          <h3 className="font-archivo text-base sm:text-lg font-bold text-zinc-900 dark:text-white truncate">
                             {coin.name}
                           </h3>
-                          <span className="font-mono text-xs font-bold text-zinc-500 dark:text-zinc-400">
+                          <span className="font-mono text-xs text-zinc-400">
                             ${coin.ticker}
                           </span>
+                          {coin.category && (
+                            <span className="px-2 py-0.5 rounded-full bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 text-[10px] font-mono font-semibold uppercase">
+                              {coin.category}
+                            </span>
+                          )}
+                          {isRank1 && (
+                            <span className="px-2 py-0.5 rounded-full bg-orange-500/10 border border-orange-500/30 text-orange-600 dark:text-orange-400 text-[10px] font-mono font-bold uppercase flex items-center gap-1">
+                              <ShieldCheck className="w-3 h-3" />
+                              #1 Outbid Leader
+                            </span>
+                          )}
                         </div>
 
-                        <p className="text-xs text-zinc-500 dark:text-zinc-400 line-clamp-1 max-w-lg">
-                          {coin.description || "Solana verified community token. Burn $BATON to overtake rank."}
+                        <p className="text-xs font-space text-zinc-500 dark:text-zinc-400 line-clamp-1">
+                          {coin.description}
                         </p>
-
-                        {/* Meta Tags Row */}
-                        <div className="flex items-center gap-2 sm:gap-3 text-[11px] font-mono text-zinc-400 dark:text-zinc-500 flex-wrap pt-0.5">
-                          <span className="inline-flex items-center gap-1 text-zinc-600 dark:text-zinc-400 font-semibold">
-                            🏷 {coin.category || "Mascots"}
-                          </span>
-                          <span>•</span>
-                          <span className="text-emerald-600 dark:text-emerald-400 font-semibold">✓ Verified SPL Asset</span>
-                          <span>•</span>
-                          <a
-                            href={`https://pump.fun/coin/${coin.mintAddress}`}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            onClick={(e) => e.stopPropagation()}
-                            className="text-orange-500 hover:underline inline-flex items-center gap-0.5 font-bold"
-                          >
-                            pump.fun <ExternalLink className="w-2.5 h-2.5 inline" />
-                          </a>
-                        </div>
                       </div>
                     </div>
 
-                    {/* Right: Burned Score & Outbid Button */}
-                    <div className="flex items-center justify-between sm:justify-end gap-4 shrink-0 font-mono">
+                    {/* Right: Burned Metric & Action Button */}
+                    <div className="flex items-center justify-between sm:justify-end gap-6 shrink-0 pt-3 sm:pt-0 border-t sm:border-t-0 border-zinc-100 dark:border-white/5">
                       <div className="text-left sm:text-right">
-                        <div className="text-lg sm:text-2xl font-black text-orange-500 font-mono-num">
-                          {coin.totalBurnedBaton > 0
-                            ? `${coin.totalBurnedBaton.toLocaleString("en-US")} BATON`
-                            : "0 BATON"}
+                        <div className="text-[10px] font-mono uppercase text-zinc-400">
+                          Total Burned
                         </div>
-                        <div className="text-[10px] text-zinc-400 uppercase font-bold">
-                          Total Burn Score
+                        <div className="font-archivo text-base sm:text-lg font-black text-orange-500 font-mono-num flex items-center gap-1 sm:justify-end">
+                          <Flame className="w-4 h-4 fill-current text-orange-500" />
+                          <span>{coin.totalBurnedBaton.toLocaleString("en-US")} BATON</span>
                         </div>
                       </div>
 
@@ -368,7 +577,11 @@ export default function OutbidHomePage() {
                           e.stopPropagation();
                           handleClaimRank(coin);
                         }}
-                        className="px-4 py-2 rounded-xl bg-orange-500/10 hover:bg-orange-500 text-orange-600 hover:text-white dark:text-orange-400 dark:hover:text-white border border-orange-500/30 text-xs font-bold transition-all shadow-sm flex items-center gap-1"
+                        className={`px-4 py-2 rounded-xl font-mono text-xs font-bold uppercase tracking-wider transition-all flex items-center gap-1.5 shadow-sm ${
+                          isRank1
+                            ? "bg-orange-500 text-white hover:bg-orange-600 shadow-orange-500/20"
+                            : "bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-200 hover:bg-orange-500 hover:text-white dark:hover:bg-orange-500"
+                        }`}
                       >
                         <Flame className="w-3.5 h-3.5 fill-current" />
                         <span>Outbid</span>
@@ -381,147 +594,72 @@ export default function OutbidHomePage() {
           )}
         </div>
 
-        {/* 6. Today's Top Ranking Mini Cards */}
-        {top3Coins.length > 0 && (
-          <div className="space-y-2 pt-2">
-            <div className="flex items-center justify-between text-xs font-mono">
-              <span className="font-bold text-zinc-500 uppercase tracking-wider">Today&apos;s Top Ranking</span>
-              <Link href="/leaderboard" className="text-orange-500 hover:underline font-bold">
-                See all →
-              </Link>
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-              {top3Coins.map((c, i) => (
-                <div
-                  key={`today-${c.id}`}
-                  onClick={() => handleClaimRank(c)}
-                  className="p-3 rounded-xl bg-white dark:bg-[#15171C] border border-zinc-200 dark:border-white/10 flex items-center gap-3 cursor-pointer hover:border-orange-500/40 transition-all"
-                >
-                  <span className="font-mono text-xs font-bold text-zinc-400">#{i + 1}</span>
-                  <div className="w-8 h-8 rounded-lg overflow-hidden bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center font-bold text-xs shrink-0">
-                    {c.imageUrl ? (
-                      <Image src={c.imageUrl} alt={c.name} width={32} height={32} className="object-cover" unoptimized />
-                    ) : (
-                      c.ticker.slice(0, 2)
-                    )}
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <div className="text-xs font-bold text-zinc-900 dark:text-white truncate">
-                      {c.name}
-                    </div>
-                    <div className="text-[11px] font-mono font-bold text-orange-500">
-                      {c.totalBurnedBaton > 0 ? `${formatNumber(c.totalBurnedBaton)} BATON` : "0 BATON"}
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* 7. Latest Activity Live Strip */}
-        <div className="space-y-2 pt-4">
-          <div className="flex items-center gap-2 text-xs font-mono font-bold text-zinc-500">
-            <span className="w-2 h-2 rounded-full bg-rose-500 animate-pulse" />
-            <span className="uppercase tracking-wider">Latest Activity</span>
-          </div>
-
-          <div className="flex items-center gap-3 overflow-x-auto pb-2 scrollbar-none">
-            {recentBurns.length === 0 ? (
-              <div className="p-3 rounded-xl bg-white dark:bg-[#15171C] border border-dashed border-zinc-200 dark:border-white/10 text-xs font-mono text-zinc-500">
-                ⚡ Ready for first bid! Burn $BATON to claim rank.
-              </div>
-            ) : (
-              recentBurns.slice(0, 6).map((burn) => (
-                <a
-                  key={burn.id}
-                  href={`https://solscan.io/tx/${burn.txHash}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="p-3 rounded-xl bg-white dark:bg-[#15171C] border border-zinc-200 dark:border-white/10 shadow-sm flex items-center gap-2.5 shrink-0 hover:border-orange-500/40 transition-all font-mono text-xs"
-                >
-                  <Flame className="w-4 h-4 text-rose-500 fill-current" />
-                  <div>
-                    <div className="font-bold text-zinc-900 dark:text-white flex items-center gap-1">
-                      <span>{burn.coinName || "Baton"}</span>
-                      <span className="text-orange-500 font-black">+{formatNumber(burn.amount)}</span>
-                    </div>
-                    <div className="text-[10px] text-zinc-400">
-                      by {burn.userAddress.slice(0, 4)}...{burn.userAddress.slice(-4)}
-                    </div>
-                  </div>
-                </a>
-              ))
-            )}
-          </div>
-        </div>
-
-        {/* 8. Ranks #4 and Beyond */}
+        {/* 7. Remaining Standard Leaderboard Coins */}
         {listCoins.length > 0 && (
-          <div className="space-y-3 pt-2">
-            <div className="divide-y divide-zinc-200/80 dark:divide-white/5">
-              {listCoins.map((coin, idx) => {
-                const rank = idx + 4;
+          <div className="rounded-2xl border border-zinc-200 dark:border-white/10 bg-white dark:bg-[#15171C] overflow-hidden shadow-sm">
+            <div className="p-4 border-b border-zinc-200 dark:border-white/10 flex items-center justify-between">
+              <span className="font-archivo text-sm font-bold text-zinc-900 dark:text-white">
+                All Ranked Projects
+              </span>
+              <span className="font-mono text-xs text-zinc-400">
+                {listCoins.length} projects listed
+              </span>
+            </div>
+
+            <div className="divide-y divide-zinc-100 dark:divide-white/5 font-mono text-xs">
+              {listCoins.map((coin, index) => {
+                const rank = index + 4;
                 return (
                   <div
                     key={coin.id}
                     onClick={() => handleClaimRank(coin)}
-                    className="py-4 px-2 sm:px-4 rounded-xl flex items-center justify-between gap-4 hover:bg-white dark:hover:bg-[#15171C] transition-colors cursor-pointer group"
+                    className="p-4 flex items-center justify-between hover:bg-zinc-50 dark:hover:bg-white/5 transition-colors cursor-pointer"
                   >
-                    {/* Rank & Token Info */}
-                    <div className="flex items-center gap-3 sm:gap-4 min-w-0">
-                      <span className="font-mono text-sm font-bold text-zinc-400 w-7 shrink-0">
+                    <div className="flex items-center gap-3 min-w-0">
+                      <span className="w-6 text-zinc-400 font-bold text-center">
                         #{rank}
                       </span>
-
                       <div
-                        className="w-10 h-10 rounded-xl overflow-hidden flex items-center justify-center font-bold text-xs shrink-0 shadow-inner"
+                        className="w-8 h-8 rounded-lg overflow-hidden flex items-center justify-center font-bold text-xs shrink-0"
                         style={{
                           backgroundColor: `${coin.iconColor}20`,
                           color: coin.iconColor,
                         }}
                       >
                         {coin.imageUrl ? (
-                          <Image src={coin.imageUrl} alt={coin.name} width={40} height={40} className="object-cover" unoptimized />
+                          <Image
+                            src={coin.imageUrl}
+                            alt={coin.name}
+                            width={32}
+                            height={32}
+                            className="w-full h-full object-cover"
+                            unoptimized
+                          />
                         ) : (
-                          coin.ticker.slice(0, 3)
+                          <span>{coin.ticker.slice(0, 2)}</span>
                         )}
                       </div>
-
                       <div className="min-w-0">
-                        <div className="flex items-center gap-2">
-                          <h4 className="font-archivo text-sm sm:text-base font-bold text-zinc-900 dark:text-white truncate group-hover:text-orange-500 transition-colors">
-                            {coin.name}
-                          </h4>
-                          <span className="font-mono text-xs text-zinc-500">
-                            ${coin.ticker}
-                          </span>
+                        <div className="font-bold text-zinc-900 dark:text-white truncate">
+                          {coin.name}
                         </div>
-
-                        <div className="flex items-center gap-2 text-xs font-mono text-zinc-400 pt-0.5">
-                          <span>🏷 {coin.category || "General"}</span>
-                          <span>•</span>
-                          <span className="text-emerald-600 dark:text-emerald-400 font-semibold">✓ Verified SPL Asset</span>
+                        <div className="text-[11px] text-zinc-400">
+                          ${coin.ticker}
                         </div>
                       </div>
                     </div>
 
-                    {/* Score & Action */}
-                    <div className="flex items-center gap-4 shrink-0 font-mono">
-                      <div className="text-right">
-                        <div className="text-base font-black text-orange-500 font-mono-num">
-                          {coin.totalBurnedBaton > 0 ? `${coin.totalBurnedBaton.toLocaleString("en-US")} BATON` : "0 BATON"}
-                        </div>
+                    <div className="flex items-center gap-4 shrink-0">
+                      <div className="text-right font-mono-num font-bold text-orange-500">
+                        {coin.totalBurnedBaton.toLocaleString("en-US")} BATON
                       </div>
-
                       <button
                         type="button"
                         onClick={(e) => {
                           e.stopPropagation();
                           handleClaimRank(coin);
                         }}
-                        className="px-3 py-1.5 rounded-lg bg-zinc-100 dark:bg-zinc-800 hover:bg-orange-500 hover:text-white text-xs font-bold transition-all"
+                        className="px-3 py-1.5 rounded-lg bg-zinc-100 dark:bg-zinc-800 hover:bg-orange-500 hover:text-white text-zinc-700 dark:text-zinc-300 text-xs font-bold transition-all"
                       >
                         Outbid
                       </button>
@@ -532,72 +670,23 @@ export default function OutbidHomePage() {
             </div>
           </div>
         )}
+      </main>
 
-        {/* 9. Launchpad Hub Floating Banner */}
-        <section className="p-6 sm:p-8 rounded-3xl bg-gradient-to-r from-orange-500 via-amber-500 to-rose-500 text-white shadow-xl shadow-orange-500/20 flex flex-col sm:flex-row items-center justify-between gap-6">
-          <div className="space-y-2 text-center sm:text-left">
-            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/20 backdrop-blur-md text-xs font-mono font-bold uppercase tracking-wider">
-              <Flame className="w-3.5 h-3.5 fill-current" />
-              <span>Full Launchpad &amp; Mascot Engine</span>
-            </div>
-            <h2 className="font-archivo text-2xl sm:text-3xl font-black uppercase">
-              Explore the $BATON Launchpad Hub
-            </h2>
-            <p className="text-sm text-white/90 font-space max-w-lg">
-              Detailed holder distributions, deflationary supply tracking, and pump.fun verified mascot listings.
-            </p>
-          </div>
-
-          <Link
-            href="/launchpad"
-            className="px-6 py-3.5 rounded-2xl bg-white text-zinc-900 font-mono text-xs font-black uppercase tracking-wider shadow-lg hover:bg-zinc-100 hover:scale-105 active:scale-95 transition-all shrink-0 flex items-center gap-2"
-          >
-            <span>Open Launchpad Hub</span>
-            <ArrowRight className="w-4 h-4" />
-          </Link>
-        </section>
-
-        {/* SPL Token Burn / Outbid Modal */}
+      {/* Burn & Outbid Modal */}
+      {selectedCoin && (
         <BurnModal
           coin={selectedCoin}
           isOpen={!!selectedCoin}
           initialAmount={customBidAmount}
           onClose={() => setSelectedCoin(null)}
           onSuccess={() => {
+            setSelectedCoin(null);
             refresh();
             refreshStats();
             refreshBurns();
           }}
         />
-      </main>
-
-      {/* Footer */}
-      <footer className="border-t border-zinc-200 dark:border-white/10 bg-white dark:bg-[#0E1013] py-8 mt-16 text-xs text-zinc-500 dark:text-zinc-400 font-mono">
-        <div className="max-w-5xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-4">
-          <div className="flex items-center gap-2">
-            <ShieldCheck className="w-4 h-4 text-emerald-500" />
-            <span>outbid.baton • Solana On-Chain Bidding &amp; Burn Engine</span>
-          </div>
-          <div className="flex items-center gap-4 text-zinc-600 dark:text-zinc-400">
-            <Link href="/launchpad" className="hover:text-orange-500 transition-colors">
-              Launchpad Hub
-            </Link>
-            <span>•</span>
-            <Link href="/leaderboard" className="hover:text-orange-500 transition-colors">
-              Leaderboard
-            </Link>
-            <span>•</span>
-            <a
-              href="https://x.com/buybaton"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="hover:text-orange-500 transition-colors"
-            >
-              @buybaton
-            </a>
-          </div>
-        </div>
-      </footer>
+      )}
     </div>
   );
 }
