@@ -60,8 +60,10 @@ export const Navbar: React.FC = () => {
                 <span className="w-4/5 h-1 bg-orange-500 rounded-full transition-transform group-hover:scale-x-125 origin-left" />
                 <span className="w-3/5 h-1 bg-zinc-900 dark:bg-white rounded-full transition-transform group-hover:scale-x-110 origin-left" />
               </div>
-              <span className="font-archivo text-xl font-black tracking-tight text-zinc-900 dark:text-white uppercase flex items-center">
-                BATON<span className="text-orange-500">.OUTBID</span>
+              <span className="font-archivo text-xl tracking-tight flex items-center select-none">
+                <span className="text-zinc-900 dark:text-white font-extrabold tracking-tight">BATON</span>
+                <span className="text-orange-500 font-extrabold tracking-tight">OUTBID</span>
+                <span className="text-orange-400/80 font-bold text-sm tracking-normal">.icu</span>
               </span>
             </Link>
 
@@ -155,8 +157,10 @@ export const Navbar: React.FC = () => {
             <div className="space-y-6">
               {/* Drawer Header */}
               <div className="flex items-center justify-between pb-4 border-b border-zinc-200 dark:border-zinc-800">
-                <span className="font-archivo text-lg font-black text-zinc-900 dark:text-white uppercase">
-                  BATON<span className="text-orange-500">.OUTBID</span>
+                <span className="font-archivo text-lg tracking-tight flex items-center select-none">
+                  <span className="text-zinc-900 dark:text-white font-extrabold tracking-tight">BATON</span>
+                  <span className="text-orange-500 font-extrabold tracking-tight">OUTBID</span>
+                  <span className="text-orange-400/80 font-bold text-xs tracking-normal">.icu</span>
                 </span>
                 <button
                   onClick={() => setMobileMenuOpen(false)}

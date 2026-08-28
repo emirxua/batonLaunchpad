@@ -25,9 +25,23 @@ const jetbrainsMono = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "$BATON Launchpad | Solana Memecoin Showcase & Burn Multiplier",
+  title: "BatonOutbid.icu — Solana Mascot & Burn Engine",
   description:
-    "Showcase directory for Solana pump.fun mascot & community memecoins. Burn $BATON to boost visibility and reach Diamond tier.",
+    "Showcase directory & on-chain burn engine for Solana memecoins and mascots. Burn $BATON to outbid ranks and claim #1.",
+  openGraph: {
+    title: "BatonOutbid.icu — Solana Mascot & Burn Engine",
+    description:
+      "Showcase directory & on-chain burn engine for Solana memecoins and mascots. Burn $BATON to outbid ranks and claim #1.",
+    url: "https://batonoutbid.icu",
+    siteName: "BatonOutbid.icu",
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "BatonOutbid.icu — Solana Mascot & Burn Engine",
+    description:
+      "Showcase directory & on-chain burn engine for Solana memecoins and mascots. Burn $BATON to outbid ranks and claim #1.",
+  },
 };
 
 export default function RootLayout({
