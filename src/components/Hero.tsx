@@ -53,7 +53,7 @@ export const Hero: React.FC<HeroProps> = ({
               <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500 dark:bg-acid shadow-[0_0_10px_#059669]" />
             </span>
             <span className="font-mono text-[11px] text-zinc-600 dark:text-text-faint uppercase tracking-wider font-semibold">
-              OFFICIAL SOLANA MASCOT &amp; BURN LAUNCHPAD — $BATON
+              COMMUNITY DIRECTORY &amp; ON-CHAIN BURN ENGINE — $BATON
             </span>
           </div>
 

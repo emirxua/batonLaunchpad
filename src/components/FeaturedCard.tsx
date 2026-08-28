@@ -2,7 +2,7 @@
 
 import React, { useState } from "react";
 import Image from "next/image";
-import { Flame, ExternalLink, Sparkles, TrendingUp, Copy, Check } from "lucide-react";
+import { Flame, ExternalLink, Sparkles, TrendingUp, Copy, Check, BarChart2, ChevronDown, ChevronUp } from "lucide-react";
 import { formatCurrency, formatNumber } from "@/lib/utils";
 
 export interface FeaturedCardProps {
@@ -25,15 +25,16 @@ export const FeaturedCard: React.FC<FeaturedCardProps> = React.memo(({
   description = "The premier community-driven mascot token and deflationary burn engine on Solana.",
   mintAddress = "2vdc4owf1MPz54jJCN61y3QSKqjcPpr32wJ9qKkmpump",
   imageUrl = "https://cdn.dexscreener.com/cms/images/B_1EShunz2lCb0jz?width=800&height=800&quality=95&format=auto",
-  marketCap = 12_435,
-  volume24h = 653,
-  change24h = 16.09,
+  marketCap = 0,
+  volume24h = 0,
+  change24h = 0,
   totalBurnedBaton = 0,
   isLoading = false,
   onBurnClick,
 }) => {
   const [imageError, setImageError] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [showLiveChart, setShowLiveChart] = useState(false);
   const isPositive = (change24h ?? 0) >= 0;
 
   const handleCopyCA = (e: React.MouseEvent) => {
@@ -139,7 +140,7 @@ export const FeaturedCard: React.FC<FeaturedCardProps> = React.memo(({
           </div>
         </div>
 
-        {/* 2. Middle Section: 3 Metric Columns with Clear Formatting & No Overflow */}
+        {/* 2. Middle Section: 3 Metric Columns */}
         <div className="lg:col-span-4 p-3.5 sm:p-4 rounded-2xl bg-bg-raised/60 lg:bg-transparent lg:p-0 border border-line/60 lg:border-y-0 lg:border-x lg:border-line/70 lg:px-6 grid grid-cols-3 gap-3 font-mono">
           {/* Market Cap */}
           <div className="space-y-1">
@@ -184,7 +185,7 @@ export const FeaturedCard: React.FC<FeaturedCardProps> = React.memo(({
                 </div>
               )}
               <div className="text-[10px] text-text-dim font-bold uppercase tracking-wider">
-                $BATON
+                BATON
               </div>
             </div>
           </div>
@@ -223,6 +224,37 @@ export const FeaturedCard: React.FC<FeaturedCardProps> = React.memo(({
             </a>
           </div>
         </div>
+      </div>
+
+      {/* 4. Live DexScreener Interactive Chart Panel */}
+      <div className="px-5 pb-5 sm:px-8 sm:pb-8 pt-0 font-mono">
+        <div className="flex items-center justify-between py-2.5 border-t border-line/60">
+          <div className="flex items-center gap-2 text-xs text-text-dim">
+            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+            <span className="font-bold text-text">DexScreener Live Price Chart</span>
+          </div>
+
+          <button
+            type="button"
+            onClick={() => setShowLiveChart(!showLiveChart)}
+            className="inline-flex items-center gap-1 text-xs font-bold text-acid hover:text-acid-dim transition-colors"
+          >
+            <BarChart2 className="w-3.5 h-3.5" />
+            <span>{showLiveChart ? "Hide Chart" : "View Live Chart"}</span>
+            {showLiveChart ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
+          </button>
+        </div>
+
+        {showLiveChart && (
+          <div className="mt-2 w-full h-80 sm:h-96 rounded-2xl overflow-hidden border border-line bg-black shadow-inner">
+            <iframe
+              src={`https://dexscreener.com/solana/${mintAddress}?embed=1&theme=dark&trades=0&info=0`}
+              className="w-full h-full border-0"
+              title="DexScreener Live Chart"
+              loading="lazy"
+            />
+          </div>
+        )}
       </div>
     </div>
   );

@@ -19,10 +19,13 @@ export const CoinCard: React.FC<CoinCardProps> = React.memo(({ coin, onBurnClick
   const tierInfo = getBurnTierInfo(coin.totalBurnedBaton);
   const isDiamond = tierInfo.level === "diamond";
 
-  // Generate SVG Polyline points for sparkline
-  const sparklineData = coin.sparkline && coin.sparkline.length > 0
-    ? coin.sparkline
-    : [10, 15, 12, 20, 18, 25];
+  // Generate SVG Polyline points for sparkline based on 24h change trend
+  const sparklineData =
+    coin.sparkline && coin.sparkline.length > 0
+      ? coin.sparkline
+      : isPositive
+      ? [10, 11, 13, 12, 16, 15, 19, 22]
+      : [22, 20, 18, 19, 14, 15, 11, 10];
 
   const minVal = Math.min(...sparklineData);
   const maxVal = Math.max(...sparklineData);
@@ -40,7 +43,7 @@ export const CoinCard: React.FC<CoinCardProps> = React.memo(({ coin, onBurnClick
     })
     .join(" ");
 
-  const strokeColor = isPositive ? "#4ade80" : "#ff5c5c";
+  const strokeColor = isPositive ? "#22c55e" : "#ef4444";
 
   return (
     <div
