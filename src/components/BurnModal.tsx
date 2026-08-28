@@ -29,6 +29,7 @@ const WalletMultiButton = dynamic(
 interface BurnModalProps {
   coin: Coin | null;
   isOpen: boolean;
+  initialAmount?: number;
   onClose: () => void;
   onSuccess?: (coinId: string, burnedAmount: number) => void;
 }
@@ -38,6 +39,7 @@ type BurnState = "idle" | "awaiting_approval" | "confirming" | "success" | "erro
 export const BurnModal: React.FC<BurnModalProps> = ({
   coin,
   isOpen,
+  initialAmount = 1000,
   onClose,
   onSuccess,
 }) => {
@@ -46,7 +48,7 @@ export const BurnModal: React.FC<BurnModalProps> = ({
   const { batonBalance, isLoading: balanceLoading, refetch } =
     useUserBatonBalance();
 
-  const [amount, setAmount] = useState<number>(10000);
+  const [amount, setAmount] = useState<number>(initialAmount);
   const [burnState, setBurnState] = useState<BurnState>("idle");
   const [txSignature, setTxSignature] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
@@ -55,7 +57,7 @@ export const BurnModal: React.FC<BurnModalProps> = ({
   useEffect(() => {
     if (isOpen) {
       document.body.style.overflow = "hidden";
-      setAmount(10000);
+      setAmount(initialAmount > 0 ? initialAmount : 1000);
       setTxSignature(null);
       setErrorMessage(null);
       setBurnState("idle");

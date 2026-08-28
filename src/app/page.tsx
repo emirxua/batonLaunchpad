@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { Navbar } from "@/components/Navbar";
@@ -35,7 +35,6 @@ export default function OutbidHomePage() {
   const [selectedCategory, setSelectedCategory] = useState("all");
   const [inputToken, setInputToken] = useState("");
   const [inputCategory, setInputCategory] = useState("Mascots");
-  const [claimAmountDelta, setClaimAmountDelta] = useState(1000);
   const [selectedCoin, setSelectedCoin] = useState<Coin | null>(null);
 
   const { coins, isLoading: coinsLoading, refresh } = useCoinsData(15_000);
@@ -56,12 +55,25 @@ export default function OutbidHomePage() {
   }, [rankedCoins, selectedCategory]);
 
   const top1Coin = rankedCoins[0];
-  const requiredToOvertakeTop1 = (top1Coin?.totalBurnedBaton || 0) + claimAmountDelta;
+  const top1Burn = top1Coin?.totalBurnedBaton || 0;
+  const minRequiredToClaimRank1 = top1Burn === 0 ? 1000 : top1Burn + 1000;
+
+  const [customBidAmount, setCustomBidAmount] = useState<number>(1000);
+
+  // Ensure custom bid is always at least the minimum required to overtake #1
+  useEffect(() => {
+    setCustomBidAmount((prev) => Math.max(prev, minRequiredToClaimRank1));
+  }, [minRequiredToClaimRank1]);
 
   const top3Coins = filteredCoins.slice(0, 3);
   const listCoins = filteredCoins.slice(3);
 
-  const handleClaimRank = () => {
+  const handleClaimRank = (targetCoin?: Coin) => {
+    if (targetCoin) {
+      setSelectedCoin(targetCoin);
+      return;
+    }
+
     if (inputToken.trim()) {
       const match = coins.find(
         (c) =>
@@ -99,7 +111,7 @@ export default function OutbidHomePage() {
       <Navbar />
 
       <main className="flex-1 max-w-5xl w-full mx-auto px-4 sm:px-6 py-8 sm:py-12 space-y-8 sm:space-y-10">
-        {/* 2. Top Live Stats Pill (outbid.lol style) */}
+        {/* 2. Top Live Stats Pill */}
         <div className="flex justify-center">
           <Link
             href="/leaderboard"
@@ -116,7 +128,7 @@ export default function OutbidHomePage() {
           </Link>
         </div>
 
-        {/* 3. Hero Section: "Claim #1 for [ Amount ]" */}
+        {/* 3. Hero Section: "Claim #1 for [X] $BATON" (Dynamic Burn Bidding) */}
         <div className="text-center space-y-6 max-w-2xl mx-auto pt-2">
           <div className="flex items-center justify-center gap-2 sm:gap-3 flex-wrap">
             <h1 className="font-archivo text-3xl sm:text-5xl font-black tracking-tight text-zinc-900 dark:text-white">
@@ -126,32 +138,41 @@ export default function OutbidHomePage() {
             {/* Minus Button */}
             <button
               type="button"
-              onClick={() => setClaimAmountDelta((prev) => Math.max(100, prev - 500))}
-              className="w-8 h-8 rounded-full bg-zinc-200 dark:bg-zinc-800 hover:bg-orange-500 hover:text-white dark:hover:bg-orange-500 text-zinc-700 dark:text-zinc-300 flex items-center justify-center transition-all shadow-sm"
-              title="Decrease required burn amount"
+              onClick={() =>
+                setCustomBidAmount((prev) => Math.max(minRequiredToClaimRank1, prev - 1000))
+              }
+              disabled={customBidAmount <= minRequiredToClaimRank1}
+              className={`w-9 h-9 rounded-full flex items-center justify-center transition-all shadow-sm ${
+                customBidAmount <= minRequiredToClaimRank1
+                  ? "bg-zinc-100 dark:bg-zinc-900 text-zinc-300 dark:text-zinc-700 cursor-not-allowed"
+                  : "bg-zinc-200 dark:bg-zinc-800 hover:bg-orange-500 hover:text-white dark:hover:bg-orange-500 text-zinc-700 dark:text-zinc-300"
+              }`}
+              title={
+                customBidAmount <= minRequiredToClaimRank1
+                  ? `Minimum required to overtake #1 is ${minRequiredToClaimRank1.toLocaleString()} $BATON`
+                  : "Decrease burn bid by 1,000 $BATON"
+              }
             >
               <Minus className="w-4 h-4 stroke-[3]" />
             </button>
 
-            {/* Dynamic Burn Amount */}
-            <span className="font-archivo text-3xl sm:text-5xl font-black text-[#F97316] tracking-tight">
-              {requiredToOvertakeTop1 > 0
-                ? `${requiredToOvertakeTop1.toLocaleString()} $BATON`
-                : "1,000 $BATON"}
+            {/* Dynamic Burn Amount in $BATON */}
+            <span className="font-archivo text-3xl sm:text-5xl font-black text-[#F97316] tracking-tight font-mono-num">
+              {customBidAmount.toLocaleString()} $BATON
             </span>
 
             {/* Plus Button */}
             <button
               type="button"
-              onClick={() => setClaimAmountDelta((prev) => prev + 1000)}
-              className="w-8 h-8 rounded-full bg-zinc-200 dark:bg-zinc-800 hover:bg-orange-500 hover:text-white dark:hover:bg-orange-500 text-zinc-700 dark:text-zinc-300 flex items-center justify-center transition-all shadow-sm"
-              title="Increase required burn amount"
+              onClick={() => setCustomBidAmount((prev) => prev + 1000)}
+              className="w-9 h-9 rounded-full bg-zinc-200 dark:bg-zinc-800 hover:bg-orange-500 hover:text-white dark:hover:bg-orange-500 text-zinc-700 dark:text-zinc-300 flex items-center justify-center transition-all shadow-sm"
+              title="Increase burn bid by 1,000 $BATON"
             >
               <Plus className="w-4 h-4 stroke-[3]" />
             </button>
           </div>
 
-          {/* Claim / Search Bar (outbid.lol style) */}
+          {/* Claim / Search Bar */}
           <div className="p-1.5 sm:p-2 rounded-2xl bg-white dark:bg-[#15171C] border border-zinc-200 dark:border-white/10 shadow-lg shadow-zinc-200/50 dark:shadow-black/60 flex flex-col sm:flex-row items-center gap-2">
             {/* Input */}
             <div className="flex-1 flex items-center gap-2.5 px-3 py-2 w-full">
@@ -185,7 +206,7 @@ export default function OutbidHomePage() {
             {/* Action Button */}
             <button
               type="button"
-              onClick={handleClaimRank}
+              onClick={() => handleClaimRank()}
               className="w-full sm:w-auto px-6 py-2.5 rounded-xl bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white font-mono text-xs font-bold uppercase tracking-wider shadow-md shadow-orange-500/20 active:scale-95 transition-all flex items-center justify-center gap-1.5 shrink-0"
             >
               <Flame className="w-4 h-4 fill-current" />
@@ -232,7 +253,7 @@ export default function OutbidHomePage() {
               </div>
               <button
                 type="button"
-                onClick={handleClaimRank}
+                onClick={() => handleClaimRank()}
                 className="px-6 py-2.5 rounded-xl bg-orange-500 hover:bg-orange-600 text-white font-mono text-xs font-bold uppercase tracking-wider transition-all shadow-md shadow-orange-500/20"
               >
                 Claim #1 Rank Now 🔥
@@ -246,7 +267,7 @@ export default function OutbidHomePage() {
               return (
                 <div
                   key={coin.id}
-                  onClick={() => setSelectedCoin(coin)}
+                  onClick={() => handleClaimRank(coin)}
                   className={`group relative rounded-2xl p-5 sm:p-6 transition-all duration-200 cursor-pointer ${
                     isRank1
                       ? "bg-[#FFF8F3] dark:bg-[#1A1412] border-2 border-orange-500/60 shadow-lg shadow-orange-500/10 hover:border-orange-500"
@@ -345,7 +366,7 @@ export default function OutbidHomePage() {
                         type="button"
                         onClick={(e) => {
                           e.stopPropagation();
-                          setSelectedCoin(coin);
+                          handleClaimRank(coin);
                         }}
                         className="px-4 py-2 rounded-xl bg-orange-500/10 hover:bg-orange-500 text-orange-600 hover:text-white dark:text-orange-400 dark:hover:text-white border border-orange-500/30 text-xs font-bold transition-all shadow-sm flex items-center gap-1"
                       >
@@ -360,7 +381,7 @@ export default function OutbidHomePage() {
           )}
         </div>
 
-        {/* 6. Today's Top Ranking Mini Cards Carousel (outbid.lol screenshot 1 style) */}
+        {/* 6. Today's Top Ranking Mini Cards */}
         {top3Coins.length > 0 && (
           <div className="space-y-2 pt-2">
             <div className="flex items-center justify-between text-xs font-mono">
@@ -374,7 +395,7 @@ export default function OutbidHomePage() {
               {top3Coins.map((c, i) => (
                 <div
                   key={`today-${c.id}`}
-                  onClick={() => setSelectedCoin(c)}
+                  onClick={() => handleClaimRank(c)}
                   className="p-3 rounded-xl bg-white dark:bg-[#15171C] border border-zinc-200 dark:border-white/10 flex items-center gap-3 cursor-pointer hover:border-orange-500/40 transition-all"
                 >
                   <span className="font-mono text-xs font-bold text-zinc-400">#{i + 1}</span>
@@ -399,7 +420,7 @@ export default function OutbidHomePage() {
           </div>
         )}
 
-        {/* 7. Latest Activity Live Strip (outbid.lol screenshot 2 style) */}
+        {/* 7. Latest Activity Live Strip */}
         <div className="space-y-2 pt-4">
           <div className="flex items-center gap-2 text-xs font-mono font-bold text-zinc-500">
             <span className="w-2 h-2 rounded-full bg-rose-500 animate-pulse" />
@@ -436,7 +457,7 @@ export default function OutbidHomePage() {
           </div>
         </div>
 
-        {/* 8. Ranks #4 and Beyond (Clean Compact List - outbid.lol screenshot 2 style) */}
+        {/* 8. Ranks #4 and Beyond */}
         {listCoins.length > 0 && (
           <div className="space-y-3 pt-2">
             <div className="divide-y divide-zinc-200/80 dark:divide-white/5">
@@ -445,7 +466,7 @@ export default function OutbidHomePage() {
                 return (
                   <div
                     key={coin.id}
-                    onClick={() => setSelectedCoin(coin)}
+                    onClick={() => handleClaimRank(coin)}
                     className="py-4 px-2 sm:px-4 rounded-xl flex items-center justify-between gap-4 hover:bg-white dark:hover:bg-[#15171C] transition-colors cursor-pointer group"
                   >
                     {/* Rank & Token Info */}
@@ -498,7 +519,7 @@ export default function OutbidHomePage() {
                         type="button"
                         onClick={(e) => {
                           e.stopPropagation();
-                          setSelectedCoin(coin);
+                          handleClaimRank(coin);
                         }}
                         className="px-3 py-1.5 rounded-lg bg-zinc-100 dark:bg-zinc-800 hover:bg-orange-500 hover:text-white text-xs font-bold transition-all"
                       >
@@ -540,6 +561,7 @@ export default function OutbidHomePage() {
         <BurnModal
           coin={selectedCoin}
           isOpen={!!selectedCoin}
+          initialAmount={customBidAmount}
           onClose={() => setSelectedCoin(null)}
           onSuccess={() => {
             refresh();
