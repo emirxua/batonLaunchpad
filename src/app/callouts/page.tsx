@@ -241,7 +241,7 @@ export default function CalloutsPage() {
       return {
         rank: index + 1,
         wallet,
-        username: `AlphaCaller_${index + 1}`,
+        username: `Caller ${wallet.slice(0, 4)}...${wallet.slice(-4)}`,
         totalCalls,
         winRate,
         avgRoi,

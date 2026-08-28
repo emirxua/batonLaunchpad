@@ -151,7 +151,7 @@ export const TopCallersLeaderboard: React.FC<TopCallersLeaderboardProps> = ({
 
                     <div>
                       <div className="font-archivo text-base font-bold text-zinc-900 dark:text-white flex items-center gap-1.5">
-                        <span>{caller.username || `AlphaCaller_${caller.rank}`}</span>
+                        <span>{caller.username || `Caller ${caller.wallet.slice(0, 4)}...${caller.wallet.slice(-4)}`}</span>
                         {isRank1 && <Star className="w-4 h-4 text-amber-500 fill-current" />}
                       </div>
                       <div className="font-mono text-xs text-zinc-400 flex items-center gap-1">
@@ -283,7 +283,7 @@ export const TopCallersLeaderboard: React.FC<TopCallersLeaderboardProps> = ({
                         </div>
                         <div>
                           <div className="font-archivo text-xs sm:text-sm font-bold text-zinc-900 dark:text-white">
-                            {caller.username || `AlphaCaller_${caller.rank}`}
+                            {caller.username || `Caller ${caller.wallet.slice(0, 4)}...${caller.wallet.slice(-4)}`}
                           </div>
                           <div className="font-mono text-[11px] text-zinc-400 flex items-center gap-1">
                             <span>{caller.wallet.slice(0, 4)}...{caller.wallet.slice(-4)}</span>
