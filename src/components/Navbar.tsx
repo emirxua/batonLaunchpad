@@ -38,6 +38,7 @@ export const Navbar: React.FC = () => {
 
   const navLinks = [
     { name: "Directory", href: "/" },
+    { name: "Alpha Callouts", href: "/callouts" },
     { name: "Launchpad Hub", href: "/launchpad" },
     { name: "Leaderboard", href: "/leaderboard" },
     { name: "Submit Token", href: "/submit" },

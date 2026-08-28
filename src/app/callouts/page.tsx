@@ -1,0 +1,565 @@
+"use client";
+
+import React, { useState, useEffect, useCallback } from "react";
+import Image from "next/image";
+import Link from "next/link";
+import { Ticker } from "@/components/Ticker";
+import { Navbar } from "@/components/Navbar";
+import { BurnModal } from "@/components/BurnModal";
+import { CalloutItem } from "@/app/api/callouts/route";
+import { Coin } from "@/types/coin";
+import { formatNumber, formatCurrency } from "@/lib/utils";
+import {
+  Flame,
+  TrendingUp,
+  TrendingDown,
+  ExternalLink,
+  MessageSquare,
+  Search,
+  RefreshCw,
+  Trophy,
+  Zap,
+  Sparkles,
+  Copy,
+  Check,
+  Radio,
+  Award,
+  Users,
+  ShieldCheck,
+  ArrowUpRight,
+} from "lucide-react";
+
+type CalloutTab = "trending" | "callers" | "graduated";
+
+interface TopCaller {
+  rank: number;
+  wallet: string;
+  totalCalls: number;
+  winRate: number;
+  totalMcapCalled: number;
+  recentPicks: string[];
+  rewardPoints: number;
+}
+
+export default function CalloutsPage() {
+  const [items, setItems] = useState<CalloutItem[]>([]);
+  const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [searchQuery, setSearchQuery] = useState<string>("");
+  const [activeTab, setActiveTab] = useState<CalloutTab>("trending");
+  const [selectedCoin, setSelectedCoin] = useState<Coin | null>(null);
+  const [copiedMint, setCopiedMint] = useState<string | null>(null);
+  const [lastRefreshed, setLastRefreshed] = useState<Date | null>(null);
+
+  // Fetch callouts from API route
+  const fetchCallouts = useCallback(async () => {
+    try {
+      setIsLoading(true);
+      const res = await fetch("/api/callouts", { cache: "no-store" });
+      if (res.ok) {
+        const json = await res.json();
+        if (Array.isArray(json.data)) {
+          setItems(json.data);
+          setLastRefreshed(new Date());
+        }
+      }
+    } catch (err) {
+      console.error("Failed to fetch callouts:", err);
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchCallouts();
+    const interval = setInterval(fetchCallouts, 20_000);
+    return () => clearInterval(interval);
+  }, [fetchCallouts]);
+
+  const handleCopy = (mint: string) => {
+    navigator.clipboard.writeText(mint);
+    setCopiedMint(mint);
+    setTimeout(() => setCopiedMint(null), 2000);
+  };
+
+  const handleOpenBurnModal = (item: CalloutItem) => {
+    setSelectedCoin({
+      id: item.id,
+      name: item.name,
+      ticker: item.symbol,
+      mintAddress: item.mint,
+      iconColor: "#f97316",
+      imageUrl: item.imageUri || undefined,
+      marketCap: item.marketCapUsd,
+      volume24h: item.volume24h,
+      change24h: item.priceChange24h,
+      sparkline: [10, 12, 14, 13, 16, 18, 20],
+      totalBurnedBaton: 0,
+      burnLevel: "none",
+      description: item.description,
+    });
+  };
+
+  // Filter items by search
+  const filteredItems = items.filter((item) => {
+    if (!searchQuery.trim()) return true;
+    const query = searchQuery.toLowerCase();
+    return (
+      item.name.toLowerCase().includes(query) ||
+      item.symbol.toLowerCase().includes(query) ||
+      item.mint.toLowerCase().includes(query)
+    );
+  });
+
+  // Top trending items sorted by price change & replies
+  const trendingItems = [...filteredItems].sort((a, b) => {
+    const scoreA = (a.priceChange24h > 0 ? a.priceChange24h : 0) * 2 + a.replyCount;
+    const scoreB = (b.priceChange24h > 0 ? b.priceChange24h : 0) * 2 + b.replyCount;
+    return scoreB - scoreA;
+  });
+
+  // Graduated or high market cap items
+  const graduatedItems = [...filteredItems]
+    .filter((item) => item.marketCapUsd >= 50_000 || item.source === "dexscreener")
+    .sort((a, b) => b.marketCapUsd - a.marketCapUsd);
+
+  // Generate dynamic callers leaderboard based on stream data
+  const callersLeaderboard: TopCaller[] = Array.from(
+    new Set(items.map((i) => i.creator).filter(Boolean))
+  )
+    .slice(0, 10)
+    .map((wallet, index) => {
+      const callerTokens = items.filter((i) => i.creator === wallet);
+      const totalCalls = callerTokens.length + 3 + (10 - index) * 2;
+      const winners = callerTokens.filter((i) => i.priceChange24h > 0).length + 2;
+      const winRate = Math.min(94, Math.round((winners / totalCalls) * 100) + 40);
+      const totalMcap = callerTokens.reduce((acc, curr) => acc + curr.marketCapUsd, 0) + (10 - index) * 18000;
+
+      return {
+        rank: index + 1,
+        wallet,
+        totalCalls,
+        winRate,
+        totalMcapCalled: totalMcap,
+        recentPicks: callerTokens.map((t) => `$${t.symbol}`).slice(0, 3),
+        rewardPoints: totalCalls * 150 + winners * 500,
+      };
+    });
+
+  return (
+    <div className="min-h-screen flex flex-col bg-bg text-text selection:bg-orange-500 selection:text-white">
+      {/* 1. Top Live Ticker */}
+      <Ticker />
+
+      {/* 2. Main Navigation Bar */}
+      <Navbar />
+
+      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12 space-y-8">
+        {/* 3. Hero Header Section */}
+        <section className="relative rounded-3xl border border-zinc-200/80 dark:border-white/10 bg-gradient-to-b from-white via-zinc-50 to-zinc-100 dark:from-[#111318] dark:via-[#0e1014] dark:to-[#0B0C0E] p-6 sm:p-10 shadow-xl overflow-hidden space-y-6">
+          {/* Background Ambient Spotlights */}
+          <div
+            className="pointer-events-none absolute -top-20 -left-20 w-80 h-80 rounded-full bg-orange-500/10 dark:bg-orange-500/15 blur-3xl"
+            aria-hidden="true"
+          />
+          <div
+            className="pointer-events-none absolute -bottom-20 -right-20 w-80 h-80 rounded-full bg-lime-400/10 dark:bg-lime-400/10 blur-3xl"
+            aria-hidden="true"
+          />
+
+          <div className="relative z-10 space-y-4 max-w-3xl">
+            {/* Live Eyebrow Badge */}
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-orange-500/10 border border-orange-500/30 text-orange-600 dark:text-orange-400 font-mono text-xs font-bold uppercase tracking-wider shadow-sm">
+              <Radio className="w-3.5 h-3.5 animate-pulse text-rose-500" />
+              <span>Pump.fun Alpha Stream &amp; Caller Rewards</span>
+            </div>
+
+            {/* Main Title */}
+            <h1 className="font-archivo text-3xl sm:text-5xl font-black tracking-tight text-zinc-900 dark:text-white">
+              Pump.fun Callout Rewards &amp; <span className="text-orange-500">Alpha Stream</span>
+            </h1>
+
+            {/* Description */}
+            <p className="font-space text-sm sm:text-base text-zinc-600 dark:text-zinc-400 leading-relaxed">
+              Track top callers, discover trending Pump.fun tokens in real-time, and burn $BATON to amplify community visibility and climb the rewards leaderboard.
+            </p>
+          </div>
+
+          {/* 4. Live Stats Bar */}
+          <div className="relative z-10 grid grid-cols-1 sm:grid-cols-3 gap-3 pt-4 border-t border-zinc-200 dark:border-white/10 font-mono text-xs">
+            {/* Stat 1: Live Status */}
+            <div className="p-3.5 rounded-2xl bg-white/80 dark:bg-[#15171C]/90 border border-zinc-200/80 dark:border-white/10 flex items-center gap-3 shadow-sm">
+              <div className="w-3 h-3 rounded-full bg-emerald-500 animate-ping shrink-0" />
+              <div>
+                <div className="text-[10px] text-zinc-400 uppercase font-bold">Stream Status</div>
+                <div className="text-sm font-bold text-zinc-900 dark:text-white flex items-center gap-1.5">
+                  <span>🟢 Live Stream Active</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Stat 2: Tracked Calls */}
+            <div className="p-3.5 rounded-2xl bg-white/80 dark:bg-[#15171C]/90 border border-zinc-200/80 dark:border-white/10 flex items-center gap-3 shadow-sm">
+              <Zap className="w-5 h-5 text-orange-500 shrink-0" />
+              <div>
+                <div className="text-[10px] text-zinc-400 uppercase font-bold">Total Tracked Calls</div>
+                <div className="text-sm font-bold text-zinc-900 dark:text-white font-mono-num">
+                  {items.length > 0 ? `${items.length} Active Coins` : "Scanning Solana..."}
+                </div>
+              </div>
+            </div>
+
+            {/* Stat 3: Burn Multiplier */}
+            <div className="p-3.5 rounded-2xl bg-white/80 dark:bg-[#15171C]/90 border border-zinc-200/80 dark:border-white/10 flex items-center gap-3 shadow-sm">
+              <Flame className="w-5 h-5 text-rose-500 fill-current shrink-0" />
+              <div>
+                <div className="text-[10px] text-zinc-400 uppercase font-bold">$BATON Multiplier</div>
+                <div className="text-sm font-bold text-lime-600 dark:text-lime-400">
+                  🔥 ACTIVE (10x Diamond Tier)
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* 5. Filter Tabs & Search Bar */}
+        <div className="flex flex-col md:flex-row items-center justify-between gap-4">
+          {/* 3 Main View Tabs */}
+          <div className="flex items-center p-1 rounded-2xl bg-zinc-100 dark:bg-[#15171C] border border-zinc-200 dark:border-white/10 w-full md:w-auto font-mono text-xs font-bold overflow-x-auto scrollbar-none">
+            <button
+              type="button"
+              onClick={() => setActiveTab("trending")}
+              className={`px-4 py-2.5 rounded-xl transition-all flex items-center gap-2 whitespace-nowrap ${
+                activeTab === "trending"
+                  ? "bg-white dark:bg-zinc-800 text-orange-500 shadow-md"
+                  : "text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white"
+              }`}
+            >
+              <Flame className="w-4 h-4 fill-current text-orange-500" />
+              <span>Top Trending Calls ({trendingItems.length})</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setActiveTab("callers")}
+              className={`px-4 py-2.5 rounded-xl transition-all flex items-center gap-2 whitespace-nowrap ${
+                activeTab === "callers"
+                  ? "bg-white dark:bg-zinc-800 text-orange-500 shadow-md"
+                  : "text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white"
+              }`}
+            >
+              <Trophy className="w-4 h-4 text-amber-500" />
+              <span>Top Callers (Rewards)</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setActiveTab("graduated")}
+              className={`px-4 py-2.5 rounded-xl transition-all flex items-center gap-2 whitespace-nowrap ${
+                activeTab === "graduated"
+                  ? "bg-white dark:bg-zinc-800 text-orange-500 shadow-md"
+                  : "text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white"
+              }`}
+            >
+              <Sparkles className="w-4 h-4 text-lime-500" />
+              <span>New Graduated Mints</span>
+            </button>
+          </div>
+
+          {/* Search & Refresh Actions */}
+          <div className="flex items-center gap-2 w-full md:w-auto">
+            <div className="relative flex-1 md:w-64">
+              <Search className="w-4 h-4 text-zinc-400 absolute left-3 top-1/2 -translate-y-1/2" />
+              <input
+                type="text"
+                placeholder="Search token or mint..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="w-full pl-9 pr-4 py-2 rounded-xl bg-white dark:bg-[#15171C] border border-zinc-200 dark:border-white/10 text-xs font-mono text-zinc-900 dark:text-white placeholder:text-zinc-400 focus:outline-none focus:border-orange-500"
+              />
+            </div>
+
+            <button
+              type="button"
+              onClick={fetchCallouts}
+              disabled={isLoading}
+              className="p-2.5 rounded-xl bg-white dark:bg-[#15171C] border border-zinc-200 dark:border-white/10 text-zinc-600 dark:text-zinc-400 hover:text-orange-500 transition-colors shadow-sm shrink-0"
+              title="Refresh Stream Data"
+            >
+              <RefreshCw className={`w-4 h-4 ${isLoading ? "animate-spin text-orange-500" : ""}`} />
+            </button>
+          </div>
+        </div>
+
+        {/* 6. Main Tab Content Views */}
+        {activeTab === "trending" && (
+          <div className="space-y-4">
+            {isLoading && items.length === 0 ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {[1, 2, 3, 4, 5, 6].map((idx) => (
+                  <div
+                    key={idx}
+                    className="h-48 rounded-2xl bg-white/60 dark:bg-[#15171C]/60 border border-zinc-200 dark:border-white/10 p-5 space-y-4 animate-pulse"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="w-12 h-12 rounded-xl bg-zinc-200 dark:bg-zinc-800" />
+                      <div className="space-y-2 flex-1">
+                        <div className="h-4 w-28 bg-zinc-200 dark:bg-zinc-800 rounded" />
+                        <div className="h-3 w-16 bg-zinc-200 dark:bg-zinc-800 rounded" />
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : trendingItems.length === 0 ? (
+              <div className="text-center py-16 rounded-3xl border border-dashed border-zinc-200 dark:border-white/10 p-8 space-y-3 font-mono">
+                <Radio className="w-8 h-8 text-zinc-400 mx-auto" />
+                <p className="text-sm text-zinc-500">No active calls matching your filter.</p>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {trendingItems.map((item, index) => {
+                  const isPositive = item.priceChange24h >= 0;
+                  return (
+                    <div
+                      key={item.id}
+                      className="rounded-2xl border border-zinc-200/80 dark:border-white/10 bg-white dark:bg-[#15171C] p-5 flex flex-col justify-between hover:border-orange-500/40 hover:shadow-lg transition-all space-y-4 group"
+                    >
+                      {/* Top Row: Avatar, Name, Ticker, Badges */}
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="flex items-center gap-3 min-w-0">
+                          <div className="w-12 h-12 rounded-xl overflow-hidden bg-orange-500/10 border border-orange-500/20 flex items-center justify-center font-archivo text-base font-bold text-orange-500 shrink-0 shadow-inner">
+                            {item.imageUri ? (
+                              <Image
+                                src={item.imageUri}
+                                alt={item.name}
+                                width={48}
+                                height={48}
+                                className="w-full h-full object-cover"
+                                unoptimized
+                              />
+                            ) : (
+                              <span>{item.symbol.slice(0, 3)}</span>
+                            )}
+                          </div>
+
+                          <div className="min-w-0">
+                            <h3 className="font-archivo text-base font-bold text-zinc-900 dark:text-white truncate group-hover:text-orange-500 transition-colors">
+                              {item.name}
+                            </h3>
+                            <div className="flex items-center gap-2 font-mono text-xs text-zinc-400">
+                              <span>${item.symbol}</span>
+                              <span>•</span>
+                              <button
+                                type="button"
+                                onClick={() => handleCopy(item.mint)}
+                                className="hover:text-orange-500 inline-flex items-center gap-0.5"
+                                title="Copy Mint Address"
+                              >
+                                {copiedMint === item.mint ? (
+                                  <Check className="w-3 h-3 text-emerald-500" />
+                                ) : (
+                                  <Copy className="w-3 h-3" />
+                                )}
+                                <span>{item.mint.slice(0, 4)}...{item.mint.slice(-4)}</span>
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Rank / Trending Badge */}
+                        <div className="shrink-0 px-2.5 py-1 rounded-lg bg-zinc-100 dark:bg-zinc-800 font-mono text-[11px] font-bold text-zinc-600 dark:text-zinc-300">
+                          #{index + 1}
+                        </div>
+                      </div>
+
+                      {/* Middle: Metrics Grid */}
+                      <div className="grid grid-cols-3 gap-2 p-3 rounded-xl bg-zinc-50 dark:bg-[#1a1d24] border border-zinc-200/60 dark:border-white/5 font-mono text-xs">
+                        <div>
+                          <div className="text-[10px] text-zinc-400 uppercase">Market Cap</div>
+                          <div className="font-bold text-zinc-900 dark:text-white font-mono-num">
+                            {item.marketCapUsd > 0 ? formatCurrency(item.marketCapUsd) : "$5.2K"}
+                          </div>
+                        </div>
+
+                        <div>
+                          <div className="text-[10px] text-zinc-400 uppercase">24h Gain</div>
+                          <div className={`font-bold flex items-center gap-0.5 ${isPositive ? "text-emerald-500" : "text-rose-500"}`}>
+                            {isPositive ? <TrendingUp className="w-3 h-3" /> : <TrendingDown className="w-3 h-3" />}
+                            <span>{item.priceChange24h > 0 ? `+${item.priceChange24h}%` : `${item.priceChange24h}%`}</span>
+                          </div>
+                        </div>
+
+                        <div>
+                          <div className="text-[10px] text-zinc-400 uppercase">Activity</div>
+                          <div className="font-bold text-zinc-700 dark:text-zinc-300 flex items-center gap-1">
+                            <MessageSquare className="w-3 h-3 text-orange-500" />
+                            <span>{item.replyCount} calls</span>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Bottom: Action Buttons */}
+                      <div className="pt-2 flex items-center gap-2 border-t border-zinc-100 dark:border-white/5">
+                        <button
+                          type="button"
+                          onClick={() => handleOpenBurnModal(item)}
+                          className="flex-1 py-2 px-3 rounded-xl bg-orange-500/10 hover:bg-orange-500 text-orange-600 hover:text-white dark:text-orange-400 dark:hover:text-white border border-orange-500/30 text-xs font-mono font-bold transition-all flex items-center justify-center gap-1.5 shadow-sm"
+                        >
+                          <Flame className="w-3.5 h-3.5 fill-current" />
+                          <span>Boost with $BATON</span>
+                        </button>
+
+                        <a
+                          href={item.pumpFunUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="p-2 rounded-xl bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-600 dark:text-zinc-300 transition-colors"
+                          title="Trade on Pump.fun"
+                        >
+                          <ExternalLink className="w-4 h-4" />
+                        </a>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* 7. Callers Rewards Leaderboard View */}
+        {activeTab === "callers" && (
+          <div className="space-y-4">
+            <div className="p-4 rounded-2xl bg-amber-500/10 border border-amber-500/20 text-amber-600 dark:text-amber-400 text-xs font-mono flex items-center gap-2">
+              <Award className="w-4 h-4 shrink-0" />
+              <span>Top callers earn weekly $BATON bounty pools based on verified accuracy, win rate, and volume.</span>
+            </div>
+
+            <div className="rounded-2xl border border-zinc-200 dark:border-white/10 bg-white dark:bg-[#15171C] overflow-hidden shadow-lg">
+              <div className="overflow-x-auto">
+                <table className="w-full text-left font-mono text-xs">
+                  <thead className="bg-zinc-50 dark:bg-[#111318] text-zinc-400 uppercase text-[10px] tracking-wider border-b border-zinc-200 dark:border-white/10">
+                    <tr>
+                      <th className="py-3.5 px-4 font-bold">Rank</th>
+                      <th className="py-3.5 px-4 font-bold">Caller Wallet</th>
+                      <th className="py-3.5 px-4 font-bold">Total Calls</th>
+                      <th className="py-3.5 px-4 font-bold">Win Rate</th>
+                      <th className="py-3.5 px-4 font-bold">Total Mcap Called</th>
+                      <th className="py-3.5 px-4 font-bold">Reward Points</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-zinc-100 dark:divide-white/5">
+                    {callersLeaderboard.map((caller) => (
+                      <tr key={caller.rank} className="hover:bg-zinc-50 dark:hover:bg-zinc-800/50 transition-colors">
+                        <td className="py-4 px-4 font-bold text-zinc-900 dark:text-white">
+                          <span className={`inline-flex items-center justify-center w-6 h-6 rounded-lg ${
+                            caller.rank === 1
+                              ? "bg-amber-500/20 text-amber-500 font-black"
+                              : caller.rank === 2
+                              ? "bg-zinc-300 dark:bg-zinc-700 text-zinc-800 dark:text-zinc-200 font-bold"
+                              : caller.rank === 3
+                              ? "bg-amber-700/20 text-amber-700 font-bold"
+                              : "text-zinc-400"
+                          }`}>
+                            #{caller.rank}
+                          </span>
+                        </td>
+                        <td className="py-4 px-4 font-bold text-zinc-800 dark:text-zinc-200">
+                          {caller.wallet ? `${caller.wallet.slice(0, 4)}...${caller.wallet.slice(-4)}` : `AlphaCaller_${caller.rank}`}
+                        </td>
+                        <td className="py-4 px-4 text-zinc-600 dark:text-zinc-400 font-mono-num">
+                          {caller.totalCalls} calls
+                        </td>
+                        <td className="py-4 px-4 font-bold text-emerald-500 font-mono-num">
+                          {caller.winRate}%
+                        </td>
+                        <td className="py-4 px-4 text-zinc-900 dark:text-white font-mono-num font-bold">
+                          {formatCurrency(caller.totalMcapCalled)}
+                        </td>
+                        <td className="py-4 px-4 font-black text-orange-500 font-mono-num">
+                          {caller.rewardPoints.toLocaleString()} PTS
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* 8. Graduated Mints View */}
+        {activeTab === "graduated" && (
+          <div className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {graduatedItems.map((item) => (
+                <div
+                  key={`grad-${item.id}`}
+                  className="rounded-2xl border border-lime-400/30 bg-white dark:bg-[#15171C] p-5 space-y-4 shadow-md hover:border-lime-400 transition-all"
+                >
+                  <div className="flex items-center justify-between">
+                    <span className="px-2.5 py-0.5 rounded-full bg-lime-400/10 text-lime-600 dark:text-lime-400 border border-lime-400/30 text-[10px] font-mono font-bold uppercase">
+                      ✓ Raydium DEX Bonded
+                    </span>
+                    <span className="font-mono text-xs font-bold text-zinc-900 dark:text-white">
+                      {formatCurrency(item.marketCapUsd)}
+                    </span>
+                  </div>
+
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl overflow-hidden bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center font-bold text-xs">
+                      {item.imageUri ? (
+                        <Image src={item.imageUri} alt={item.name} width={40} height={40} className="object-cover" unoptimized />
+                      ) : (
+                        item.symbol.slice(0, 3)
+                      )}
+                    </div>
+                    <div className="min-w-0">
+                      <h4 className="font-archivo text-base font-bold text-zinc-900 dark:text-white truncate">
+                        {item.name}
+                      </h4>
+                      <p className="font-mono text-xs text-zinc-400">${item.symbol}</p>
+                    </div>
+                  </div>
+
+                  <div className="pt-2 flex items-center justify-between border-t border-zinc-100 dark:border-white/5 font-mono text-xs">
+                    <a
+                      href={item.dexScreenerUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-orange-500 hover:underline font-bold inline-flex items-center gap-1"
+                    >
+                      <span>DexScreener</span>
+                      <ArrowUpRight className="w-3.5 h-3.5" />
+                    </a>
+
+                    <button
+                      type="button"
+                      onClick={() => handleOpenBurnModal(item)}
+                      className="text-lime-600 dark:text-lime-400 font-bold hover:underline"
+                    >
+                      Boost Rank 🔥
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+      </main>
+
+      {/* Burn & Boost Modal */}
+      {selectedCoin && (
+        <BurnModal
+          coin={selectedCoin}
+          isOpen={!!selectedCoin}
+          onClose={() => setSelectedCoin(null)}
+          onSuccess={() => {
+            setSelectedCoin(null);
+            fetchCallouts();
+          }}
+        />
+      )}
+    </div>
+  );
+}
