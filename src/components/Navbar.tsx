@@ -50,7 +50,7 @@ export const Navbar: React.FC = () => {
   return (
     <>
       <header className="w-full bg-white/90 dark:bg-[#0B0C0E]/90 backdrop-blur-md border-b border-zinc-200 dark:border-white/10 sticky top-0 z-40">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-4">
+        <div className="w-full max-w-7xl mx-auto px-4 py-3 flex items-center justify-between gap-4">
           {/* Left: Logo & All-time/Today Pill */}
           <div className="flex items-center gap-4">
             <Link href="/" className="flex items-center gap-2 group select-none">
@@ -108,13 +108,13 @@ export const Navbar: React.FC = () => {
           </nav>
 
           {/* Right Action Icons & Wallet */}
-          <div className="flex items-center gap-2 sm:gap-3">
+          <div className="flex items-center gap-3 shrink-0">
             {/* Launchpad CTA button */}
             <Link
               href="/launchpad"
-              className="hidden sm:inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-orange-500/10 hover:bg-orange-500 text-orange-600 hover:text-white dark:text-orange-400 dark:hover:text-white border border-orange-500/30 text-xs font-mono font-bold transition-all shadow-sm"
+              className="hidden sm:inline-flex h-10 px-4 items-center gap-2 whitespace-nowrap rounded-xl text-sm font-medium bg-orange-500/10 hover:bg-orange-500 text-orange-600 hover:text-white dark:text-orange-400 dark:hover:text-white border border-orange-500/30 transition-all shadow-sm shrink-0"
             >
-              <Rocket className="w-3.5 h-3.5" />
+              <Rocket className="w-4 h-4" />
               <span>Explore Launchpad 🚀</span>
             </Link>
 
@@ -122,7 +122,7 @@ export const Navbar: React.FC = () => {
             <ThemeToggle />
 
             {/* Desktop Connect Wallet */}
-            <div className="hidden sm:block">
+            <div className="hidden sm:flex items-center shrink-0">
               {mounted && <WalletMultiButton />}
             </div>
 
@@ -130,7 +130,7 @@ export const Navbar: React.FC = () => {
             <button
               type="button"
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              className="md:hidden p-2 rounded-xl border border-zinc-200 dark:border-zinc-800 text-zinc-700 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-white transition-colors"
+              className="md:hidden h-10 w-10 flex items-center justify-center rounded-xl border border-zinc-200 dark:border-zinc-800 text-zinc-700 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-white transition-colors shrink-0"
               aria-label="Toggle navigation menu"
             >
               {mobileMenuOpen ? (

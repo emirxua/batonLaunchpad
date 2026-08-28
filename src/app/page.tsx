@@ -120,7 +120,7 @@ export default function OutbidHomePage() {
             <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
             <span className="font-bold text-zinc-900 dark:text-white">Live On-Chain Engine</span>
             <span className="text-zinc-400">•</span>
-            <span>{Math.round(totalBurned).toLocaleString()} total burned $BATON</span>
+            <span>{Math.round(totalBurned).toLocaleString("en-US")} BATON burned</span>
             <span className="text-zinc-400">•</span>
             <span className="text-orange-500 font-bold group-hover:underline flex items-center gap-0.5">
               see stats <ArrowRight className="w-3 h-3 inline" />
@@ -128,7 +128,7 @@ export default function OutbidHomePage() {
           </Link>
         </div>
 
-        {/* 3. Hero Section: "Claim #1 for [X] $BATON" (Dynamic Burn Bidding) */}
+        {/* 3. Hero Section: "Claim #1 for [X] BATON" */}
         <div className="text-center space-y-6 max-w-2xl mx-auto pt-2">
           <div className="flex items-center justify-center gap-2 sm:gap-3 flex-wrap">
             <h1 className="font-archivo text-3xl sm:text-5xl font-black tracking-tight text-zinc-900 dark:text-white">
@@ -149,16 +149,16 @@ export default function OutbidHomePage() {
               }`}
               title={
                 customBidAmount <= minRequiredToClaimRank1
-                  ? `Minimum required to overtake #1 is ${minRequiredToClaimRank1.toLocaleString()} $BATON`
-                  : "Decrease burn bid by 1,000 $BATON"
+                  ? `Minimum required to overtake #1 is ${minRequiredToClaimRank1.toLocaleString("en-US")} BATON`
+                  : "Decrease burn bid by 1,000 BATON"
               }
             >
               <Minus className="w-4 h-4 stroke-[3]" />
             </button>
 
-            {/* Dynamic Burn Amount in $BATON */}
+            {/* Dynamic Burn Amount in BATON */}
             <span className="font-archivo text-3xl sm:text-5xl font-black text-[#F97316] tracking-tight font-mono-num">
-              {customBidAmount.toLocaleString()} $BATON
+              {customBidAmount.toLocaleString("en-US")} BATON
             </span>
 
             {/* Plus Button */}
@@ -166,7 +166,7 @@ export default function OutbidHomePage() {
               type="button"
               onClick={() => setCustomBidAmount((prev) => prev + 1000)}
               className="w-9 h-9 rounded-full bg-zinc-200 dark:bg-zinc-800 hover:bg-orange-500 hover:text-white dark:hover:bg-orange-500 text-zinc-700 dark:text-zinc-300 flex items-center justify-center transition-all shadow-sm"
-              title="Increase burn bid by 1,000 $BATON"
+              title="Increase burn bid by 1,000 BATON"
             >
               <Plus className="w-4 h-4 stroke-[3]" />
             </button>
@@ -354,8 +354,8 @@ export default function OutbidHomePage() {
                       <div className="text-left sm:text-right">
                         <div className="text-lg sm:text-2xl font-black text-orange-500 font-mono-num">
                           {coin.totalBurnedBaton > 0
-                            ? `${coin.totalBurnedBaton.toLocaleString()} $BATON`
-                            : "0 $BATON"}
+                            ? `${coin.totalBurnedBaton.toLocaleString("en-US")} BATON`
+                            : "0 BATON"}
                         </div>
                         <div className="text-[10px] text-zinc-400 uppercase font-bold">
                           Total Burn Score
@@ -411,7 +411,7 @@ export default function OutbidHomePage() {
                       {c.name}
                     </div>
                     <div className="text-[11px] font-mono font-bold text-orange-500">
-                      {c.totalBurnedBaton > 0 ? `${formatNumber(c.totalBurnedBaton)} $BATON` : "0 $BATON"}
+                      {c.totalBurnedBaton > 0 ? `${formatNumber(c.totalBurnedBaton)} BATON` : "0 BATON"}
                     </div>
                   </div>
                 </div>
@@ -511,7 +511,7 @@ export default function OutbidHomePage() {
                     <div className="flex items-center gap-4 shrink-0 font-mono">
                       <div className="text-right">
                         <div className="text-base font-black text-orange-500 font-mono-num">
-                          {coin.totalBurnedBaton > 0 ? `${coin.totalBurnedBaton.toLocaleString()} $BATON` : "0 $BATON"}
+                          {coin.totalBurnedBaton > 0 ? `${coin.totalBurnedBaton.toLocaleString("en-US")} BATON` : "0 BATON"}
                         </div>
                       </div>
 
