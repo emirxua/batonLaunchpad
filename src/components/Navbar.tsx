@@ -4,7 +4,7 @@ import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { useWallet } from "@solana/wallet-adapter-react";
 import dynamic from "next/dynamic";
-import { Menu, X, Wallet, Trophy, Rocket } from "lucide-react";
+import { Menu, X, Wallet, Trophy, Rocket, Flame } from "lucide-react";
 import { ThemeToggle } from "@/components/ThemeToggle";
 
 // Dynamic import for WalletMultiButton to prevent SSR hydration mismatches
@@ -38,7 +38,7 @@ export const Navbar: React.FC = () => {
 
   const navLinks = [
     { name: "Directory", href: "/" },
-    { name: "Alpha Callouts", href: "/callouts" },
+    { name: "Callout Rewards", href: "/callouts", isNew: true, icon: Flame },
     { name: "Launchpad Hub", href: "/launchpad" },
     { name: "Leaderboard", href: "/leaderboard" },
     { name: "Submit Token", href: "/submit" },
@@ -53,8 +53,8 @@ export const Navbar: React.FC = () => {
       <header className="w-full bg-white/90 dark:bg-[#0B0C0E]/90 backdrop-blur-md border-b border-zinc-200 dark:border-white/10 sticky top-0 z-40">
         <div className="w-full max-w-7xl mx-auto px-4 py-3 flex items-center justify-between gap-4">
           {/* Left: Logo & All-time/Today Pill */}
-          <div className="flex items-center gap-4">
-            <Link href="/" className="flex items-center gap-2 group select-none">
+          <div className="flex items-center gap-4 shrink-0">
+            <Link href="/" className="flex items-center gap-2 group select-none shrink-0">
               {/* Outbid horizontal bars icon */}
               <div className="flex flex-col gap-1 w-6 h-4 justify-center">
                 <span className="w-full h-1 bg-zinc-900 dark:bg-white rounded-full transition-transform group-hover:scale-x-110 origin-left" />
@@ -68,14 +68,15 @@ export const Navbar: React.FC = () => {
             </Link>
 
             {/* Pill Filter Toggle: All-time / Today */}
-            <div className="hidden lg:flex items-center p-1 bg-zinc-100 dark:bg-zinc-900/90 border border-zinc-200 dark:border-white/10 rounded-full font-mono text-xs font-bold">
+            <div className="hidden lg:flex items-center p-1 bg-zinc-100 dark:bg-zinc-900/90 border border-zinc-200 dark:border-white/10 rounded-full font-mono text-xs font-bold shrink-0">
               <button
                 type="button"
                 onClick={() => setTimeFilter("all-time")}
-                className={`px-3 py-1 rounded-full transition-all flex items-center gap-1.5 ${timeFilter === "all-time"
+                className={`px-3 py-1 rounded-full transition-all flex items-center gap-1.5 ${
+                  timeFilter === "all-time"
                     ? "bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white shadow-sm"
                     : "text-zinc-500 hover:text-zinc-900 dark:hover:text-white"
-                  }`}
+                }`}
               >
                 <Trophy className="w-3 h-3 text-amber-500" />
                 <span>All-time</span>
@@ -83,10 +84,11 @@ export const Navbar: React.FC = () => {
               <button
                 type="button"
                 onClick={() => setTimeFilter("today")}
-                className={`px-3 py-1 rounded-full transition-all flex items-center gap-1.5 ${timeFilter === "today"
+                className={`px-3 py-1 rounded-full transition-all flex items-center gap-1.5 ${
+                  timeFilter === "today"
                     ? "bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white shadow-sm"
                     : "text-zinc-500 hover:text-zinc-900 dark:hover:text-white"
-                  }`}
+                }`}
               >
                 <span className="w-1.5 h-1.5 rounded-full bg-rose-500" />
                 <span>Today</span>
@@ -95,20 +97,29 @@ export const Navbar: React.FC = () => {
           </div>
 
           {/* Center: Main Navigation Links */}
-          <nav className="hidden md:flex items-center gap-6 text-xs font-mono font-bold tracking-wide">
-            {navLinks.map((link) => (
-              <Link
-                key={link.name}
-                href={link.href}
-                className="text-zinc-600 dark:text-zinc-400 hover:text-orange-500 dark:hover:text-orange-400 transition-colors py-1"
-              >
-                {link.name}
-              </Link>
-            ))}
+          <nav className="hidden md:flex items-center gap-5 text-xs font-mono font-bold tracking-wide">
+            {navLinks.map((link) => {
+              const Icon = link.icon;
+              return (
+                <Link
+                  key={link.name}
+                  href={link.href}
+                  className="text-zinc-600 dark:text-zinc-400 hover:text-orange-500 dark:hover:text-orange-400 transition-colors py-1 flex items-center gap-1.5"
+                >
+                  {Icon && <Icon className="w-3.5 h-3.5 text-orange-500 fill-current" />}
+                  <span>{link.name}</span>
+                  {link.isNew && (
+                    <span className="px-1.5 py-0.5 rounded-md bg-orange-500/15 border border-orange-500/30 text-orange-600 dark:text-orange-400 text-[9px] font-black tracking-wider shadow-sm animate-pulse">
+                      NEW
+                    </span>
+                  )}
+                </Link>
+              );
+            })}
           </nav>
 
           {/* Right Action Icons & Wallet */}
-          <div className="flex items-center gap-3 shrink-0">
+          <div className="flex items-center gap-2 sm:gap-3 shrink-0 flex-nowrap">
             {/* Launchpad CTA button */}
             <Link
               href="/launchpad"
@@ -119,7 +130,9 @@ export const Navbar: React.FC = () => {
             </Link>
 
             {/* Theme Toggle Button */}
-            <ThemeToggle />
+            <div className="shrink-0">
+              <ThemeToggle />
+            </div>
 
             {/* Desktop Connect Wallet */}
             <div className="hidden sm:flex items-center shrink-0">
@@ -169,16 +182,27 @@ export const Navbar: React.FC = () => {
 
               {/* Navigation Links */}
               <div className="flex flex-col space-y-2">
-                {navLinks.map((link) => (
-                  <Link
-                    key={link.name}
-                    href={link.href}
-                    onClick={() => setMobileMenuOpen(false)}
-                    className="font-mono text-xs uppercase font-bold tracking-wider text-zinc-700 dark:text-zinc-300 hover:text-orange-500 py-2.5 px-3 rounded-xl hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors"
-                  >
-                    {link.name}
-                  </Link>
-                ))}
+                {navLinks.map((link) => {
+                  const Icon = link.icon;
+                  return (
+                    <Link
+                      key={link.name}
+                      href={link.href}
+                      onClick={() => setMobileMenuOpen(false)}
+                      className="font-mono text-xs uppercase font-bold tracking-wider text-zinc-700 dark:text-zinc-300 hover:text-orange-500 py-2.5 px-3 rounded-xl hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors flex items-center justify-between"
+                    >
+                      <div className="flex items-center gap-2">
+                        {Icon && <Icon className="w-3.5 h-3.5 text-orange-500 fill-current" />}
+                        <span>{link.name}</span>
+                      </div>
+                      {link.isNew && (
+                        <span className="px-1.5 py-0.5 rounded-md bg-orange-500/15 border border-orange-500/30 text-orange-600 dark:text-orange-400 text-[9px] font-black tracking-wider">
+                          NEW
+                        </span>
+                      )}
+                    </Link>
+                  );
+                })}
               </div>
             </div>
 
@@ -196,7 +220,7 @@ export const Navbar: React.FC = () => {
                 {mounted && <WalletMultiButton />}
               </div>
               {connected && (
-                <div className="text-center font-mono text-xs text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-200 dark:border-emerald-500/20 py-1.5 px-2 rounded-lg">
+                <div className="text-center font-mono text-xs text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-200 dark:border-emerald-500/20 py-1.5 px-2 rounded-lg truncate">
                   Connected: {formattedAddress}
                 </div>
               )}
