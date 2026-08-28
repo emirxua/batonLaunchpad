@@ -1,0 +1,152 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --bg: #f5f6f8;
+  --bg-raised: #ffffff;
+  --bg-card: #ffffff;
+  --line: #e2e5ec;
+  --text: #0f1117;
+  --text-dim: #5a5f6e;
+  --text-faint: #8a909d;
+  --acid: #059669;
+  --acid-dim: #047857;
+  --magenta: #e11d48;
+  --magenta-dim: #be123c;
+  --up: #16a34a;
+  --down: #dc2626;
+}
+
+.dark {
+  --bg: #0a0b0d;
+  --bg-raised: #131519;
+  --bg-card: #17191e;
+  --line: #262930;
+  --text: #eef0ec;
+  --text-dim: #8b8f99;
+  --text-faint: #55585f;
+  --acid: #d4ff3f;
+  --acid-dim: #a8cc32;
+  --magenta: #ff3d7a;
+  --magenta-dim: #c22d5c;
+  --up: #4ade80;
+  --down: #ff5c5c;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html, body {
+  background-color: var(--bg);
+  color: var(--text);
+  transition: background-color 0.25s ease, color 0.25s ease, border-color 0.25s ease;
+  font-family: var(--font-space), -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  min-height: 100vh;
+  margin: 0;
+  padding: 0;
+  overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+/* Custom Thin Scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--bg);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--line);
+  border-radius: 9999px;
+  transition: background-color 0.2s ease;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--acid);
+}
+
+/* Firefox Scrollbar */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--line) var(--bg);
+}
+
+/* Global Focus Styles */
+*:focus-visible {
+  outline: 2px solid var(--acid) !important;
+  outline-offset: 2px !important;
+}
+
+/* Headings font */
+h1, h2, h3, .font-heading {
+  font-family: var(--font-archivo), sans-serif;
+}
+
+/* Numeric / Price display font */
+.font-mono-num {
+  font-family: var(--font-mono), monospace;
+  font-variant-numeric: tabular-nums;
+}
+
+/* GPU Accelerated Layer & 60 FPS Optimizations */
+.gpu-layer {
+  transform: translateZ(0);
+  will-change: transform;
+  backface-visibility: hidden;
+}
+
+/* Content Visibility for 60 FPS scrolling performance */
+.content-auto {
+  content-visibility: auto;
+  contain-intrinsic-size: 0 350px;
+}
+
+/* Hardware Accelerated Marquee */
+@keyframes marquee-gpu {
+  0% {
+    transform: translate3d(0, 0, 0);
+  }
+  100% {
+    transform: translate3d(-50%, 0, 0);
+  }
+}
+
+.animate-marquee-gpu {
+  display: flex;
+  width: max-content;
+  will-change: transform;
+  transform: translate3d(0, 0, 0);
+  animation: marquee-gpu 28s linear infinite;
+}
+
+.animate-marquee-gpu:hover {
+  animation-play-state: paused;
+}
+
+/* Shimmer Loading Skeleton */
+@keyframes shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+.skeleton-shimmer {
+  background: linear-gradient(
+    90deg,
+    var(--bg-card) 25%,
+    var(--bg-raised) 50%,
+    var(--bg-card) 75%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.8s infinite;
+}
