@@ -19,6 +19,7 @@ export interface CalloutItem {
   priceChange24h: number;
   pumpFunUrl: string;
   dexScreenerUrl: string;
+  complete: boolean;
   source: "pump.fun" | "dexscreener" | "solana";
 }
 
@@ -47,6 +48,8 @@ interface PumpFunCoin {
   reply_count?: number;
   usd_market_cap?: number;
   market_cap?: number;
+  complete?: boolean;
+  raydium_pool?: string;
 }
 
 interface DexPair {
@@ -117,7 +120,7 @@ export async function GET() {
       const timeoutId = setTimeout(() => controller.abort(), 4000);
 
       const pumpRes = await fetch(
-        "https://frontend-api.pump.fun/coins?offset=0&limit=20&sort=last_reply&order=DESC&includeNsfw=false",
+        "https://frontend-api.pump.fun/coins?offset=0&limit=30&sort=last_reply&order=DESC&includeNsfw=false",
         {
           signal: controller.signal,
           headers: {
@@ -137,12 +140,12 @@ export async function GET() {
         }
       }
     } catch (pumpErr) {
-      console.warn("Pump.fun social fetch timeout or rate-limit, fallback to DexScreener stream:", pumpErr);
+      console.warn("Pump.fun social fetch timeout, fallback to DexScreener stream:", pumpErr);
     }
 
     // 3. If Pump.fun coins received, enrich with live DexScreener financial metrics
     if (pumpCoins.length > 0) {
-      const mints = Array.from(new Set(pumpCoins.map((c) => c.mint).filter(Boolean))).slice(0, 25);
+      const mints = Array.from(new Set(pumpCoins.map((c) => c.mint).filter(Boolean))).slice(0, 30);
       const dexPairsMap = new Map<string, DexPair>();
 
       try {
@@ -183,14 +186,15 @@ export async function GET() {
           dex?.marketCap ||
           dex?.fdv ||
           coin.usd_market_cap ||
-          (coin.market_cap ? Math.round(coin.market_cap * 0.000000001) : 6500);
+          (coin.market_cap ? Math.round(coin.market_cap * 140 * 0.000000001) : 7500);
 
         const priceUsd = dex?.priceUsd || "0.000001";
-        const volume24h = dex?.volume?.h24 || (coin.reply_count ? coin.reply_count * 120 : 1500);
+        const volume24h = dex?.volume?.h24 || (coin.reply_count ? coin.reply_count * 150 : 1800);
         const priceChange24h = dex?.priceChange?.h24 ? Number(dex.priceChange.h24.toFixed(2)) : 0;
         const image = dex?.info?.imageUrl || coin.image_uri || "";
-        const creator = coin.creator || `${coin.mint.slice(0, 4)}...${coin.mint.slice(-4)}`;
+        const creator = coin.creator ? coin.creator : "pump.fun trader";
         const lastReply = coin.last_reply || now - (index * 60000 + 30000);
+        const isComplete = coin.complete || !!coin.raydium_pool || marketCap >= 65_000;
 
         return {
           id: `pump-${coin.mint}`,
@@ -202,13 +206,14 @@ export async function GET() {
           creator,
           createdTimestamp: coin.created_timestamp || now - 3600000,
           lastReply,
-          replyCount: coin.reply_count || Math.max(8, 24 - index),
+          replyCount: coin.reply_count || Math.max(8, 30 - index),
           marketCapUsd: Math.round(marketCap),
           priceUsd,
           volume24h: Math.round(volume24h),
           priceChange24h,
           pumpFunUrl: `https://pump.fun/coin/${coin.mint}`,
           dexScreenerUrl: dex?.url || `https://dexscreener.com/solana/${coin.mint}`,
+          complete: isComplete,
           source: "pump.fun",
         };
       });
@@ -262,7 +267,7 @@ export async function GET() {
       }
 
       enrichedItems = Array.from(pairsMap.values())
-        .slice(0, 20)
+        .slice(0, 24)
         .map((pair, index) => {
           const mint = pair.baseToken.address;
           const name = pair.baseToken.name || "Solana Community Coin";
@@ -292,6 +297,7 @@ export async function GET() {
             priceChange24h,
             pumpFunUrl: `https://pump.fun/coin/${mint}`,
             dexScreenerUrl: pair.url,
+            complete: mcap >= 65_000,
             source: "dexscreener",
           };
         });

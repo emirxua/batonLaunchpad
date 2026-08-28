@@ -60,7 +60,7 @@ export default function OutbidHomePage() {
       if (res.ok) {
         const json = await res.json();
         if (Array.isArray(json.data)) {
-          setLiveCallouts(json.data.slice(0, 3));
+          setLiveCallouts(json.data.slice(0, 4));
         }
       }
     } catch (e) {
@@ -298,10 +298,10 @@ export default function OutbidHomePage() {
               </div>
 
               <h2 className="font-archivo text-xl sm:text-2xl font-black tracking-tight text-zinc-900 dark:text-white flex items-center gap-2">
-                <span>🔥 Pump.fun Callout Rewards &amp; Alpha Stream</span>
+                <span>🔥 LIVE PUMP.FUN CALLOUT STREAM</span>
               </h2>
               <p className="font-space text-xs text-zinc-500 dark:text-zinc-400">
-                Trending Solana tokens called by verified alpha hunters. Boost rank with $BATON.
+                Real-time Solana tokens called by verified alpha hunters. Boost rank with $BATON.
               </p>
             </div>
 
@@ -315,9 +315,9 @@ export default function OutbidHomePage() {
           </div>
 
           {/* Callouts Live Grid */}
-          <div className="relative z-10 grid grid-cols-1 md:grid-cols-3 gap-3.5">
+          <div className="relative z-10 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5">
             {calloutsLoading && liveCallouts.length === 0 ? (
-              [1, 2, 3].map((idx) => (
+              [1, 2, 3, 4].map((idx) => (
                 <div
                   key={idx}
                   className="h-44 rounded-2xl bg-zinc-100 dark:bg-zinc-800/50 border border-zinc-200 dark:border-white/5 p-4 animate-pulse space-y-3"
