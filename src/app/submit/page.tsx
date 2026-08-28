@@ -487,7 +487,7 @@ export default function SubmitCoinPage() {
                     <span className="font-bold text-text font-mono-num">
                       {dexPairData?.marketCap
                         ? `$${dexPairData.marketCap.toLocaleString()}`
-                        : "$12,435"}
+                        : "—"}
                     </span>
                   </div>
                   <div className="flex justify-between">

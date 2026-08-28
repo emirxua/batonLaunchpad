@@ -115,7 +115,7 @@ export const Navbar: React.FC = () => {
               className="hidden sm:inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-orange-500/10 hover:bg-orange-500 text-orange-600 hover:text-white dark:text-orange-400 dark:hover:text-white border border-orange-500/30 text-xs font-mono font-bold transition-all shadow-sm"
             >
               <Rocket className="w-3.5 h-3.5" />
-              <span>Launchpad&apos;e Git 🚀</span>
+              <span>Explore Launchpad 🚀</span>
             </Link>
 
             {/* Theme Toggle Button */}
@@ -189,7 +189,7 @@ export const Navbar: React.FC = () => {
                 className="w-full py-2.5 rounded-xl bg-orange-500 text-white font-mono text-xs font-bold uppercase tracking-wider text-center flex items-center justify-center gap-1.5 shadow-md shadow-orange-500/20"
               >
                 <Rocket className="w-3.5 h-3.5" />
-                <span>Launchpad&apos;e Git 🚀</span>
+                <span>Explore Launchpad 🚀</span>
               </Link>
               <div className="w-full flex justify-center">
                 {mounted && <WalletMultiButton />}
