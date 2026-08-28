@@ -65,11 +65,18 @@ export async function prepareRealBurnTransaction({
   );
 
   // 2. Check if token account exists on chain
-  const accountInfo = await connection.getAccountInfo(userAta);
-  if (!accountInfo) {
-    throw new Error(
-      "Insufficient $BATON balance or token account not found in this wallet."
-    );
+  try {
+    const accountInfo = await connection.getAccountInfo(userAta);
+    if (!accountInfo) {
+      throw new Error(
+        "Yeterli $BATON bakiyesi veya cüzdanınızda $BATON token hesabı bulunamadı."
+      );
+    }
+  } catch (err: unknown) {
+    if (err instanceof Error && err.message.includes("Yeterli $BATON")) {
+      throw err;
+    }
+    console.warn("Could not verify account info on chain due to RPC limits:", err);
   }
 
   // 3. Convert burnAmount (e.g. 10000) to BigInt with 6 decimals

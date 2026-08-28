@@ -199,10 +199,19 @@ export const BurnModal: React.FC<BurnModalProps> = ({
     } catch (err: unknown) {
       console.error("Burn execution failed:", err);
       setBurnState("error");
-      const message =
+      let message =
         err instanceof Error
           ? err.message
           : "An unexpected error occurred during the burn transaction.";
+
+      if (
+        message.includes("403") ||
+        message.toLowerCase().includes("forbidden") ||
+        message.toLowerCase().includes("rate limit")
+      ) {
+        message =
+          "Solana RPC ağ yoğunluğu yaşanıyor veya cüzdanda yeterli $BATON bulunamadı. Lütfen tekrar deneyin.";
+      }
       setErrorMessage(message);
     }
   };

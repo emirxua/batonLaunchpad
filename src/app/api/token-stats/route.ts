@@ -28,7 +28,7 @@ export interface TokenStatsResponse {
 // In-memory cache for 15 seconds to protect RPC limits
 let cachedStats: TokenStatsResponse | null = null;
 let lastFetchTime = 0;
-const DEFAULT_RPC = "https://api.mainnet-beta.solana.com";
+const DEFAULT_RPC = "https://rpc.ankr.com/solana";
 const rawRpc = process.env.NEXT_PUBLIC_SOLANA_RPC_URL?.trim();
 const rpcUrl = rawRpc && (rawRpc.startsWith("http://") || rawRpc.startsWith("https://")) ? rawRpc : DEFAULT_RPC;
 
