@@ -9,6 +9,11 @@ export interface Coin {
   imageUrl?: string;
   headerUrl?: string;
   iconColor: string;
+  category?: string;
+  description?: string;
+  website?: string;
+  twitter?: string;
+  viewsCount?: number;
   priceUsd?: number;
   marketCap: number;
   volume24h: number;

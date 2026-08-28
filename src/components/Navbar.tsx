@@ -2,10 +2,9 @@
 
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
-import Image from "next/image";
 import { useWallet } from "@solana/wallet-adapter-react";
 import dynamic from "next/dynamic";
-import { Menu, X, Flame, Wallet } from "lucide-react";
+import { Menu, X, Wallet, Trophy, Flame, Rocket, Search } from "lucide-react";
 import { ThemeToggle } from "@/components/ThemeToggle";
 
 // Dynamic import for WalletMultiButton to prevent SSR hydration mismatches
@@ -21,7 +20,7 @@ const WalletMultiButton = dynamic(
         disabled
       >
         <Wallet className="w-3.5 h-3.5" />
-        <span>LOADING WALLET...</span>
+        <span>CONNECT WALLET</span>
       </button>
     ),
   }
@@ -30,6 +29,7 @@ const WalletMultiButton = dynamic(
 export const Navbar: React.FC = () => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
+  const [timeFilter, setTimeFilter] = useState<"all-time" | "today">("all-time");
   const { publicKey, connected } = useWallet();
 
   useEffect(() => {
@@ -37,70 +37,90 @@ export const Navbar: React.FC = () => {
   }, []);
 
   const navLinks = [
-    { name: "Directory", href: "/#directory" },
     { name: "Leaderboard", href: "/leaderboard" },
-    { name: "Submit Coin", href: "/submit" },
-    { name: "About", href: "/#about" },
+    { name: "Launchpad Hub", href: "/launchpad" },
+    { name: "Submit Project", href: "/submit" },
   ];
 
-  // Format public key address as "7xK...9mP"
   const formattedAddress = publicKey
     ? `${publicKey.toBase58().slice(0, 4)}...${publicKey.toBase58().slice(-4)}`
     : "";
 
   return (
     <>
-      <nav className="w-full bg-bg/95 backdrop-blur-md border-b border-line sticky top-0 z-40">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
-          {/* Logo Section */}
-          <Link href="/" className="flex items-center gap-3 group">
-            <div className="relative w-8 h-8 rounded-lg overflow-hidden border border-magenta/40 bg-magenta/20 flex items-center justify-center shrink-0 shadow-[0_0_12px_rgba(255,61,122,0.3)]">
-              <Image
-                src="https://cdn.dexscreener.com/cms/images/B_1EShunz2lCb0jz?width=800&height=800&quality=95&format=auto"
-                alt="Baton Logo"
-                width={32}
-                height={32}
-                className="w-full h-full object-cover"
-                unoptimized
-              />
-            </div>
-            <span className="font-archivo text-[18px] tracking-wider text-text uppercase group-hover:text-acid transition-colors">
-              BATON<span className="text-magenta">.</span>LAUNCH
-            </span>
-          </Link>
+      <header className="w-full bg-white/90 dark:bg-[#0B0C0E]/90 backdrop-blur-md border-b border-zinc-200/80 dark:border-white/10 sticky top-0 z-40">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-4">
+          {/* Left: Logo & All-time/Today Pill */}
+          <div className="flex items-center gap-4">
+            <Link href="/" className="flex items-center gap-2 group select-none">
+              {/* Outbid horizontal bars icon */}
+              <div className="flex flex-col gap-1 w-6 h-4 justify-center">
+                <span className="w-full h-1 bg-zinc-900 dark:bg-white rounded-full transition-transform group-hover:scale-x-110 origin-left" />
+                <span className="w-4/5 h-1 bg-orange-500 rounded-full transition-transform group-hover:scale-x-125 origin-left" />
+                <span className="w-3/5 h-1 bg-zinc-900 dark:bg-white rounded-full transition-transform group-hover:scale-x-110 origin-left" />
+              </div>
+              <span className="font-archivo text-xl font-bold tracking-tight text-zinc-900 dark:text-white flex items-center">
+                outbid<span className="text-orange-500">.baton</span>
+              </span>
+            </Link>
 
-          {/* Desktop Center Menu Links */}
-          <div className="hidden md:flex items-center gap-8">
-            {navLinks.map((link) => (
-              <a
-                key={link.name}
-                href={link.href}
-                className="font-mono text-[12px] uppercase tracking-wider text-text-dim hover:text-acid transition-colors font-medium relative py-1 after:content-[''] after:absolute after:bottom-0 after:left-0 after:w-0 after:h-[2px] after:bg-acid hover:after:w-full after:transition-all"
+            {/* Pill Filter Toggle: All-time / Today */}
+            <div className="hidden sm:flex items-center p-1 bg-zinc-100 dark:bg-zinc-900/90 border border-zinc-200/80 dark:border-white/10 rounded-full font-mono text-xs font-bold">
+              <button
+                type="button"
+                onClick={() => setTimeFilter("all-time")}
+                className={`px-3 py-1 rounded-full transition-all flex items-center gap-1.5 ${
+                  timeFilter === "all-time"
+                    ? "bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white shadow-sm"
+                    : "text-zinc-500 hover:text-zinc-900 dark:hover:text-white"
+                }`}
               >
-                {link.name}
-              </a>
-            ))}
+                <Trophy className="w-3 h-3 text-amber-500" />
+                <span>All-time</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setTimeFilter("today")}
+                className={`px-3 py-1 rounded-full transition-all flex items-center gap-1.5 ${
+                  timeFilter === "today"
+                    ? "bg-white dark:bg-zinc-800 text-zinc-900 dark:text-white shadow-sm"
+                    : "text-zinc-500 hover:text-zinc-900 dark:hover:text-white"
+                }`}
+              >
+                <span className="w-1.5 h-1.5 rounded-full bg-rose-500" />
+                <span>Today</span>
+              </button>
+            </div>
           </div>
 
-          {/* Right Action & Mobile Toggle */}
-          <div className="flex items-center gap-2.5">
+          {/* Center / Right Menu Links */}
+          <nav className="hidden md:flex items-center gap-6 text-xs font-mono font-bold tracking-wide">
+            {navLinks.map((link) => (
+              <Link
+                key={link.name}
+                href={link.href}
+                className="text-zinc-600 dark:text-zinc-400 hover:text-orange-500 dark:hover:text-orange-400 transition-colors py-1"
+              >
+                {link.name}
+              </Link>
+            ))}
+
+            {/* Launchpad Badge Link */}
+            <Link
+              href="/launchpad"
+              className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-orange-50 dark:bg-orange-500/10 border border-orange-200 dark:border-orange-500/20 text-orange-600 dark:text-orange-400 hover:bg-orange-100 dark:hover:bg-orange-500/20 transition-all font-mono text-xs font-bold"
+            >
+              <Rocket className="w-3.5 h-3.5" />
+              <span>Launchpad Hub</span>
+            </Link>
+          </nav>
+
+          {/* Right Action Icons & Wallet */}
+          <div className="flex items-center gap-2 sm:gap-3">
             {/* Theme Toggle Button */}
             <ThemeToggle />
 
-            {/* Official X (Twitter) Link */}
-            <a
-              href="https://x.com/buybaton"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="p-2 rounded-xl border border-line bg-bg-raised/80 text-text-dim hover:text-text hover:border-text-dim transition-colors flex items-center justify-center"
-              title="Official X: @buybaton"
-            >
-              <svg className="w-4 h-4 fill-current" viewBox="0 0 24 24">
-                <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
-              </svg>
-            </a>
-
-            {/* Desktop Connect Wallet Multi Button */}
+            {/* Desktop Connect Wallet */}
             <div className="hidden sm:block">
               {mounted && <WalletMultiButton />}
             </div>
@@ -109,81 +129,86 @@ export const Navbar: React.FC = () => {
             <button
               type="button"
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              className="md:hidden p-2 rounded-lg border border-line text-text-dim hover:text-text hover:border-text-dim transition-colors"
+              className="md:hidden p-2 rounded-xl border border-zinc-200 dark:border-zinc-800 text-zinc-700 dark:text-zinc-300 hover:text-zinc-900 dark:hover:text-white transition-colors"
               aria-label="Toggle navigation menu"
             >
               {mobileMenuOpen ? (
-                <X className="w-5 h-5 text-acid" />
+                <X className="w-5 h-5 text-orange-500" />
               ) : (
                 <Menu className="w-5 h-5" />
               )}
             </button>
           </div>
         </div>
-      </nav>
+      </header>
 
-      {/* Mobile Drawer Backdrop & Menu */}
+      {/* Mobile Drawer */}
       {mobileMenuOpen && (
-        <div className="fixed inset-0 z-50 md:hidden">
-          {/* Backdrop */}
+        <div className="fixed inset-0 z-50 md:hidden animate-in fade-in duration-200">
           <div
-            className="fixed inset-0 bg-black/80 backdrop-blur-sm transition-opacity"
+            className="fixed inset-0 bg-black/80 backdrop-blur-sm"
             onClick={() => setMobileMenuOpen(false)}
           />
 
-          {/* Drawer Panel */}
-          <div className="fixed top-0 right-0 bottom-0 w-4/5 max-w-xs bg-bg-card border-l border-line p-6 flex flex-col justify-between shadow-2xl z-50 animate-in slide-in-from-right duration-200">
+          <div className="fixed top-0 right-0 bottom-0 w-4/5 max-w-xs bg-white dark:bg-[#111318] border-l border-zinc-200 dark:border-zinc-800 p-6 flex flex-col justify-between shadow-2xl z-50 animate-in slide-in-from-right duration-200">
             <div className="space-y-6">
               {/* Drawer Header */}
-              <div className="flex items-center justify-between pb-4 border-b border-line">
-                <div className="flex items-center gap-2">
-                  <div className="w-5 h-5 bg-magenta rotate-45 rounded-[2px]" />
-                  <span className="font-archivo text-base text-text">
-                    BATON.LAUNCH
-                  </span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <ThemeToggle />
-                  <button
-                    onClick={() => setMobileMenuOpen(false)}
-                    className="p-1 rounded-lg border border-line text-text-dim hover:text-text"
-                  >
-                    <X className="w-4 h-4" />
-                  </button>
-                </div>
+              <div className="flex items-center justify-between pb-4 border-b border-zinc-200 dark:border-zinc-800">
+                <span className="font-archivo text-lg font-bold text-zinc-900 dark:text-white">
+                  outbid<span className="text-orange-500">.baton</span>
+                </span>
+                <button
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="p-1.5 rounded-lg border border-zinc-200 dark:border-zinc-800 text-zinc-500 hover:text-zinc-900 dark:hover:text-white"
+                >
+                  <X className="w-4 h-4" />
+                </button>
               </div>
 
               {/* Navigation Links */}
-              <div className="flex flex-col space-y-3">
-                {navLinks.map((link) => (
-                  <a
-                    key={link.name}
-                    href={link.href}
-                    onClick={() => setMobileMenuOpen(false)}
-                    className="font-mono text-[13px] uppercase tracking-wider text-text-dim hover:text-acid py-2 px-3 rounded-lg hover:bg-bg-raised transition-colors flex items-center justify-between"
-                  >
-                    <span>{link.name}</span>
-                    <span className="text-text-faint">→</span>
-                  </a>
-                ))}
+              <div className="flex flex-col space-y-2">
+                <Link
+                  href="/"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="font-mono text-xs uppercase font-bold tracking-wider text-zinc-700 dark:text-zinc-300 hover:text-orange-500 py-2.5 px-3 rounded-xl hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors"
+                >
+                  Directory / Bidding
+                </Link>
+                <Link
+                  href="/launchpad"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="font-mono text-xs uppercase font-bold tracking-wider text-orange-600 dark:text-orange-400 py-2.5 px-3 rounded-xl bg-orange-50 dark:bg-orange-500/10 border border-orange-200 dark:border-orange-500/20 flex items-center justify-between"
+                >
+                  <span>Launchpad Hub</span>
+                  <Rocket className="w-3.5 h-3.5" />
+                </Link>
+                <Link
+                  href="/leaderboard"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="font-mono text-xs uppercase font-bold tracking-wider text-zinc-700 dark:text-zinc-300 hover:text-orange-500 py-2.5 px-3 rounded-xl hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors"
+                >
+                  Leaderboard
+                </Link>
+                <Link
+                  href="/submit"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="font-mono text-xs uppercase font-bold tracking-wider text-zinc-700 dark:text-zinc-300 hover:text-orange-500 py-2.5 px-3 rounded-xl hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors"
+                >
+                  Submit Coin
+                </Link>
               </div>
             </div>
 
-            {/* Drawer Bottom Actions */}
-            <div className="space-y-3 pt-6 border-t border-line">
+            {/* Bottom Wallet Section */}
+            <div className="space-y-3 pt-6 border-t border-zinc-200 dark:border-zinc-800">
               <div className="w-full flex justify-center">
                 {mounted && <WalletMultiButton />}
               </div>
-
               {connected && (
-                <div className="text-center font-mono text-xs text-acid bg-acid/10 border border-acid/20 py-1.5 px-2 rounded-lg">
+                <div className="text-center font-mono text-xs text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-200 dark:border-emerald-500/20 py-1.5 px-2 rounded-lg">
                   Connected: {formattedAddress}
                 </div>
               )}
-
-              <p className="text-[11px] text-center text-text-faint font-mono">
-                Solana pump.fun Ecosystem • $BATON
-              </p>
             </div>
           </div>
         </div>

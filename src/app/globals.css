@@ -3,35 +3,35 @@
 @tailwind utilities;
 
 :root {
-  --bg: #f8fafc;
-  --bg-raised: #ffffff;
-  --bg-card: #ffffff;
-  --line: #e2e8f0;
-  --text: #09090b;
-  --text-dim: #52525b;
-  --text-faint: #71717a;
-  --acid: #059669;
-  --acid-dim: #047857;
-  --magenta: #e11d48;
-  --magenta-dim: #be123c;
-  --up: #16a34a;
-  --down: #dc2626;
+  --bg: #FAF9F6;
+  --bg-raised: #FFFFFF;
+  --bg-card: #FFFFFF;
+  --line: #E5E7EB;
+  --text: #111827;
+  --text-dim: #4B5563;
+  --text-faint: #6B7280;
+  --acid: #F97316;
+  --acid-dim: #EA580C;
+  --magenta: #EF4444;
+  --magenta-dim: #DC2626;
+  --up: #10B981;
+  --down: #EF4444;
 }
 
 .dark {
-  --bg: #0a0b0d;
-  --bg-raised: #131519;
-  --bg-card: #17191e;
-  --line: #262930;
-  --text: #eef0ec;
-  --text-dim: #8b8f99;
-  --text-faint: #55585f;
-  --acid: #d4ff3f;
-  --acid-dim: #a8cc32;
-  --magenta: #ff3d7a;
-  --magenta-dim: #c22d5c;
-  --up: #4ade80;
-  --down: #ff5c5c;
+  --bg: #0B0C0E;
+  --bg-raised: #15171C;
+  --bg-card: #15171C;
+  --line: #22262F;
+  --text: #FFFFFF;
+  --text-dim: #9CA3AF;
+  --text-faint: #6B7280;
+  --acid: #F97316;
+  --acid-dim: #EA580C;
+  --magenta: #F43F5E;
+  --magenta-dim: #E11D48;
+  --up: #10B981;
+  --down: #EF4444;
 }
 
 * {
