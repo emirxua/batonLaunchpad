@@ -146,9 +146,13 @@ export const FeaturedCard: React.FC<FeaturedCardProps> = React.memo(({
             <div className="text-[10px] sm:text-[11px] text-text-faint uppercase tracking-wider font-semibold">
               Market Cap
             </div>
-            <div className="text-sm sm:text-base lg:text-lg font-bold text-text font-mono-num">
-              {formatCurrency(marketCap)}
-            </div>
+            {isLoading ? (
+              <div className="h-6 w-20 bg-zinc-200 dark:bg-zinc-800 rounded animate-pulse" />
+            ) : (
+              <div className="text-sm sm:text-base lg:text-lg font-bold text-text font-mono-num">
+                {formatCurrency(marketCap)}
+              </div>
+            )}
           </div>
 
           {/* 24h Volume */}
@@ -156,9 +160,13 @@ export const FeaturedCard: React.FC<FeaturedCardProps> = React.memo(({
             <div className="text-[10px] sm:text-[11px] text-text-faint uppercase tracking-wider font-semibold">
               24h Volume
             </div>
-            <div className="text-sm sm:text-base lg:text-lg font-bold text-text font-mono-num">
-              {formatCurrency(volume24h)}
-            </div>
+            {isLoading ? (
+              <div className="h-6 w-16 bg-zinc-200 dark:bg-zinc-800 rounded animate-pulse" />
+            ) : (
+              <div className="text-sm sm:text-base lg:text-lg font-bold text-text font-mono-num">
+                {formatCurrency(volume24h)}
+              </div>
+            )}
           </div>
 
           {/* Total Burned */}
@@ -168,9 +176,13 @@ export const FeaturedCard: React.FC<FeaturedCardProps> = React.memo(({
               <span>Burned Total</span>
             </div>
             <div className="space-y-0.5">
-              <div className="text-sm sm:text-base lg:text-lg font-black text-acid font-mono-num">
-                {formatNumber(totalBurnedBaton)}
-              </div>
+              {isLoading ? (
+                <div className="h-6 w-14 bg-zinc-200 dark:bg-zinc-800 rounded animate-pulse" />
+              ) : (
+                <div className="text-sm sm:text-base lg:text-lg font-black text-acid font-mono-num">
+                  {formatNumber(totalBurnedBaton)}
+                </div>
+              )}
               <div className="text-[10px] text-text-dim font-bold uppercase tracking-wider">
                 $BATON
               </div>

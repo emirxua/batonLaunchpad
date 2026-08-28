@@ -3,7 +3,7 @@ import { TRACKED_COINS } from "@/lib/tracked-coins";
 import { getCoinsMarketData } from "@/lib/dexscreener";
 
 export const dynamic = "force-dynamic";
-export const revalidate = 30;
+export const revalidate = 0;
 
 export async function GET() {
   try {
@@ -19,7 +19,9 @@ export async function GET() {
       },
       {
         headers: {
-          "Cache-Control": "public, s-maxage=30, stale-while-revalidate=59",
+          "Cache-Control": "no-store, no-cache, must-revalidate, proxy-revalidate",
+          "Pragma": "no-cache",
+          "Expires": "0",
         },
       }
     );

@@ -72,7 +72,7 @@ export async function getCoinsMarketData(
       headers: {
         Accept: "application/json",
       },
-      next: { revalidate: 30 },
+      cache: "no-store",
     });
 
     clearTimeout(timeoutId);
