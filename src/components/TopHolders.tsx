@@ -23,7 +23,7 @@ interface TopHoldersProps {
 
 export const TopHolders: React.FC<TopHoldersProps> = React.memo(({
   holders = [],
-  totalHoldersCount = 1935,
+  totalHoldersCount = 0,
   isLoading = false,
   onRefresh,
   lastUpdated,

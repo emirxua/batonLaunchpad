@@ -96,9 +96,9 @@ export default function LaunchpadPage() {
             description="The premier community-driven mascot token and deflationary burn engine on Solana."
             mintAddress={featuredCoin?.mintAddress || "2vdc4owf1MPz54jJCN61y3QSKqjcPpr32wJ9qKkmpump"}
             imageUrl={featuredCoin?.imageUrl}
-            marketCap={featuredCoin?.marketCap || 12_435}
-            volume24h={featuredCoin?.volume24h || 653}
-            change24h={featuredCoin?.change24h || 16.09}
+            marketCap={featuredCoin?.marketCap || 0}
+            volume24h={featuredCoin?.volume24h || 0}
+            change24h={featuredCoin?.change24h || 0}
             totalBurnedBaton={totalBurned}
             isLoading={coinsLoading || statsLoading}
             onBurnClick={() =>
@@ -109,9 +109,9 @@ export default function LaunchpadPage() {
                   ticker: "BATON",
                   mintAddress: "2vdc4owf1MPz54jJCN61y3QSKqjcPpr32wJ9qKkmpump",
                   iconColor: "#ff3d7a",
-                  marketCap: 12_435,
-                  volume24h: 653,
-                  change24h: 16.09,
+                  marketCap: 0,
+                  volume24h: 0,
+                  change24h: 0,
                   sparkline: [10, 12, 11, 14, 13, 16, 18],
                   totalBurnedBaton: totalBurned,
                   burnLevel: "diamond",
