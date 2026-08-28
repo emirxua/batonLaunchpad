@@ -5,20 +5,20 @@ import { useCoinsData } from "@/hooks/useCoinsData";
 import { useTokenStats } from "@/hooks/useTokenStats";
 
 export const Ticker: React.FC = React.memo(() => {
-  const { featuredCoin, isLoading } = useCoinsData(30_000);
-  const { totalBurned } = useTokenStats(30_000);
+  const { featuredCoin, isLoading } = useCoinsData(20_000);
+  const { totalBurned } = useTokenStats(20_000);
 
   const priceStr = featuredCoin?.priceUsd
     ? `$${featuredCoin.priceUsd < 0.01 ? featuredCoin.priceUsd.toFixed(8) : featuredCoin.priceUsd.toFixed(4)}`
-    : "$0.00001039";
+    : "$0.00001250";
   const change24h = featuredCoin?.change24h ?? 0;
   const isPositive = change24h >= 0;
   const mcapStr = featuredCoin?.marketCap
-    ? `$${Math.round(featuredCoin.marketCap).toLocaleString()}`
-    : "$10,390";
+    ? `$${Math.round(featuredCoin.marketCap).toLocaleString("en-US")}`
+    : "$12,500";
   const volumeStr = featuredCoin?.volume24h
-    ? `$${Math.round(featuredCoin.volume24h).toLocaleString()}`
-    : "$1,200";
+    ? `$${Math.round(featuredCoin.volume24h).toLocaleString("en-US")}`
+    : "$1,840";
 
   const tickerSegments = [
     { label: "$BATON (pump.fun)", value: priceStr, isLoading },
@@ -26,7 +26,7 @@ export const Ticker: React.FC = React.memo(() => {
     { label: "Market Cap", value: mcapStr, isLoading },
     { label: "24h Volume", value: volumeStr, isLoading },
     { label: "CA", value: "2vdc4owf1MPz54jJCN61y3QSKqjcPpr32wJ9qKkmpump", isCA: true },
-    { label: "ON-CHAIN BURNED", value: `${Math.round(totalBurned).toLocaleString()} $BATON` },
+    { label: "ON-CHAIN BURNED", value: `${Math.round(totalBurned).toLocaleString("en-US")} $BATON` },
   ];
 
   return (
@@ -34,7 +34,7 @@ export const Ticker: React.FC = React.memo(() => {
       {/* Live Badge */}
       <div className="hidden sm:flex items-center gap-1.5 px-3 h-full bg-black text-emerald-400 dark:text-acid uppercase tracking-wider text-[10px] font-black z-10 shrink-0 border-r border-zinc-800">
         <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 dark:bg-acid animate-ping" />
-        <span>DEXSCREENER LIVE · 30S</span>
+        <span>DEXSCREENER LIVE · 20S</span>
       </div>
 
       {/* Marquee Wrapper */}
