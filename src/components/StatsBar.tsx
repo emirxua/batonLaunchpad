@@ -10,7 +10,7 @@ interface StatsBarProps {
 }
 
 export const StatsBar: React.FC<StatsBarProps> = ({
-  totalBurned = 48_290_420,
+  totalBurned = 0,
   listedCoins = 142,
   topMultiplier = "Diamond 10x",
   tps = 2840,

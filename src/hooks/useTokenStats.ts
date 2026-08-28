@@ -35,9 +35,9 @@ export function useTokenStats(intervalMs: number = 15_000) {
 
   return {
     stats,
-    totalBurned: stats?.totalBurned ?? 2_323_086,
-    currentSupply: stats?.currentSupply ?? 997_676_913,
-    burnPercentage: stats?.burnPercentage ?? 0.2323,
+    totalBurned: stats?.totalBurned ?? 0,
+    currentSupply: stats?.currentSupply ?? 1_000_000_000,
+    burnPercentage: stats?.burnPercentage ?? 0,
     topHolders: stats?.topHolders ?? [],
     totalHoldersCount: stats?.totalHoldersCount ?? 1935,
     isLoading,

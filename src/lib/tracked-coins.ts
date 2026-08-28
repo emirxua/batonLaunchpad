@@ -31,7 +31,7 @@ export const TRACKED_COINS: TrackedCoinConfig[] = [
     imageUrl: "https://cdn.dexscreener.com/cms/images/B_1EShunz2lCb0jz?width=800&height=800&quality=95&format=auto",
     headerUrl: "https://cdn.dexscreener.com/cms/images/vVNqFVaQ0jWxKguy?width=1500&height=500&quality=95&format=auto",
     iconColor: "#ff3d7a",
-    totalBurnedBaton: 1_450_000,
+    totalBurnedBaton: 0,
     fallbackMarketCap: 12_435,
     fallbackVolume24h: 653,
     fallbackChange24h: 16.09,

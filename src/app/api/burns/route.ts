@@ -7,36 +7,24 @@ export interface RecordedBurn {
   id: string;
   txHash: string;
   coinId: string;
+  coinName?: string;
+  coinTicker?: string;
   amount: number;
   userAddress: string;
   timestamp: number;
 }
 
-// In-memory burn storage for demo / runtime state
-const BURNS_STORE: RecordedBurn[] = [
-  {
-    id: "burn-init-1",
-    txHash: "4yU9qKxJ...solscan",
-    coinId: "1",
-    amount: 150000,
-    userAddress: "8xK...9mP",
-    timestamp: Date.now() - 3600000,
-  },
-  {
-    id: "burn-init-2",
-    txHash: "2bW8xLmN...solscan",
-    coinId: "2",
-    amount: 50000,
-    userAddress: "3fR...7vX",
-    timestamp: Date.now() - 7200000,
-  },
-];
+// In-memory burn storage for real runtime transactions
+const BURNS_STORE: RecordedBurn[] = [];
 
 export async function GET() {
+  const totalBurned = BURNS_STORE.reduce((sum, b) => sum + b.amount, 0);
+
   return NextResponse.json({
     success: true,
     totalRecordedBurns: BURNS_STORE.length,
-    recentBurns: BURNS_STORE.slice(0, 20),
+    totalBurnedAmount: totalBurned,
+    recentBurns: BURNS_STORE.slice(0, 30),
   });
 }
 
@@ -63,13 +51,15 @@ export async function POST(request: Request) {
       targetCoin.totalBurnedBaton += burnAmount;
     }
 
-    // 2. Record burn transaction
+    // 2. Record genuine on-chain burn transaction
     const newRecord: RecordedBurn = {
       id: `burn-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
-      txHash,
-      coinId,
+      txHash: String(txHash).trim(),
+      coinId: String(coinId),
+      coinName: targetCoin?.name || "Baton",
+      coinTicker: targetCoin?.ticker || "BATON",
       amount: burnAmount,
-      userAddress: userAddress || "Anonymous",
+      userAddress: userAddress ? String(userAddress).trim() : "Anonymous",
       timestamp: Date.now(),
     };
 
@@ -79,7 +69,7 @@ export async function POST(request: Request) {
       success: true,
       record: newRecord,
       newTotalBurned: targetCoin?.totalBurnedBaton || burnAmount,
-      message: `Successfully burned ${burnAmount.toLocaleString()} $BATON for ${
+      message: `Successfully recorded on-chain burn of ${burnAmount.toLocaleString()} $BATON for ${
         targetCoin?.name || coinId
       }!`,
     });

@@ -12,7 +12,7 @@ interface HeroProps {
 }
 
 export const Hero: React.FC<HeroProps> = ({
-  totalBurnedBaton = 1_450_000,
+  totalBurnedBaton = 0,
   activeCoinsCount = 1,
   topCommunityTicker = "$BATON",
   topCommunityTier = "DIAMOND",

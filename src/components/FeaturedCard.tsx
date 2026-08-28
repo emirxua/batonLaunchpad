@@ -28,7 +28,7 @@ export const FeaturedCard: React.FC<FeaturedCardProps> = React.memo(({
   marketCap = 12_435,
   volume24h = 653,
   change24h = 16.09,
-  totalBurnedBaton = 2_323_086,
+  totalBurnedBaton = 0,
   isLoading = false,
   onBurnClick,
 }) => {
