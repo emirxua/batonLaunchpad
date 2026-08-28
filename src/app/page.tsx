@@ -15,17 +15,10 @@ import {
   Search,
   ExternalLink,
   ChevronDown,
-  Sparkles,
-  Rocket,
-  ShieldCheck,
   Plus,
   Minus,
   ArrowRight,
-  TrendingUp,
-  Clock,
-  Layers,
-  CheckCircle2,
-  Users,
+  ShieldCheck,
 } from "lucide-react";
 
 const CATEGORIES = [
@@ -78,7 +71,7 @@ export default function OutbidHomePage() {
       if (match) {
         setSelectedCoin(match);
       } else {
-        // Create new candidate coin for burn modal
+        // Create candidate coin for burn modal
         setSelectedCoin({
           id: `custom-${Date.now()}`,
           name: inputToken.length > 12 ? `${inputToken.slice(0, 4)}...${inputToken.slice(-4)}` : inputToken,
@@ -222,126 +215,149 @@ export default function OutbidHomePage() {
           })}
         </div>
 
-        {/* 5. Top 3 Featured Outbid Podium Cards (#1, #2, #3) */}
+        {/* 5. Top Featured Outbid Podium Cards */}
         <div className="space-y-4">
-          {top3Coins.map((coin, index) => {
-            const rank = index + 1;
-            const isRank1 = rank === 1;
-
-            return (
-              <div
-                key={coin.id}
-                onClick={() => setSelectedCoin(coin)}
-                className={`group relative rounded-2xl p-5 sm:p-6 transition-all duration-200 cursor-pointer ${
-                  isRank1
-                    ? "bg-[#FFF8F3] dark:bg-[#1A1412] border-2 border-orange-500/60 shadow-lg shadow-orange-500/10 hover:border-orange-500"
-                    : "bg-white dark:bg-[#15171C] border border-zinc-200 dark:border-white/10 shadow-sm hover:border-zinc-300 dark:hover:border-white/20"
-                }`}
+          {top3Coins.length === 0 ? (
+            <div className="p-8 sm:p-12 rounded-2xl bg-white dark:bg-[#15171C] border border-dashed border-zinc-300 dark:border-white/10 text-center space-y-4">
+              <div className="w-12 h-12 rounded-2xl bg-orange-50 dark:bg-orange-500/10 text-orange-500 flex items-center justify-center mx-auto">
+                <Flame className="w-6 h-6" />
+              </div>
+              <div className="space-y-1">
+                <h3 className="font-archivo text-lg font-bold text-zinc-900 dark:text-white">
+                  No projects listed in {selectedCategory === "all" ? "this category" : selectedCategory} yet
+                </h3>
+                <p className="text-xs font-mono text-zinc-500 dark:text-zinc-400 max-w-md mx-auto">
+                  Be the first community to claim #1 rank by burning $BATON or submitting your project.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={handleClaimRank}
+                className="px-6 py-2.5 rounded-xl bg-orange-500 hover:bg-orange-600 text-white font-mono text-xs font-bold uppercase tracking-wider transition-all shadow-md shadow-orange-500/20"
               >
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                  {/* Left: Rank Badge + Avatar + Title & Meta */}
-                  <div className="flex items-start sm:items-center gap-4 min-w-0">
-                    {/* Rank Badge */}
-                    <div
-                      className={`w-9 h-9 rounded-xl flex items-center justify-center font-archivo text-sm font-black shrink-0 ${
-                        isRank1
-                          ? "bg-orange-500 text-white shadow-md shadow-orange-500/30"
-                          : rank === 2
-                          ? "bg-zinc-200 dark:bg-zinc-800 text-zinc-800 dark:text-zinc-200"
-                          : "bg-amber-100 dark:bg-amber-950/60 text-amber-800 dark:text-amber-400"
-                      }`}
-                    >
-                      #{rank}
-                    </div>
+                Claim #1 Rank Now 🔥
+              </button>
+            </div>
+          ) : (
+            top3Coins.map((coin, index) => {
+              const rank = index + 1;
+              const isRank1 = rank === 1;
 
-                    {/* 48x48 Avatar */}
-                    <div
-                      className="w-12 h-12 rounded-xl overflow-hidden flex items-center justify-center font-archivo text-base font-bold shrink-0 shadow-inner"
-                      style={{
-                        backgroundColor: `${coin.iconColor}20`,
-                        color: coin.iconColor,
-                        border: `1px solid ${coin.iconColor}40`,
-                      }}
-                    >
-                      {coin.imageUrl ? (
-                        <Image
-                          src={coin.imageUrl}
-                          alt={coin.name}
-                          width={48}
-                          height={48}
-                          className="w-full h-full object-cover"
-                          unoptimized
-                        />
-                      ) : (
-                        <span>{coin.ticker.slice(0, 3)}</span>
-                      )}
-                    </div>
-
-                    {/* Info */}
-                    <div className="min-w-0 space-y-1">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <h3 className="font-archivo text-base sm:text-lg font-bold text-zinc-900 dark:text-white truncate group-hover:text-orange-500 transition-colors">
-                          {coin.name}
-                        </h3>
-                        <span className="font-mono text-xs font-bold text-zinc-500 dark:text-zinc-400">
-                          ${coin.ticker}
-                        </span>
+              return (
+                <div
+                  key={coin.id}
+                  onClick={() => setSelectedCoin(coin)}
+                  className={`group relative rounded-2xl p-5 sm:p-6 transition-all duration-200 cursor-pointer ${
+                    isRank1
+                      ? "bg-[#FFF8F3] dark:bg-[#1A1412] border-2 border-orange-500/60 shadow-lg shadow-orange-500/10 hover:border-orange-500"
+                      : "bg-white dark:bg-[#15171C] border border-zinc-200 dark:border-white/10 shadow-sm hover:border-zinc-300 dark:hover:border-white/20"
+                  }`}
+                >
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                    {/* Left: Rank Badge + Avatar + Title & Meta */}
+                    <div className="flex items-start sm:items-center gap-4 min-w-0">
+                      {/* Rank Badge */}
+                      <div
+                        className={`w-9 h-9 rounded-xl flex items-center justify-center font-archivo text-sm font-black shrink-0 ${
+                          isRank1
+                            ? "bg-orange-500 text-white shadow-md shadow-orange-500/30"
+                            : rank === 2
+                            ? "bg-zinc-200 dark:bg-zinc-800 text-zinc-800 dark:text-zinc-200"
+                            : "bg-amber-100 dark:bg-amber-950/60 text-amber-800 dark:text-amber-400"
+                        }`}
+                      >
+                        #{rank}
                       </div>
 
-                      <p className="text-xs text-zinc-500 dark:text-zinc-400 line-clamp-1 max-w-lg">
-                        {coin.description || "Solana verified community token. Burn $BATON to overtake rank."}
-                      </p>
+                      {/* Avatar */}
+                      <div
+                        className="w-12 h-12 rounded-xl overflow-hidden flex items-center justify-center font-archivo text-base font-bold shrink-0 shadow-inner"
+                        style={{
+                          backgroundColor: `${coin.iconColor}20`,
+                          color: coin.iconColor,
+                          border: `1px solid ${coin.iconColor}40`,
+                        }}
+                      >
+                        {coin.imageUrl ? (
+                          <Image
+                            src={coin.imageUrl}
+                            alt={coin.name}
+                            width={48}
+                            height={48}
+                            className="w-full h-full object-cover"
+                            unoptimized
+                          />
+                        ) : (
+                          <span>{coin.ticker.slice(0, 3)}</span>
+                        )}
+                      </div>
 
-                      {/* Meta Tags Row */}
-                      <div className="flex items-center gap-2 sm:gap-3 text-[11px] font-mono text-zinc-400 dark:text-zinc-500 flex-wrap pt-0.5">
-                        <span className="inline-flex items-center gap-1 text-zinc-600 dark:text-zinc-400 font-semibold">
-                          🏷 {coin.category || "Mascots"}
-                        </span>
-                        <span>•</span>
-                        <span>{(coin.viewsCount || 12450).toLocaleString()} clicks</span>
-                        <span>•</span>
-                        <a
-                          href={`https://pump.fun/coin/${coin.mintAddress}`}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          onClick={(e) => e.stopPropagation()}
-                          className="text-orange-500 hover:underline inline-flex items-center gap-0.5 font-bold"
-                        >
-                          pump.fun <ExternalLink className="w-2.5 h-2.5 inline" />
-                        </a>
+                      {/* Info */}
+                      <div className="min-w-0 space-y-1">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <h3 className="font-archivo text-base sm:text-lg font-bold text-zinc-900 dark:text-white truncate group-hover:text-orange-500 transition-colors">
+                            {coin.name}
+                          </h3>
+                          <span className="font-mono text-xs font-bold text-zinc-500 dark:text-zinc-400">
+                            ${coin.ticker}
+                          </span>
+                        </div>
+
+                        <p className="text-xs text-zinc-500 dark:text-zinc-400 line-clamp-1 max-w-lg">
+                          {coin.description || "Solana verified community token. Burn $BATON to overtake rank."}
+                        </p>
+
+                        {/* Meta Tags Row */}
+                        <div className="flex items-center gap-2 sm:gap-3 text-[11px] font-mono text-zinc-400 dark:text-zinc-500 flex-wrap pt-0.5">
+                          <span className="inline-flex items-center gap-1 text-zinc-600 dark:text-zinc-400 font-semibold">
+                            🏷 {coin.category || "Mascots"}
+                          </span>
+                          <span>•</span>
+                          <span>{(coin.viewsCount || 12450).toLocaleString()} clicks</span>
+                          <span>•</span>
+                          <a
+                            href={`https://pump.fun/coin/${coin.mintAddress}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            onClick={(e) => e.stopPropagation()}
+                            className="text-orange-500 hover:underline inline-flex items-center gap-0.5 font-bold"
+                          >
+                            pump.fun <ExternalLink className="w-2.5 h-2.5 inline" />
+                          </a>
+                        </div>
                       </div>
                     </div>
-                  </div>
 
-                  {/* Right: Burned Score & Outbid Button */}
-                  <div className="flex items-center justify-between sm:justify-end gap-4 shrink-0 font-mono">
-                    <div className="text-left sm:text-right">
-                      <div className="text-lg sm:text-2xl font-black text-orange-500 font-mono-num">
-                        {coin.totalBurnedBaton > 0
-                          ? `${coin.totalBurnedBaton.toLocaleString()} $BATON`
-                          : "0 $BATON"}
+                    {/* Right: Burned Score & Outbid Button */}
+                    <div className="flex items-center justify-between sm:justify-end gap-4 shrink-0 font-mono">
+                      <div className="text-left sm:text-right">
+                        <div className="text-lg sm:text-2xl font-black text-orange-500 font-mono-num">
+                          {coin.totalBurnedBaton > 0
+                            ? `${coin.totalBurnedBaton.toLocaleString()} $BATON`
+                            : "0 $BATON"}
+                        </div>
+                        <div className="text-[10px] text-zinc-400 uppercase font-bold">
+                          Total Burn Score
+                        </div>
                       </div>
-                      <div className="text-[10px] text-zinc-400 uppercase font-bold">
-                        Total Burn Score
-                      </div>
+
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setSelectedCoin(coin);
+                        }}
+                        className="px-4 py-2 rounded-xl bg-orange-500/10 hover:bg-orange-500 text-orange-600 hover:text-white dark:text-orange-400 dark:hover:text-white border border-orange-500/30 text-xs font-bold transition-all shadow-sm flex items-center gap-1"
+                      >
+                        <Flame className="w-3.5 h-3.5 fill-current" />
+                        <span>Outbid</span>
+                      </button>
                     </div>
-
-                    <button
-                      type="button"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setSelectedCoin(coin);
-                      }}
-                      className="px-4 py-2 rounded-xl bg-orange-500/10 hover:bg-orange-500 text-orange-600 hover:text-white dark:text-orange-400 dark:hover:text-white border border-orange-500/30 text-xs font-bold transition-all shadow-sm flex items-center gap-1"
-                    >
-                      <Flame className="w-3.5 h-3.5 fill-current" />
-                      <span>Outbid</span>
-                    </button>
                   </div>
                 </div>
-              </div>
-            );
-          })}
+              );
+            })
+          )}
         </div>
 
         {/* 6. Today's Top Ranking Mini Cards Carousel (outbid.lol screenshot 1 style) */}
@@ -500,7 +516,7 @@ export default function OutbidHomePage() {
         <section className="p-6 sm:p-8 rounded-3xl bg-gradient-to-r from-orange-500 via-amber-500 to-rose-500 text-white shadow-xl shadow-orange-500/20 flex flex-col sm:flex-row items-center justify-between gap-6">
           <div className="space-y-2 text-center sm:text-left">
             <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/20 backdrop-blur-md text-xs font-mono font-bold uppercase tracking-wider">
-              <Rocket className="w-3.5 h-3.5" />
+              <Flame className="w-3.5 h-3.5 fill-current" />
               <span>Full Launchpad &amp; Mascot Engine</span>
             </div>
             <h2 className="font-archivo text-2xl sm:text-3xl font-black uppercase">
