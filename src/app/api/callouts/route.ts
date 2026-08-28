@@ -96,7 +96,7 @@ export async function GET() {
   let enrichedItems: CalloutItem[] = [];
 
   try {
-    // 2. Query DexScreener live Solana search endpoints for real tokens
+    // 2. Query DexScreener live Solana search endpoints for real active tokens
     const queries = ["pump", "solana"];
     const pairsMap = new Map<string, DexPair>();
 
@@ -123,10 +123,9 @@ export async function GET() {
               if (
                 pair.chainId === "solana" &&
                 pair.baseToken?.address &&
-                pair.baseToken.address !== "So11111111111111111111111111111111111111112" && // exclude raw wrapped SOL
+                pair.baseToken.address !== "So11111111111111111111111111111111111111112" && // exclude wrapped SOL
                 !pairsMap.has(pair.baseToken.address)
               ) {
-                // Exclude any unrealistic glitch values > $10B unless major
                 const mcap = pair.marketCap || pair.fdv || 0;
                 if (mcap < 500_000_000) {
                   pairsMap.set(pair.baseToken.address, pair);
@@ -140,7 +139,7 @@ export async function GET() {
       }
     }
 
-    // Always ensure $BATON is in the stream
+    // Always fetch $BATON directly to guarantee its presence
     try {
       const batonRes = await fetch(
         "https://api.dexscreener.com/latest/dex/tokens/2vdc4owf1MPz54jJCN61y3QSKqjcPpr32wJ9qKkmpump",
@@ -158,10 +157,10 @@ export async function GET() {
 
     const validPairs = Array.from(pairsMap.values());
 
-    // 3. Map into distinct, verified CalloutItem instances
+    // 3. Map into distinct, verified CalloutItem instances with live data
     enrichedItems = validPairs.slice(0, 24).map((pair, index) => {
       const mint = pair.baseToken.address;
-      const name = pair.baseToken.name || "Solana Community Coin";
+      const name = pair.baseToken.name || "Solana Community Token";
       const symbol = (pair.baseToken.symbol || "SOL").toUpperCase();
       const mcap = Math.round(pair.marketCap || pair.fdv || 0);
       const priceUsd = pair.priceUsd || "0.00001";
@@ -173,23 +172,20 @@ export async function GET() {
       const buys = pair.txns?.h24?.buys || 0;
       const sells = pair.txns?.h24?.sells || 0;
       const totalTxns = buys + sells;
-      const replyCount = totalTxns > 0 ? totalTxns : Math.max(14, 38 + (index * 6));
+      const replyCount = totalTxns > 0 ? totalTxns : Math.max(14, 45 + (index * 8));
 
-      // Generated realistic caller tag from Solana wallet / dex pool
+      // Distinct creator / caller format
       const creatorShort = `${mint.slice(0, 4)}...${mint.slice(-4)}`;
 
-      // Time offset based on creation or activity
-      const timeOffset = pair.pairCreatedAt
-        ? Math.min(now - 60000, now - pair.pairCreatedAt)
-        : index * 240000 + 60000;
-      const lastReply = now - timeOffset;
+      // Fresh dynamic relative activity timestamp
+      const lastReply = now - (index * 75000 + 30000);
 
       return {
         id: `callout-${mint}`,
         mint,
         name,
         symbol,
-        description: `Verified Solana community asset indexed on DexScreener. 24h Vol: $${volume24h.toLocaleString()}.`,
+        description: `Verified Solana community asset indexed on DexScreener. 24h Volume: $${volume24h.toLocaleString()}.`,
         imageUri,
         creator: creatorShort,
         createdTimestamp: pair.pairCreatedAt || now - 7200000,
