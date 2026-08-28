@@ -120,53 +120,57 @@ export default function HomePage() {
         />
 
         {/* Tier Multipliers Banner */}
-        <section className="p-6 rounded-2xl border border-zinc-200/80 dark:border-line bg-white/80 dark:bg-bg-raised/60 backdrop-blur-md shadow-lg shadow-zinc-200/30 dark:shadow-none space-y-4">
+        <section className="bg-zinc-900/60 dark:bg-[#111318]/80 backdrop-blur-md border border-zinc-800 dark:border-white/10 rounded-2xl p-6 shadow-xl shadow-black/40 space-y-4">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
             <div>
-              <h2 className="font-archivo text-lg text-zinc-900 dark:text-text flex items-center gap-2">
-                <Zap className="w-4 h-4 text-emerald-600 dark:text-acid" />
+              <h2 className="font-archivo text-lg text-white font-bold flex items-center gap-2">
+                <Zap className="w-4 h-4 text-lime-400" />
                 <span>$BATON Burn Tiers &amp; Visibility Multipliers</span>
               </h2>
-              <p className="text-xs text-zinc-500 dark:text-text-dim font-space">
+              <p className="text-sm text-zinc-400 font-space">
                 Every $BATON burned directly upgrades your token&apos;s directory ranking and community trust score.
               </p>
             </div>
-            <span className="text-[11px] font-mono text-emerald-700 dark:text-acid bg-emerald-50 dark:bg-acid/10 border border-emerald-200 dark:border-acid/20 px-2.5 py-1 rounded-full uppercase font-bold w-max">
+            <span className="bg-lime-400/10 text-lime-400 border border-lime-400/20 font-semibold px-3 py-1 rounded-full text-xs font-mono uppercase w-max select-none">
               Automatic Tier Progression
             </span>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 pt-1">
-            <div className="p-3.5 rounded-xl border border-[#cd7f32]/40 bg-[#cd7f32]/5">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 pt-1 font-mono">
+            {/* Bronze Tier */}
+            <div className="bg-zinc-950/60 border border-amber-700/40 rounded-xl p-4 transition-all duration-200 hover:scale-[1.02]">
               <div className="flex items-center justify-between">
-                <span className="text-xs font-mono font-bold text-[#b45309] dark:text-[#e6a86c]">Bronze Tier</span>
-                <span className="text-[10px] font-mono text-zinc-500 dark:text-text-dim">10K $BATON</span>
+                <span className="text-xs font-bold text-amber-500">Bronze Tier</span>
+                <span className="text-[11px] text-zinc-400">10K $BATON</span>
               </div>
-              <div className="text-xs text-zinc-500 dark:text-text-dim mt-1.5 font-space">1.5x Directory Multiplier</div>
+              <div className="text-zinc-400 text-xs mt-1 font-space">1.5x Directory Multiplier</div>
             </div>
 
-            <div className="p-3.5 rounded-xl border border-zinc-300 dark:border-[#c0c0c0]/40 bg-zinc-100/60 dark:bg-[#c0c0c0]/5">
+            {/* Silver Tier */}
+            <div className="bg-zinc-950/60 border border-slate-500/40 rounded-xl p-4 transition-all duration-200 hover:scale-[1.02]">
               <div className="flex items-center justify-between">
-                <span className="text-xs font-mono font-bold text-zinc-700 dark:text-[#f0f0f0]">Silver Tier</span>
-                <span className="text-[10px] font-mono text-zinc-500 dark:text-text-dim">50K $BATON</span>
+                <span className="text-xs font-bold text-slate-300">Silver Tier</span>
+                <span className="text-[11px] text-zinc-400">50K $BATON</span>
               </div>
-              <div className="text-xs text-zinc-500 dark:text-text-dim mt-1.5 font-space">3x Visibility Boost</div>
+              <div className="text-zinc-400 text-xs mt-1 font-space">3x Visibility Boost</div>
             </div>
 
-            <div className="p-3.5 rounded-xl border border-amber-400/40 bg-amber-50 dark:bg-[#ffd700]/5">
+            {/* Gold Tier */}
+            <div className="bg-zinc-950/60 border border-yellow-500/40 rounded-xl p-4 transition-all duration-200 hover:scale-[1.02] shadow-[0_0_15px_rgba(234,179,8,0.08)]">
               <div className="flex items-center justify-between">
-                <span className="text-xs font-mono font-bold text-amber-600 dark:text-[#ffe033]">Gold Tier</span>
-                <span className="text-[10px] font-mono text-zinc-500 dark:text-text-dim">250K $BATON</span>
+                <span className="text-xs font-bold text-yellow-400">Gold Tier</span>
+                <span className="text-[11px] text-zinc-400">250K $BATON</span>
               </div>
-              <div className="text-xs text-zinc-500 dark:text-text-dim mt-1.5 font-space">6x Priority Placement</div>
+              <div className="text-zinc-400 text-xs mt-1 font-space">6x Priority Placement</div>
             </div>
 
-            <div className="p-3.5 rounded-xl border border-sky-400/40 bg-sky-50 dark:bg-[#70d6ff]/5 shadow-sm">
+            {/* Diamond Tier */}
+            <div className="bg-zinc-950/60 border border-cyan-400/50 rounded-xl p-4 transition-all duration-200 hover:scale-[1.02] shadow-[0_0_20px_rgba(34,211,238,0.15)]">
               <div className="flex items-center justify-between">
-                <span className="text-xs font-mono font-bold text-sky-600 dark:text-[#a5e5ff]">Diamond Tier</span>
-                <span className="text-[10px] font-mono text-zinc-500 dark:text-text-dim">1M+ $BATON</span>
+                <span className="text-xs font-bold text-cyan-300">Diamond Tier</span>
+                <span className="text-[11px] text-zinc-400">1M+ $BATON</span>
               </div>
-              <div className="text-xs text-zinc-500 dark:text-text-dim mt-1.5 font-space">10x Hero Spotlight &amp; Glow</div>
+              <div className="text-zinc-400 text-xs mt-1 font-space">10x Hero Spotlight &amp; Glow</div>
             </div>
           </div>
         </section>
