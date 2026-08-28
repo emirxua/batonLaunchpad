@@ -120,10 +120,10 @@ export default function CalloutsPage() {
       fetchCallouts(false);
     }
 
-    // 20 seconds silent client-side polling interval
+    // 12 seconds silent client-side polling interval for live stream
     const interval = setInterval(() => {
       fetchCallouts(true);
-    }, 20_000);
+    }, 12_000);
 
     return () => clearInterval(interval);
   }, [fetchCallouts]);
@@ -327,13 +327,16 @@ export default function CalloutsPage() {
 
           {/* 4. Live Stats Bar */}
           <div className="relative z-10 grid grid-cols-1 sm:grid-cols-3 gap-3 pt-4 border-t border-zinc-200 dark:border-white/10 font-mono text-xs">
-            {/* Stat 1: Live Status */}
+            {/* Stat 1: Live Status & Auto-Sync */}
             <div className="p-3.5 rounded-2xl bg-white/80 dark:bg-[#15171C]/90 border border-zinc-200/80 dark:border-white/10 flex items-center gap-3 shadow-sm">
-              <div className="w-3 h-3 rounded-full bg-emerald-500 animate-ping shrink-0" />
+              <div className="relative flex items-center justify-center">
+                <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-ping absolute" />
+                <span className="w-2 h-2 rounded-full bg-emerald-500" />
+              </div>
               <div>
-                <div className="text-[10px] text-zinc-400 uppercase font-bold">Stream Status</div>
-                <div className="text-sm font-bold text-zinc-900 dark:text-white flex items-center gap-1.5">
-                  <span>🟢 Live Stream Active</span>
+                <div className="text-[10px] text-zinc-400 uppercase font-bold">Auto-Sync Engine</div>
+                <div className="text-sm font-bold text-zinc-900 dark:text-white flex items-center gap-1.5 font-mono">
+                  <span>⚡ Live Syncing (every 10s)</span>
                 </div>
               </div>
             </div>

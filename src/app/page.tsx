@@ -72,7 +72,7 @@ export default function OutbidHomePage() {
 
   useEffect(() => {
     fetchTopCallouts();
-    const interval = setInterval(fetchTopCallouts, 25_000);
+    const interval = setInterval(fetchTopCallouts, 12_000);
     return () => clearInterval(interval);
   }, [fetchTopCallouts]);
 

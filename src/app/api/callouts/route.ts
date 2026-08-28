@@ -31,10 +31,10 @@ export interface CalloutsResponse {
   timestamp: number;
 }
 
-// In-Memory Cache Store (30 seconds TTL)
+// In-Memory Cache Store (10 seconds TTL for live stream)
 let cachedCallouts: CalloutItem[] | null = null;
 let lastCacheTime = 0;
-const CACHE_TTL_MS = 30_000;
+const CACHE_TTL_MS = 10_000;
 
 interface PumpFunCoin {
   mint: string;
