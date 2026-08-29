@@ -8,7 +8,7 @@ import { LiveCalloutsFeed } from "@/components/home/LiveCalloutsFeed";
 import { KingOfHillCard } from "@/components/home/KingOfHillCard";
 import { RankedAttentionTable } from "@/components/home/RankedAttentionTable";
 import { QuickSwapCard } from "@/components/home/QuickSwapCard";
-import { LiveSignalsCompact } from "@/components/home/LiveSignalsCompact";
+import { HomeTrendingMini } from "@/components/home/HomeTrendingMini";
 import { OutbidModal } from "@/components/modals/OutbidModal";
 import { useHomeData } from "@/hooks/useHomeData";
 import { Coin } from "@/types/coin";
@@ -83,16 +83,13 @@ export default function OutbidHomePage() {
             />
           </section>
 
-          {/* Right Column (col-span-4): QuickSwap + Live Caller Signals */}
+          {/* Right Column (col-span-4): QuickSwap + Trending Alpha Movers */}
           <aside className="lg:col-span-4 space-y-6">
             {/* 1. Quick Swap Card: SOL -> BATON Route via Jupiter */}
             <QuickSwapCard />
 
-            {/* 2. Live Verified Caller Pulse Stream */}
-            <LiveSignalsCompact
-              initialCallouts={recentCallouts}
-              isLoading={isLoading}
-            />
+            {/* 2. Trending Alpha Movers: DexScreener >$70K MC Top 4 */}
+            <HomeTrendingMini />
           </aside>
         </div>
       </main>

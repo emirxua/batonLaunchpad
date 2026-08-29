@@ -127,6 +127,7 @@ export async function GET(req: Request) {
       success: true,
       count: tokens.length,
       tokens: tokens.length > 0 ? tokens : lastGoodTokens,
+      data: tokens.length > 0 ? tokens : lastGoodTokens,
     });
   } catch (err: unknown) {
     if (lastGoodTokens.length > 0) {
@@ -134,6 +135,7 @@ export async function GET(req: Request) {
         success: true,
         count: lastGoodTokens.length,
         tokens: lastGoodTokens,
+        data: lastGoodTokens,
       });
     }
     const message = err instanceof Error ? err.message : "Trending fetch error";
