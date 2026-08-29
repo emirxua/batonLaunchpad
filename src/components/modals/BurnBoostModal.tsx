@@ -40,7 +40,7 @@ interface DynamicTokenMetadata {
 // In-memory cache for resolved metadata across modals
 const tokenMetadataCache = new Map<string, DynamicTokenMetadata>();
 
-interface BurnModalProps {
+export interface BurnBoostModalProps {
   coin: Coin | null;
   isOpen: boolean;
   initialAmount?: number;
@@ -55,7 +55,7 @@ type BurnState =
   | "success"
   | "error";
 
-export const BurnModal: React.FC<BurnModalProps> = ({
+export const BurnBoostModal: React.FC<BurnBoostModalProps> = ({
   coin,
   isOpen,
   initialAmount = 1000,
@@ -205,7 +205,7 @@ export const BurnModal: React.FC<BurnModalProps> = ({
   }, [isOpen, coin, initialAmount, resolveMetadata, fetchLiveCoinBurns]);
 
   // ── DYNAMIC TIER CALCULATION ─────────────────────────────────────────────────
-  // Tier thresholds (exact specification):
+  // Exact Thresholds:
   // Bronze: 10,000 $BATON
   // Silver: 50,000 $BATON
   // Gold: 250,000 $BATON
@@ -452,7 +452,7 @@ export const BurnModal: React.FC<BurnModalProps> = ({
         onClick={(e) => e.stopPropagation()}
         className="w-full max-w-md max-h-[90vh] overflow-y-auto bg-[#111318]/95 border border-white/10 rounded-2xl p-6 sm:p-7 space-y-5 shadow-2xl shadow-black/80 relative my-auto transition-all"
       >
-        {/* Modal Header: full dynamic title without truncate */}
+        {/* 1. Modal Header: Full title without truncate */}
         <div className="flex items-start justify-between pb-3.5 border-b border-white/10 gap-3">
           <div className="flex items-start gap-3 flex-1 min-w-0">
             <div className="w-10 h-10 rounded-xl bg-orange-500/15 border border-orange-500/30 flex items-center justify-center text-orange-400 shadow-[0_0_15px_rgba(249,115,22,0.25)] shrink-0 mt-0.5">
@@ -478,7 +478,7 @@ export const BurnModal: React.FC<BurnModalProps> = ({
           </button>
         </div>
 
-        {/* Target Token Künyesi / Info Card */}
+        {/* 2. Target Token Künyesi: Logo, $SYMBOL ($NAME), CA copy, Explorer Links */}
         <div className="p-3.5 rounded-xl bg-zinc-950/70 border border-white/10 space-y-2 font-mono">
           <div className="flex items-center justify-between gap-3">
             <div className="flex items-center gap-2.5 min-w-0">
@@ -616,7 +616,7 @@ export const BurnModal: React.FC<BurnModalProps> = ({
           </div>
         ) : (
           <>
-            {/* 1. Dynamic Tier Progress Bar with Live Simulation Preview */}
+            {/* 3. Dynamic Tier Progress Bar (Bronze: 10k, Silver: 50k, Gold: 250k, Diamond: 1M) */}
             <div className="p-3.5 rounded-xl border border-white/10 bg-zinc-900/50 space-y-2.5 font-mono">
               <div className="flex items-center justify-between text-xs">
                 <div className="flex items-center gap-1.5 text-zinc-400">
@@ -691,7 +691,7 @@ export const BurnModal: React.FC<BurnModalProps> = ({
               )}
             </div>
 
-            {/* 2. Amount Input & Wallet Balance */}
+            {/* 4. Amount Input & Wallet Balance */}
             <div className="space-y-2.5 font-mono">
               <div className="flex items-center justify-between text-xs">
                 <label className="text-zinc-400 font-medium">
@@ -810,5 +810,4 @@ export const BurnModal: React.FC<BurnModalProps> = ({
   );
 };
 
-export { BurnBoostModal } from "@/components/modals/BurnBoostModal";
-export default BurnModal;
+export default BurnBoostModal;
