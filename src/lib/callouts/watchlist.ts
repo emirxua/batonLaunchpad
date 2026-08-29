@@ -1,107 +1,67 @@
-/**
- * Watchlist of high-signal callers on Pump.fun (e.g. Alon / Founders / Alpha callers)
- */
+// ─── Watchlist: known callers ─────────────────────────────────────────────────
+// Source: CALLOUT_WATCH_WALLETS / CALLOUT_WATCH_LABELS env vars
+// Defaults are the community-curated list (as of Aug 2026)
 
-export interface WatchlistEntry {
-  wallet: string;
-  label: string;
-  avatarUrl?: string;
-  username?: string;
-}
-
-// Alon (pump.fun founder): 6DtEedWf9Wk5hA7Xth82Eq441yf5DA4aGLqaQAVfDokm
-export const DEFAULT_WATCH_WALLETS = [
-  "6DtEedWf9Wk5hA7Xth82Eq441yf5DA4aGLqaQAVfDokm",
-];
-
-export const DEFAULT_WATCH_LABELS: Record<string, string> = {
-  "6DtEedWf9Wk5hA7Xth82Eq441yf5DA4aGLqaQAVfDokm": "Alon (Founder)",
+export const DEFAULT_WATCHLIST: Record<string, string> = {
+  "2fg5QD1eD7rzNNCsvnhmXFm5hqNgwTTG8p7kQ6f3rx6f": "cupseyyyyy",
+  "5YRgrP3mjGzrzirYYN5HAQH19cTYREYwGxW6XRJQUzij": "slingoor",
+  "FNcrF6nt9BXswJrHom4hNmXCeW9no2C8wKh5UqdP8ueu": "archelon",
+  "7fEXteaTtmX1uR8fpChEXsevM4icH5vq8LNL9dzDupX2": "croakie",
+  "BSzpGGB3AMwtW126RT3Z27STSBrVjKV5A96H4BsUKdtD": "ferre",
+  "5hAgYC8TJCcEZV7LTXAzkTrm7YL29YXyQQJPCNrG84zM": "schoen",
+  "HmUt3Jn46j7c7ANdURmEyjSRj8i3Em6MhjQUi37PZ219": "netvyxe",
+  "GV6UUmNxz2RpKxmNAPadYKb7uQpszwqQAu3qLJxVdC52": "ansemconzimp",
+  "6i2aHtxfqkC2biTo98FSkP59FVHPKFRLZWDbdghN6WKK": "sapijiju",
+  "6DtEedWf9Wk5hA7Xth82Eq441yf5DA4aGLqaQAVfDokm": "alonalon",
 };
 
 /**
- * Returns the list of tracked caller wallet addresses from env or defaults.
+ * Returns wallet → label map, merging env overrides over defaults.
+ * CALLOUT_WATCH_WALLETS: comma-separated wallet addresses
+ * CALLOUT_WATCH_LABELS:  JSON  {"wallet": "label", ...}
+ *                     OR comma-separated  "wallet:label,wallet2:label2"
  */
-export function getWatchlistWallets(): string[] {
-  if (typeof process !== "undefined" && process.env.CALLOUT_WATCH_WALLETS) {
-    const fromEnv = process.env.CALLOUT_WATCH_WALLETS.split(",")
-      .map((w) => w.trim())
-      .filter(Boolean);
-    if (fromEnv.length > 0) {
-      return fromEnv;
-    }
-  }
-  return DEFAULT_WATCH_WALLETS;
-}
+export function getWatchlistMap(): Record<string, string> {
+  const map: Record<string, string> = { ...DEFAULT_WATCHLIST };
 
-/**
- * Returns a mapping of wallet addresses to human-readable labels.
- */
-export function getWatchlistLabels(): Record<string, string> {
-  const map: Record<string, string> = { ...DEFAULT_WATCH_LABELS };
-  if (typeof process !== "undefined" && process.env.CALLOUT_WATCH_LABELS) {
+  if (process.env.CALLOUT_WATCH_LABELS) {
     try {
       const parsed = JSON.parse(process.env.CALLOUT_WATCH_LABELS);
       if (typeof parsed === "object" && parsed !== null) {
         Object.assign(map, parsed);
       }
     } catch {
-      // If comma-separated pairs "addr:label,addr2:label2"
+      // Try "wallet:label,..." format
       process.env.CALLOUT_WATCH_LABELS.split(",").forEach((pair) => {
-        const [addr, label] = pair.split(":");
-        if (addr && label) {
-          map[addr.trim()] = label.trim();
+        const idx = pair.indexOf(":");
+        if (idx > 0) {
+          const addr = pair.slice(0, idx).trim();
+          const label = pair.slice(idx + 1).trim();
+          if (addr && label) map[addr] = label;
         }
       });
     }
   }
+
   return map;
 }
 
-export function isWatchlistWallet(wallet: string): boolean {
-  if (!wallet) return false;
-  const list = getWatchlistWallets();
-  return list.some((w) => w.toLowerCase() === wallet.toLowerCase());
-}
-
 /**
- * Attempt to resolve username/profile from pump.fun profile-api or fallback gracefully
+ * Returns the ordered list of wallets to fetch.
+ * If CALLOUT_WATCH_WALLETS is set, those wallets are used (plus defaults).
+ * Otherwise returns all default watchlist wallets.
  */
-export async function resolveCallerProfile(
-  wallet: string,
-  jwt?: string
-): Promise<{ username?: string; avatarUrl?: string }> {
-  const labels = getWatchlistLabels();
-  if (labels[wallet]) {
-    return {
-      username: labels[wallet],
-    };
+export function getWatchlistWallets(): string[] {
+  const map = getWatchlistMap();
+
+  if (process.env.CALLOUT_WATCH_WALLETS) {
+    const extra = process.env.CALLOUT_WATCH_WALLETS.split(",")
+      .map((w) => w.trim())
+      .filter(Boolean);
+    // extra takes precedence; default list still included unless overridden
+    const combined = Array.from(new Set([...extra, ...Object.keys(map)]));
+    return combined;
   }
 
-  try {
-    const headers: Record<string, string> = {
-      Accept: "application/json",
-      "User-Agent": "Mozilla/5.0 (compatible; BatonOutbidBot/1.0)",
-    };
-    if (jwt) {
-      headers["Authorization"] = jwt.startsWith("Bearer ") ? jwt : `Bearer ${jwt}`;
-    }
-
-    const res = await fetch(`https://profile-api.pump.fun/users/${wallet}`, {
-      headers,
-      next: { revalidate: 300 },
-    });
-
-    if (res.ok) {
-      const data = await res.json();
-      return {
-        username: data?.username || undefined,
-        avatarUrl: data?.image_uri || data?.avatar || undefined,
-      };
-    }
-  } catch (err) {
-    // Soft fallback - do not crash
-    console.debug(`Profile resolve for ${wallet} skipped:`, err);
-  }
-
-  return {};
+  return Object.keys(map);
 }
