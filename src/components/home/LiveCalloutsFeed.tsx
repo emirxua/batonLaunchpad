@@ -3,6 +3,7 @@
 import React, { useState, useMemo } from "react";
 import Image from "next/image";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import useSWR from "swr";
 import { CalloutsApiResponse, CalloutCard } from "@/lib/types/callouts";
 import { Coin } from "@/types/coin";
@@ -32,9 +33,10 @@ export function LiveCalloutsFeed({
   isLoading: parentLoading = false,
   onBoostCoin,
 }: LiveCalloutsFeedProps) {
+  const router = useRouter();
   const [copiedMint, setCopiedMint] = useState<string | null>(null);
 
-  // Fallback SWR fetch if initialCallouts is empty
+  // Fallback SWR fetch with keepPreviousData to protect against 429 rate limits
   const { data, isLoading: swrLoading } = useSWR<CalloutsApiResponse>(
     initialCallouts && initialCallouts.length > 0 ? null : "/api/callouts",
     fetcher,
@@ -42,6 +44,8 @@ export function LiveCalloutsFeed({
       refreshInterval: 60_000,
       dedupingInterval: 30_000,
       revalidateOnFocus: false,
+      revalidateOnReconnect: false,
+      errorRetryCount: 3,
       keepPreviousData: true,
     }
   );
@@ -99,6 +103,11 @@ export function LiveCalloutsFeed({
       description: item.thesis || `Native pump.fun callout by ${item.callerLabel}.`,
     };
     onBoostCoin?.(candidateCoin);
+  };
+
+  const handleNavigateToTerminal = (coinMint: string, symbol?: string) => {
+    const sym = symbol || "SOL";
+    router.push(`/terminal?token=${coinMint}&outputMint=${coinMint}&outputSymbol=${sym}`);
   };
 
   return (
@@ -174,12 +183,14 @@ export function LiveCalloutsFeed({
               return (
                 <div
                   key={item.calloutId}
-                  className="bg-zinc-950/90 border border-white/10 hover:border-amber-500/40 transition-all rounded-xl p-3.5 shadow-lg flex flex-col justify-between gap-2.5 group"
+                  onClick={() => handleNavigateToTerminal(item.coinMint, meta?.symbol)}
+                  className="bg-zinc-950/90 border border-white/10 hover:border-amber-500/40 transition-all rounded-xl p-3.5 shadow-lg flex flex-col justify-between gap-2.5 group cursor-pointer"
                 >
                   {/* Top: Caller Handle + Time Ago */}
                   <div className="flex items-center justify-between gap-2">
                     <Link
                       href={`/callouts?caller=${encodeURIComponent(item.callerLabel)}`}
+                      onClick={(e) => e.stopPropagation()}
                       className="flex items-center gap-1.5 min-w-0 hover:opacity-80 transition-opacity"
                     >
                       <div className="w-5 h-5 rounded-full bg-amber-500/20 border border-amber-500/30 flex items-center justify-center text-[9px] font-bold text-amber-300 shrink-0 uppercase">
@@ -225,13 +236,13 @@ export function LiveCalloutsFeed({
                           ${meta.symbol.toUpperCase()}
                         </span>
                       ) : null}
-                      <span className="text-zinc-500 truncate">{shortMint}</span>
+                      <span className="text-zinc-400 truncate">{shortMint}</span>
                     </div>
 
                     <button
                       type="button"
                       onClick={(e) => handleCopy(item.coinMint, e)}
-                      className="p-0.5 hover:text-amber-400 text-zinc-500 transition-colors"
+                      className="p-0.5 hover:text-amber-400 text-zinc-500 transition-colors cursor-pointer"
                       title="Copy mint address"
                     >
                       {copiedMint === item.coinMint ? (
@@ -272,6 +283,7 @@ export function LiveCalloutsFeed({
                       href={`https://pump.fun/coin/${item.coinMint}`}
                       target="_blank"
                       rel="noopener noreferrer"
+                      onClick={(e) => e.stopPropagation()}
                       className="p-1 rounded bg-white/5 hover:bg-white/10 border border-white/10 text-zinc-300 hover:text-white transition-colors"
                       title="View on Pump.fun"
                     >
@@ -281,6 +293,7 @@ export function LiveCalloutsFeed({
                       href={`https://dexscreener.com/solana/${item.coinMint}`}
                       target="_blank"
                       rel="noopener noreferrer"
+                      onClick={(e) => e.stopPropagation()}
                       className="p-1 rounded bg-white/5 hover:bg-white/10 border border-white/10 text-zinc-300 hover:text-white transition-colors"
                       title="View on DexScreener"
                     >
