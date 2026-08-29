@@ -311,10 +311,10 @@ export const BurnModal: React.FC<BurnModalProps> = ({
     ? `BURN $BATON TO BOOST $${displaySymbol.toUpperCase()}`
     : `BURN $BATON TO BOOST ${shortMint}`;
 
-  // Subtitle: "Burn $BATON on-chain to boost $SYMBOL visibility and climb rank."
+  // Subtitle: "Burn $BATON on-chain to boost $SYMBOL visibility and directory ranking."
   const modalSubtitle = displaySymbol
-    ? `Burn $BATON on-chain to boost $${displaySymbol.toUpperCase()} visibility and climb rank.`
-    : `Burn $BATON on-chain to boost ${shortMint} visibility and climb rank.`;
+    ? `Burn $BATON on-chain to boost $${displaySymbol.toUpperCase()} visibility and directory ranking.`
+    : `Burn $BATON on-chain to boost ${shortMint} visibility and directory ranking.`;
 
   const quickAmounts = [1000, 5000, 25000];
 
@@ -452,17 +452,17 @@ export const BurnModal: React.FC<BurnModalProps> = ({
         onClick={(e) => e.stopPropagation()}
         className="w-full max-w-md max-h-[90vh] overflow-y-auto bg-[#111318]/95 border border-white/10 rounded-2xl p-6 sm:p-7 space-y-5 shadow-2xl shadow-black/80 relative my-auto transition-all"
       >
-        {/* Modal Header */}
-        <div className="flex items-start justify-between pb-3 border-b border-white/10 gap-3">
-          <div className="flex items-center gap-3 min-w-0">
-            <div className="w-10 h-10 rounded-xl bg-orange-500/15 border border-orange-500/30 flex items-center justify-center text-orange-400 shadow-[0_0_15px_rgba(249,115,22,0.25)] shrink-0">
+        {/* Modal Header: full dynamic title without truncate */}
+        <div className="flex items-start justify-between pb-3.5 border-b border-white/10 gap-3">
+          <div className="flex items-start gap-3 flex-1 min-w-0">
+            <div className="w-10 h-10 rounded-xl bg-orange-500/15 border border-orange-500/30 flex items-center justify-center text-orange-400 shadow-[0_0_15px_rgba(249,115,22,0.25)] shrink-0 mt-0.5">
               <Flame className="w-5 h-5 fill-current animate-pulse" />
             </div>
-            <div className="min-w-0">
-              <h3 className="font-archivo text-base sm:text-lg text-white font-black tracking-wide uppercase leading-tight truncate">
+            <div className="flex-1 min-w-0">
+              <h3 className="font-archivo text-base sm:text-lg text-white font-black tracking-wide uppercase leading-snug break-words">
                 {modalTitle}
               </h3>
-              <p className="font-space text-[11px] text-zinc-400 line-clamp-1 mt-0.5">
+              <p className="font-space text-[11px] sm:text-xs text-zinc-400 mt-1 leading-relaxed break-words">
                 {modalSubtitle}
               </p>
             </div>
@@ -471,7 +471,8 @@ export const BurnModal: React.FC<BurnModalProps> = ({
           <button
             onClick={onClose}
             disabled={isProcessing}
-            className="p-1.5 rounded-xl border border-white/10 text-zinc-400 hover:text-white hover:border-white/20 transition-colors disabled:opacity-50 shrink-0"
+            className="p-1.5 rounded-xl border border-white/10 text-zinc-400 hover:text-white hover:border-white/20 transition-colors disabled:opacity-50 shrink-0 mt-0.5 cursor-pointer"
+            title="Close modal"
           >
             <X className="w-4 h-4" />
           </button>
