@@ -1,11 +1,11 @@
 "use client";
-
 import React from "react";
 import useSWR from "swr";
 import { Sparkline } from "./Sparkline";
-import { TrendingUp, TrendingDown, Activity } from "lucide-react";
 
-interface MarketItem {
+const fetcher = (url: string) => fetch(url).then((res) => res.json());
+
+interface MarketToken {
   symbol: string;
   name: string;
   price: number;
@@ -14,169 +14,89 @@ interface MarketItem {
   sparkline: number[];
 }
 
-interface MarketStatsApiResponse {
-  success?: boolean;
-  updatedAt?: number;
-  data: MarketItem[];
-}
-
-const fetcher = (url: string): Promise<MarketStatsApiResponse> =>
-  fetch(url).then((r) => {
-    if (!r.ok) throw new Error(`HTTP error ${r.status}`);
-    return r.json();
+export function MidasMarketBar() {
+  const { data, isLoading } = useSWR("/api/market-stats", fetcher, {
+    refreshInterval: 15000,
+    revalidateOnFocus: false,
+    keepPreviousData: true,
   });
 
-function formatPrice(price: number): string {
-  if (!price && price !== 0) return "—";
-  if (price >= 1000) {
-    return price.toLocaleString("en-US", {
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2,
-    });
-  }
-  if (price >= 1) {
-    return price.toLocaleString("en-US", {
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 4,
-    });
-  }
-  return price.toLocaleString("en-US", {
-    minimumFractionDigits: 4,
-    maximumFractionDigits: 6,
-  });
-}
-
-function cleanSymbol(sym: string): { label: string; name: string } {
-  const upper = sym.toUpperCase();
-  if (upper.includes("SOL")) return { label: "SOL", name: "Solana" };
-  if (upper.includes("BTC")) return { label: "BTC", name: "Bitcoin" };
-  if (upper.includes("ETH")) return { label: "ETH", name: "Ethereum" };
-  if (upper.includes("BNB")) return { label: "BNB", name: "BNB Chain" };
-  return { label: upper.replace("USDT", "").replace("USD", ""), name: upper };
-}
-
-export const MidasMarketBar: React.FC = () => {
-  const { data, isLoading, error } = useSWR<MarketStatsApiResponse>(
-    "/api/market-stats",
-    fetcher,
-    {
-      refreshInterval: 15_000,
-      dedupingInterval: 8_000,
-      revalidateOnFocus: false,
-      revalidateOnReconnect: false,
-      errorRetryCount: 2,
-      errorRetryInterval: 10_000,
-      keepPreviousData: true,
-    }
-  );
-
-  const marketList: MarketItem[] = Array.isArray(data?.data)
-    ? data.data
-    : Array.isArray(data)
-    ? (data as unknown as MarketItem[])
-    : [];
+  const tokens: MarketToken[] = data?.data || [];
 
   return (
-    <div className="w-full bg-[#0D0E12] border border-white/10 rounded-2xl p-3 sm:p-4 shadow-xl select-none font-mono">
-      {/* Top Header / Live Indicator */}
-      <div className="flex items-center justify-between pb-3 mb-3 border-b border-white/5 px-1">
-        <div className="flex items-center gap-2">
-          <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse shadow-[0_0_8px_rgba(52,211,153,0.8)]" />
-          <span className="text-[11px] uppercase tracking-wider text-zinc-400 font-bold flex items-center gap-1.5">
-            <Activity className="w-3.5 h-3.5 text-orange-400" />
-            Spot Market Pulse (Kraken Live OHLC)
-          </span>
+    <div className="w-full bg-zinc-950 rounded-xl border border-white/10 p-4 font-mono">
+      <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center gap-2 text-xs text-zinc-400">
+          <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+          <span>GLOBAL MARKETS 24H</span>
         </div>
-
-        <div className="flex items-center gap-2 text-[10px] text-zinc-500">
-          <span className="px-1.5 py-0.5 rounded bg-zinc-900 border border-zinc-800 text-zinc-400 font-semibold">
-            24H Hourly Candles
-          </span>
-        </div>
+        <span className="text-[11px] text-zinc-500">Spot Market Pulse (15s)</span>
       </div>
 
-      {/* Grid of 4 Market Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-        {isLoading && marketList.length === 0 ? (
-          // Zinc Skeleton Loaders
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        {isLoading && tokens.length === 0 ? (
           [1, 2, 3, 4].map((i) => (
             <div
               key={i}
-              className="p-3.5 rounded-xl bg-zinc-950/80 border border-white/5 animate-pulse flex flex-col justify-between h-24"
+              className="bg-zinc-900/40 border border-white/5 rounded-lg p-3.5 h-24 animate-pulse flex flex-col justify-between"
             >
-              <div className="flex justify-between items-center">
-                <div className="h-4 w-14 bg-zinc-800 rounded" />
+              <div className="flex justify-between">
+                <div className="h-4 w-16 bg-zinc-800 rounded" />
                 <div className="h-4 w-12 bg-zinc-800 rounded" />
               </div>
               <div className="flex justify-between items-end">
-                <div className="h-6 w-20 bg-zinc-800 rounded" />
-                <div className="h-8 w-20 bg-zinc-800/60 rounded" />
+                <div className="h-5 w-20 bg-zinc-800 rounded" />
+                <div className="h-6 w-24 bg-zinc-800/60 rounded" />
               </div>
             </div>
           ))
-        ) : error && marketList.length === 0 ? (
-          <div className="col-span-full py-4 text-center text-xs text-zinc-500">
-            Market rates temporarily unavailable. Reconnecting...
-          </div>
         ) : (
-          marketList.map((item) => {
-            const isPositive = item.priceChangePercent24h >= 0;
-            const { label, name } = cleanSymbol(item.symbol);
-
+          tokens.map((token: MarketToken) => {
+            const isPositive = token.priceChangePercent24h >= 0;
             return (
               <div
-                key={item.symbol}
-                className="p-3.5 rounded-xl bg-zinc-950/90 border border-white/10 hover:border-orange-500/40 transition-all shadow-md group flex flex-col justify-between gap-2"
+                key={token.symbol}
+                className="bg-zinc-900/40 border border-white/5 rounded-lg p-3.5 flex flex-col justify-between"
               >
-                {/* Header: Symbol + Name + 24h Badge */}
-                <div className="flex items-center justify-between gap-2">
-                  <div className="flex items-center gap-1.5 min-w-0">
-                    <span className="font-archivo font-black text-sm text-white tracking-wide">
-                      ${label}
-                    </span>
-                    <span className="text-[10px] text-zinc-500 truncate">
-                      {name}
-                    </span>
+                <div className="flex items-center justify-between">
+                  <div className="flex items-baseline gap-1.5">
+                    <span className="text-sm font-bold text-zinc-100">${token.symbol}</span>
+                    <span className="text-[11px] text-zinc-500">{token.name}</span>
                   </div>
-
-                  <div
-                    className={`inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] font-bold shrink-0 ${
-                      isPositive
-                        ? "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20"
-                        : "bg-rose-500/10 text-rose-400 border border-rose-500/20"
+                  <span
+                    className={`text-xs px-1.5 py-0.5 rounded ${
+                      isPositive ? "text-emerald-400 bg-emerald-500/10" : "text-red-400 bg-red-500/10"
                     }`}
                   >
-                    {isPositive ? (
-                      <TrendingUp className="w-2.5 h-2.5" />
-                    ) : (
-                      <TrendingDown className="w-2.5 h-2.5" />
-                    )}
-                    <span>
-                      {isPositive ? "+" : ""}
-                      {item.priceChangePercent24h.toFixed(2)}%
-                    </span>
-                  </div>
+                    {isPositive ? "+" : ""}
+                    {token.priceChangePercent24h.toFixed(2)}%
+                  </span>
                 </div>
 
-                {/* Price & Real 24h Sparkline */}
-                <div className="flex items-end justify-between gap-3 pt-1">
-                  <div className="space-y-0.5">
-                    <div className="text-base sm:text-lg font-bold text-white tracking-tight font-mono">
-                      ${formatPrice(item.price)}
+                <div className="mt-3 flex items-end justify-between">
+                  <div>
+                    <div className="text-base font-bold text-zinc-100">
+                      $
+                      {token.price >= 1
+                        ? token.price.toLocaleString("en-US", {
+                            minimumFractionDigits: 2,
+                            maximumFractionDigits: 2,
+                          })
+                        : token.price.toFixed(4)}
                     </div>
-                    <div className="text-[9px] text-zinc-500 uppercase">
-                      Vol: ${Math.round(item.volume24h).toLocaleString("en-US", { notation: "compact" })}
+                    <div className="text-[10px] text-zinc-500 mt-0.5">
+                      VOL: ${(token.volume24h / 1e9).toFixed(0)}B
                     </div>
                   </div>
 
-                  {/* Sparkline Chart - Pure dynamic data from API */}
-                  <div className="shrink-0">
+                  {/* DİNAMİK SPARKLINE: Her coinin kendi bağımsız array'i aktarılıyor */}
+                  <div className="flex items-center justify-end">
                     <Sparkline
-                      data={item.sparkline}
+                      data={token.sparkline || []}
                       isPositive={isPositive}
-                      symbol={label}
-                      width={84}
-                      height={28}
+                      symbol={token.symbol}
+                      width={110}
+                      height={32}
                     />
                   </div>
                 </div>
@@ -187,6 +107,6 @@ export const MidasMarketBar: React.FC = () => {
       </div>
     </div>
   );
-};
+}
 
 export default MidasMarketBar;
