@@ -45,9 +45,15 @@ export function JupiterSwapWidget({
         setErrorMsg(null);
         const lamports = Math.floor(val * 1e9);
 
-        const res = await fetch(
-          `https://quote-api.jup.ag/v6/quote?inputMint=${SOL_MINT}&outputMint=${outputMint}&amount=${lamports}&slippageBps=50`
+        let res = await fetch(
+          `/api/jupiter/quote?inputMint=${SOL_MINT}&outputMint=${outputMint}&amount=${lamports}&slippageBps=50`
         );
+
+        if (!res.ok) {
+          res = await fetch(
+            `https://quote-api.jup.ag/v6/quote?inputMint=${SOL_MINT}&outputMint=${outputMint}&amount=${lamports}&slippageBps=50`
+          );
+        }
 
         if (!res.ok) throw new Error("Failed to fetch route");
         const data = await res.json();
@@ -97,17 +103,27 @@ export function JupiterSwapWidget({
       setErrorMsg(null);
       setTxSuccess(null);
 
-      const swapRes = await fetch("https://quote-api.jup.ag/v6/swap", {
+      const payload = {
+        quoteResponse,
+        userPublicKey: publicKey.toBase58(),
+        wrapAndUnwrapSol: true,
+        dynamicComputeUnitLimit: true,
+        prioritizationFeeLamports: "auto",
+      };
+
+      let swapRes = await fetch("/api/jupiter/swap", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          quoteResponse,
-          userPublicKey: publicKey.toBase58(),
-          wrapAndUnwrapSol: true,
-          dynamicComputeUnitLimit: true,
-          prioritizationFeeLamports: "auto",
-        }),
+        body: JSON.stringify(payload),
       });
+
+      if (!swapRes.ok) {
+        swapRes = await fetch("https://quote-api.jup.ag/v6/swap", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
+      }
 
       const { swapTransaction } = await swapRes.json();
       if (!swapTransaction) throw new Error("Transaction build failed");
