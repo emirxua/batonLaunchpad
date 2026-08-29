@@ -50,9 +50,9 @@ export default function OutbidHomePage() {
   const [selectedCoin, setSelectedCoin] = useState<Coin | null>(null);
   const [copiedMint, setCopiedMint] = useState<string | null>(null);
 
-  const { coins, isLoading: coinsLoading, refresh } = useCoinsData(15_000);
-  const { totalBurned, refresh: refreshStats } = useTokenStats(15_000);
-  const { recentBurns, refresh: refreshBurns } = useRecentBurns(10_000);
+  const { coins, isLoading: coinsLoading, refresh } = useCoinsData(60_000);
+  const { totalBurned, refresh: refreshStats } = useTokenStats(60_000);
+  const { recentBurns, refresh: refreshBurns } = useRecentBurns(60_000);
 
   // Live callouts for homepage showcase — SWR with keepPreviousData so 429 doesn't blank the grid
   const { data: calloutsData, isLoading: calloutsLoading } =

@@ -14,7 +14,7 @@ export interface CoinsDataState {
   refresh: () => Promise<void>;
 }
 
-export function useCoinsData(pollingIntervalMs: number = 15_000): CoinsDataState {
+export function useCoinsData(pollingIntervalMs: number = 60_000): CoinsDataState {
   const [coins, setCoins] = useState<Coin[]>(() => getFallbackCoins());
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [isError, setIsError] = useState<boolean>(false);

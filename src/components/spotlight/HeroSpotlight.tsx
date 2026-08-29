@@ -46,8 +46,10 @@ export const HeroSpotlight: React.FC<HeroSpotlightProps> = ({
       : null,
     lookupFetcher,
     {
-      refreshInterval: 30_000,
+      refreshInterval: 60_000,
+      dedupingInterval: 30_000,
       revalidateOnFocus: false,
+      revalidateOnReconnect: false,
     }
   );
 
@@ -77,7 +79,7 @@ export const HeroSpotlight: React.FC<HeroSpotlightProps> = ({
 
   return (
     <div
-      className={`relative w-full rounded-3xl p-6 sm:p-8 overflow-hidden transition-all bg-gradient-to-b from-[#14161D] via-[#0E1015] to-[#08090C] border border-amber-500/30 ring-1 ring-amber-400/40 shadow-[0_0_40px_rgba(245,158,11,0.12)] ${className}`}
+      className={`relative w-full rounded-3xl p-6 sm:p-8 overflow-hidden transition-all bg-gradient-to-b from-[#14161D] via-[#0E1015] to-[#08090C] border border-amber-500/30 ring-1 ring-amber-400/40 shadow-xl ${className}`}
     >
       {/* Background Ambient Glow */}
       <div className="absolute -top-24 -right-24 w-80 h-80 rounded-full bg-amber-500/10 blur-3xl pointer-events-none" />

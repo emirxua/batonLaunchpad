@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { TokenStatsResponse } from "@/app/api/token-stats/route";
 
-export function useTokenStats(intervalMs: number = 15_000) {
+export function useTokenStats(intervalMs: number = 60_000) {
   const [stats, setStats] = useState<TokenStatsResponse | null>(null);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [error, setError] = useState<Error | null>(null);
