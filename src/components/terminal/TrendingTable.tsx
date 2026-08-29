@@ -40,23 +40,16 @@ const fetcher = (url: string): Promise<TrendingApiResponse> =>
   });
 
 function formatPrice(price: number): string {
-  if (!price && price !== 0) return "—";
-  if (price >= 1000) {
-    return price.toLocaleString("en-US", {
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2,
-    });
-  }
+  if (!price || isNaN(price)) return "$0.00";
   if (price >= 1) {
-    return price.toLocaleString("en-US", {
+    return `$${price.toLocaleString("en-US", {
       minimumFractionDigits: 2,
       maximumFractionDigits: 4,
-    });
+    })}`;
   }
-  if (price >= 0.0001) {
-    return price.toFixed(6);
-  }
-  return price.toExponential(4);
+  if (price < 0.000001) return `$${price.toFixed(8)}`;
+  if (price < 0.001) return `$${price.toFixed(6)}`;
+  return `$${price.toFixed(4)}`;
 }
 
 export const TrendingTable: React.FC<TrendingTableProps> = ({
@@ -69,8 +62,13 @@ export const TrendingTable: React.FC<TrendingTableProps> = ({
   const { toggleWatchToken, isWatchedToken } = useWatchlist();
 
   // Map tab to API sortBy parameter
-  const sortByParam = activeTab === "gainers" ? "gainers" : "volume";
-  const apiUrl = `/api/trending?limit=30&minMcap=50000&sortBy=${sortByParam}`;
+  const sortByParam =
+    activeTab === "gainers"
+      ? "gainers"
+      : activeTab === "volume"
+      ? "volume"
+      : "trending";
+  const apiUrl = `/api/trending?limit=30&minMcap=70000&sortBy=${sortByParam}`;
 
   const { data, isLoading, error } = useSWR<TrendingApiResponse>(
     apiUrl,
@@ -325,7 +323,7 @@ export const TrendingTable: React.FC<TrendingTableProps> = ({
 
                     {/* Price */}
                     <td className="py-3.5 px-4 text-right font-bold text-white">
-                      ${formatPrice(token.priceUsd)}
+                      {formatPrice(token.priceUsd)}
                     </td>
 
                     {/* 24h Change */}

@@ -63,13 +63,14 @@ interface DexTokenPairsResponse {
  * Fetches trending and boosted Solana tokens from DexScreener Public API.
  * 1. Queries token-boosts/top/v1 for active boosted Solana tokens
  * 2. Fetches detailed DEX pair data in batch
- * 3. Filters: chainId === 'solana', marketCap >= 50,000 USD, liquidity.usd > 1,000 USD
- * 4. Sorts: 24h Volume (h24) DESC
+ * 3. Filters: chainId === 'solana', marketCap >= 70,000 USD, liquidity.usd >= 5,000 USD
+ * 4. Sorts according to requested sortBy mode (trending/boost order, gainers, or volume)
  * 5. Returns formatted DexTrendingToken[] with zero mock data.
  */
 export async function fetchDexTrendingTokens(
-  minMarketCap: number = 50_000,
-  minLiquidity: number = 1_000
+  minMarketCap: number = 70_000,
+  minLiquidity: number = 5_000,
+  sortBy: string = "trending"
 ): Promise<DexTrendingToken[]> {
   try {
     // 1. Fetch top boosted tokens from DexScreener
@@ -78,6 +79,7 @@ export async function fetchDexTrendingTokens(
       {
         headers: {
           Accept: "application/json",
+          "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)",
         },
         next: { revalidate: 60 },
       }
@@ -93,25 +95,28 @@ export async function fetchDexTrendingTokens(
       return [];
     }
 
-    // Extract unique Solana mint addresses
-    const solanaMints = Array.from(
-      new Set(
-        boostData
-          .filter((t) => t.chainId?.toLowerCase() === "solana" && t.tokenAddress)
-          .map((t) => t.tokenAddress!)
-      )
-    ).slice(0, 30);
+    // Extract unique Solana mint addresses preserving boost rank order
+    const solanaMints: string[] = [];
+    for (const t of boostData) {
+      if (t.chainId?.toLowerCase() === "solana" && t.tokenAddress) {
+        if (!solanaMints.includes(t.tokenAddress)) {
+          solanaMints.push(t.tokenAddress);
+        }
+      }
+    }
 
-    if (solanaMints.length === 0) {
+    const limitedMints = solanaMints.slice(0, 30);
+    if (limitedMints.length === 0) {
       return [];
     }
 
     // 2. Fetch full DEX pair details for these tokens in batch
     const pairsRes = await fetch(
-      `https://api.dexscreener.com/latest/dex/tokens/${solanaMints.join(",")}`,
+      `https://api.dexscreener.com/latest/dex/tokens/${limitedMints.join(",")}`,
       {
         headers: {
           Accept: "application/json",
+          "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7)",
         },
         next: { revalidate: 60 },
       }
@@ -138,7 +143,7 @@ export async function fetchDexTrendingTokens(
       const priceUsd = parseFloat(pair.priceUsd ?? "0") || 0;
       const priceChange24h = pair.priceChange?.h24 ?? 0;
 
-      // Filter requirements: mcap >= $50k, liquidity > $1k
+      // Filter requirements: mcap >= $70k, liquidity >= $5k
       if (mcap < minMarketCap) continue;
       if (liquidityUsd < minLiquidity) continue;
 
@@ -163,10 +168,26 @@ export async function fetchDexTrendingTokens(
       }
     }
 
-    // 4. Sort by 24h Volume DESC
-    const trendingList = Array.from(tokenMap.values()).sort(
-      (a, b) => b.volume24h - a.volume24h
-    );
+    // 4. Sort according to requested parameter
+    let trendingList: DexTrendingToken[] = [];
+
+    if (sortBy === "gainers") {
+      trendingList = Array.from(tokenMap.values()).sort(
+        (a, b) => b.priceChange24h - a.priceChange24h
+      );
+    } else if (sortBy === "volume") {
+      trendingList = Array.from(tokenMap.values()).sort(
+        (a, b) => b.volume24h - a.volume24h
+      );
+    } else {
+      // Preserve DexScreener Boost order
+      for (const mint of limitedMints) {
+        const token = tokenMap.get(mint);
+        if (token) {
+          trendingList.push(token);
+        }
+      }
+    }
 
     return trendingList;
   } catch (err) {

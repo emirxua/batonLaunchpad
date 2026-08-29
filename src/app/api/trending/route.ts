@@ -12,27 +12,20 @@ export async function GET(request: NextRequest) {
     const limitParam = parseInt(searchParams.get("limit") || "30", 10);
     const limit = Math.min(50, Math.max(1, isNaN(limitParam) ? 30 : limitParam));
 
-    const minMcapParam = parseFloat(searchParams.get("minMcap") || "50000");
-    const minMcap = isNaN(minMcapParam) ? 50_000 : Math.max(0, minMcapParam);
+    const minMcapParam = parseFloat(searchParams.get("minMcap") || "70000");
+    const minMcap = isNaN(minMcapParam) ? 70_000 : Math.max(0, minMcapParam);
 
-    const sortBy = searchParams.get("sortBy") || "volume";
+    const sortBy = searchParams.get("sortBy") || "trending";
 
-    // 1. Fetch real trending Solana tokens with min market cap filter
-    let tokens = await fetchDexTrendingTokens(minMcap, 1_000);
+    // 1. Fetch real trending Solana tokens with >= $70,000 market cap and >= $5,000 liquidity
+    const tokens = await fetchDexTrendingTokens(minMcap, 5_000, sortBy);
 
-    // 2. Sort according to sortBy query parameter
-    if (sortBy === "gainers") {
-      tokens = [...tokens].sort((a, b) => b.priceChange24h - a.priceChange24h);
-    } else {
-      // Default: sort by 24h volume
-      tokens = [...tokens].sort((a, b) => b.volume24h - a.volume24h);
-    }
-
-    // 3. Apply limit
+    // 2. Apply limit
     const slicedTokens: DexTrendingToken[] = tokens.slice(0, limit);
 
     return NextResponse.json(
       {
+        success: true,
         updatedAt: Date.now(),
         count: slicedTokens.length,
         tokens: slicedTokens,
@@ -49,6 +42,7 @@ export async function GET(request: NextRequest) {
       err instanceof Error ? err.message : "Unknown error fetching trending tokens";
     return NextResponse.json(
       {
+        success: false,
         updatedAt: Date.now(),
         count: 0,
         tokens: [],

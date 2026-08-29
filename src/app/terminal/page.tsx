@@ -264,7 +264,15 @@ export default function TerminalPage() {
                 <div className="p-2 rounded-lg bg-zinc-950/80 border border-white/5 space-y-0.5">
                   <div className="text-[9px] text-zinc-500 uppercase">Price</div>
                   <div className="font-bold text-white truncate">
-                    ${displayToken.priceUsd > 0 ? (displayToken.priceUsd >= 1 ? displayToken.priceUsd.toFixed(4) : displayToken.priceUsd.toFixed(6)) : "—"}
+                    {displayToken.priceUsd > 0
+                      ? displayToken.priceUsd >= 1
+                        ? `$${displayToken.priceUsd.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 4 })}`
+                        : displayToken.priceUsd < 0.000001
+                        ? `$${displayToken.priceUsd.toFixed(8)}`
+                        : displayToken.priceUsd < 0.001
+                        ? `$${displayToken.priceUsd.toFixed(6)}`
+                        : `$${displayToken.priceUsd.toFixed(4)}`
+                      : "—"}
                   </div>
                 </div>
 
