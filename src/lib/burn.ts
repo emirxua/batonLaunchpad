@@ -35,6 +35,7 @@ export interface PrepareBurnParams {
   userPublicKey: PublicKey;
   burnAmount: number;
   targetCoinTicker?: string;
+  targetMint?: string;
 }
 
 /**
@@ -42,13 +43,14 @@ export interface PrepareBurnParams {
  * 1. Derives Associated Token Account (ATA) for $BATON (2vdc4owf1MPz54jJCN61y3QSKqjcPpr32wJ9qKkmpump)
  * 2. Multiplies by 10^6 decimals into a BigInt
  * 3. Creates SPL Token createBurnInstruction
- * 4. Adds transparent Memo instruction BATON_BURN:<amount>:<ticker>
+ * 4. Adds transparent Memo instruction BOOST:<targetMint> or BATON_BURN:<amount>:<ticker>
  */
 export async function prepareRealBurnTransaction({
   connection,
   userPublicKey,
   burnAmount,
   targetCoinTicker = "BATON",
+  targetMint,
 }: PrepareBurnParams): Promise<{
   transaction: Transaction;
   userAta: PublicKey;
@@ -95,8 +97,8 @@ export async function prepareRealBurnTransaction({
     TOKEN_PROGRAM_ID
   );
 
-  // 5. Create on-chain transparency Memo Instruction
-  const memoText = `BATON_BURN:${burnAmount}:${targetCoinTicker}`;
+  // 5. Create on-chain transparency Memo Instruction: BOOST:<targetMint>
+  const memoText = targetMint ? `BOOST:${targetMint}` : `BATON_BURN:${burnAmount}:${targetCoinTicker}`;
   const memoIx = createMemoInstruction(memoText, [userPublicKey]);
 
   // 6. Assemble Transaction

@@ -1,6 +1,7 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useMemo, useCallback } from "react";
+import Image from "next/image";
 import { Coin } from "@/types/coin";
 import { useConnection, useWallet } from "@solana/wallet-adapter-react";
 import { useUserBatonBalance } from "@/hooks/useUserBatonBalance";
@@ -17,6 +18,9 @@ import {
   AlertCircle,
   Loader2,
   Zap,
+  Copy,
+  Check,
+  TrendingUp,
 } from "lucide-react";
 
 // Dynamic wallet button for unconnected state
@@ -26,6 +30,16 @@ const WalletMultiButton = dynamic(
   { ssr: false }
 );
 
+interface DynamicTokenMetadata {
+  name: string;
+  symbol: string;
+  imageUrl?: string;
+  priceUsd?: number;
+}
+
+// In-memory cache for resolved metadata across modals
+const tokenMetadataCache = new Map<string, DynamicTokenMetadata>();
+
 interface BurnModalProps {
   coin: Coin | null;
   isOpen: boolean;
@@ -34,7 +48,12 @@ interface BurnModalProps {
   onSuccess?: (coinId: string, burnedAmount: number) => void;
 }
 
-type BurnState = "idle" | "awaiting_approval" | "confirming" | "success" | "error";
+type BurnState =
+  | "idle"
+  | "awaiting_approval"
+  | "confirming"
+  | "success"
+  | "error";
 
 export const BurnModal: React.FC<BurnModalProps> = ({
   coin,
@@ -52,24 +71,124 @@ export const BurnModal: React.FC<BurnModalProps> = ({
   const [burnState, setBurnState] = useState<BurnState>("idle");
   const [txSignature, setTxSignature] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [copiedCA, setCopiedCA] = useState<boolean>(false);
 
-  // Prevent background scroll when modal is active
+  // Dynamic token metadata resolution
+  const [dynamicMeta, setDynamicMeta] = useState<DynamicTokenMetadata | null>(
+    null
+  );
+  const [metaLoading, setMetaLoading] = useState<boolean>(false);
+
+  const mintAddress = coin?.mintAddress || "";
+  const shortMint = useMemo(() => {
+    if (!mintAddress) return "";
+    return `${mintAddress.slice(0, 4)}…${mintAddress.slice(-4)}`;
+  }, [mintAddress]);
+
+  // Fetch real on-chain / DexScreener / Pump metadata dynamically if coin has generic placeholder
+  const resolveMetadata = useCallback(async (mint: string) => {
+    if (!mint) return;
+    if (tokenMetadataCache.has(mint)) {
+      setDynamicMeta(tokenMetadataCache.get(mint)!);
+      return;
+    }
+
+    setMetaLoading(true);
+    try {
+      // 1. Try DexScreener API for token pair metadata
+      const res = await fetch(`https://api.dexscreener.com/latest/dex/tokens/${mint}`);
+      if (res.ok) {
+        const data = await res.json();
+        const pair = data.pairs?.[0];
+        if (pair?.baseToken?.symbol) {
+          const meta: DynamicTokenMetadata = {
+            name: pair.baseToken.name || pair.baseToken.symbol,
+            symbol: pair.baseToken.symbol,
+            imageUrl: pair.info?.imageUrl,
+            priceUsd: Number(pair.priceUsd) || undefined,
+          };
+          tokenMetadataCache.set(mint, meta);
+          setDynamicMeta(meta);
+          return;
+        }
+      }
+
+      // 2. Fallback to Pump.fun API if DexScreener has no pairs yet
+      const pumpRes = await fetch(`https://frontend-api-v3.pump.fun/coins/${mint}`);
+      if (pumpRes.ok) {
+        const pumpData = await pumpRes.json();
+        if (pumpData?.symbol) {
+          const meta: DynamicTokenMetadata = {
+            name: pumpData.name || pumpData.symbol,
+            symbol: pumpData.symbol,
+            imageUrl: pumpData.image_uri,
+          };
+          tokenMetadataCache.set(mint, meta);
+          setDynamicMeta(meta);
+          return;
+        }
+      }
+    } catch (e) {
+      console.warn("Could not resolve dynamic token metadata:", e);
+    } finally {
+      setMetaLoading(false);
+    }
+  }, []);
+
+  // Prevent background scroll and initialize modal state
   useEffect(() => {
-    if (isOpen) {
+    if (isOpen && coin) {
       document.body.style.overflow = "hidden";
       setAmount(initialAmount > 0 ? initialAmount : 1000);
       setTxSignature(null);
       setErrorMessage(null);
       setBurnState("idle");
+      setCopiedCA(false);
+
+      // Check if coin already has verified metadata or needs resolution
+      const hasVerifiedTicker =
+        coin.ticker &&
+        coin.ticker !== "?" &&
+        coin.ticker !== "BATON" &&
+        coin.name !== coin.mintAddress.slice(0, 8);
+
+      if (hasVerifiedTicker) {
+        setDynamicMeta({
+          name: coin.name,
+          symbol: coin.ticker,
+          imageUrl: coin.imageUrl,
+        });
+      } else if (coin.mintAddress) {
+        resolveMetadata(coin.mintAddress);
+      }
     } else {
       document.body.style.overflow = "";
+      setDynamicMeta(null);
     }
     return () => {
       document.body.style.overflow = "";
     };
-  }, [isOpen, coin]);
+  }, [isOpen, coin, initialAmount, resolveMetadata]);
 
   if (!isOpen || !coin) return null;
+
+  // Determine display symbol and name
+  const displaySymbol =
+    dynamicMeta?.symbol ||
+    (coin.ticker && coin.ticker !== "?" ? coin.ticker : null);
+
+  const displayName = dynamicMeta?.name || coin.name;
+  const displayImage = dynamicMeta?.imageUrl || coin.imageUrl;
+
+  // Title: "BURN $BATON TO BOOST $SYMBOL" or fallback "BURN $BATON TO BOOST ${shortMint}"
+  const modalTitle = displaySymbol
+    ? `BURN $BATON TO BOOST $${displaySymbol.toUpperCase()}`
+    : `BURN $BATON TO BOOST ${shortMint}`;
+
+  // Subtitle: "Burn $BATON on-chain to boost $SYMBOL visibility and climb rank."
+  const modalSubtitle = displaySymbol
+    ? `Burn $BATON on-chain to boost $${displaySymbol.toUpperCase()} visibility and climb rank.`
+    : `Burn $BATON on-chain to boost ${shortMint} visibility and climb rank.`;
 
   // Calculate Next Tier Progress
   const currentBurned = coin.totalBurnedBaton || 0;
@@ -121,6 +240,13 @@ export const BurnModal: React.FC<BurnModalProps> = ({
     }
   };
 
+  const handleCopyCA = () => {
+    if (!coin.mintAddress) return;
+    navigator.clipboard.writeText(coin.mintAddress);
+    setCopiedCA(true);
+    setTimeout(() => setCopiedCA(false), 2000);
+  };
+
   const handleBurnSubmit = async () => {
     if (!connected || !publicKey) {
       setErrorMessage("Please connect your Solana wallet first.");
@@ -143,13 +269,14 @@ export const BurnModal: React.FC<BurnModalProps> = ({
     setTxSignature(null);
 
     try {
-      // 1. Build real on-chain SPL Token Burn Transaction
+      // 1. Build real on-chain SPL Token Burn Transaction with BOOST:<targetMint> Memo
       setBurnState("awaiting_approval");
       const { transaction } = await prepareRealBurnTransaction({
         connection,
         userPublicKey: publicKey,
         burnAmount: amount,
-        targetCoinTicker: coin.ticker,
+        targetCoinTicker: displaySymbol || coin.ticker || "BATON",
+        targetMint: coin.mintAddress,
       });
 
       // 2. Request signature from connected Solana wallet
@@ -169,7 +296,11 @@ export const BurnModal: React.FC<BurnModalProps> = ({
       );
 
       if (confirmation.value.err) {
-        throw new Error(`Transaction failed on-chain: ${JSON.stringify(confirmation.value.err)}`);
+        throw new Error(
+          `Transaction failed on-chain: ${JSON.stringify(
+            confirmation.value.err
+          )}`
+        );
       }
 
       // 4. Record genuine on-chain TX in backend
@@ -234,20 +365,20 @@ export const BurnModal: React.FC<BurnModalProps> = ({
     >
       <div
         onClick={(e) => e.stopPropagation()}
-        className="w-full max-w-md max-h-[90vh] overflow-y-auto bg-[#111318]/95 border border-white/10 rounded-2xl p-6 sm:p-7 space-y-6 shadow-2xl shadow-black/80 relative my-auto transition-all"
+        className="w-full max-w-md max-h-[90vh] overflow-y-auto bg-[#111318]/95 border border-white/10 rounded-2xl p-6 sm:p-7 space-y-5 shadow-2xl shadow-black/80 relative my-auto transition-all"
       >
         {/* Modal Header */}
-        <div className="flex items-center justify-between pb-4 border-b border-white/10">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-magenta/15 border border-magenta/30 flex items-center justify-center text-magenta shadow-[0_0_15px_rgba(255,61,122,0.25)] shrink-0">
+        <div className="flex items-start justify-between pb-3 border-b border-white/10 gap-3">
+          <div className="flex items-center gap-3 min-w-0">
+            <div className="w-10 h-10 rounded-xl bg-orange-500/15 border border-orange-500/30 flex items-center justify-center text-orange-400 shadow-[0_0_15px_rgba(249,115,22,0.25)] shrink-0">
               <Flame className="w-5 h-5 fill-current animate-pulse" />
             </div>
-            <div>
-              <h3 className="font-archivo text-base sm:text-lg text-white tracking-wide uppercase leading-tight">
-                Burn $BATON for {coin.name}
+            <div className="min-w-0">
+              <h3 className="font-archivo text-base sm:text-lg text-white font-black tracking-wide uppercase leading-tight truncate">
+                {modalTitle}
               </h3>
-              <p className="font-mono text-[11px] text-zinc-400">
-                Real Solana On-Chain SPL Token Burn
+              <p className="font-space text-[11px] text-zinc-400 line-clamp-1 mt-0.5">
+                {modalSubtitle}
               </p>
             </div>
           </div>
@@ -255,29 +386,122 @@ export const BurnModal: React.FC<BurnModalProps> = ({
           <button
             onClick={onClose}
             disabled={isProcessing}
-            className="p-2 rounded-xl border border-white/10 text-zinc-400 hover:text-white hover:border-white/20 transition-colors disabled:opacity-50"
+            className="p-1.5 rounded-xl border border-white/10 text-zinc-400 hover:text-white hover:border-white/20 transition-colors disabled:opacity-50 shrink-0"
           >
             <X className="w-4 h-4" />
           </button>
         </div>
 
+        {/* Target Token Künyesi / Info Card */}
+        <div className="p-3.5 rounded-xl bg-zinc-950/70 border border-white/10 space-y-2 font-mono">
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex items-center gap-2.5 min-w-0">
+              {displayImage ? (
+                <div className="w-8 h-8 rounded-lg overflow-hidden border border-white/10 bg-zinc-900 shrink-0">
+                  <Image
+                    src={displayImage}
+                    alt={displayName || "token"}
+                    width={32}
+                    height={32}
+                    className="w-full h-full object-cover"
+                    unoptimized
+                  />
+                </div>
+              ) : (
+                <div className="w-8 h-8 rounded-lg bg-orange-500/20 border border-orange-500/30 flex items-center justify-center text-xs font-bold text-orange-400 shrink-0 uppercase">
+                  {(displaySymbol || displayName || "T").slice(0, 2)}
+                </div>
+              )}
+
+              <div className="min-w-0">
+                <div className="flex items-center gap-1.5">
+                  <span className="font-bold text-white text-xs truncate">
+                    {displaySymbol ? `$${displaySymbol.toUpperCase()}` : shortMint}
+                  </span>
+                  {displayName && displayName !== displaySymbol && (
+                    <span className="text-[11px] text-zinc-400 truncate">
+                      ({displayName})
+                    </span>
+                  )}
+                </div>
+                {metaLoading && (
+                  <span className="text-[10px] text-zinc-500 flex items-center gap-1">
+                    <Loader2 className="w-2.5 h-2.5 animate-spin" />
+                    Fetching metadata…
+                  </span>
+                )}
+              </div>
+            </div>
+
+            <div className="flex items-center gap-1.5 shrink-0">
+              <a
+                href={`https://pump.fun/coin/${coin.mintAddress}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="px-2 py-1 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 text-lime-400 hover:text-lime-300 text-[10px] font-bold transition-colors inline-flex items-center gap-1"
+                title="Pump.fun"
+              >
+                <span>Pump</span>
+                <ExternalLink className="w-2.5 h-2.5" />
+              </a>
+              <a
+                href={`https://dexscreener.com/solana/${coin.mintAddress}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="px-2 py-1 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 text-zinc-300 hover:text-white text-[10px] font-bold transition-colors inline-flex items-center gap-1"
+                title="DexScreener"
+              >
+                <span>DEX</span>
+                <ExternalLink className="w-2.5 h-2.5" />
+              </a>
+            </div>
+          </div>
+
+          {/* CA row with copy button */}
+          <div className="flex items-center justify-between gap-2 pt-2 border-t border-white/5 text-[11px] text-zinc-400">
+            <span className="text-zinc-500 text-[10px] uppercase tracking-wider">
+              CA:
+            </span>
+            <div className="flex items-center gap-1.5 min-w-0">
+              <span className="font-mono text-zinc-300 truncate text-[10px]">
+                {coin.mintAddress}
+              </span>
+              <button
+                type="button"
+                onClick={handleCopyCA}
+                className="p-1 hover:text-orange-400 transition-colors text-zinc-500 shrink-0"
+                title="Copy Contract Address"
+              >
+                {copiedCA ? (
+                  <Check className="w-3 h-3 text-emerald-400" />
+                ) : (
+                  <Copy className="w-3 h-3" />
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+
         {/* Success State Screen */}
         {burnState === "success" && txSignature ? (
           <div className="py-6 space-y-6 text-center font-mono animate-in zoom-in-95 duration-200">
-            <div className="w-16 h-16 rounded-2xl bg-acid/15 border border-acid/40 text-acid mx-auto flex items-center justify-center shadow-[0_0_30px_rgba(212,255,63,0.3)]">
+            <div className="w-16 h-16 rounded-2xl bg-lime-400/15 border border-lime-400/40 text-lime-400 mx-auto flex items-center justify-center shadow-[0_0_30px_rgba(163,230,53,0.3)]">
               <CheckCircle2 className="w-8 h-8" />
             </div>
 
             <div className="space-y-2">
-              <h4 className="font-archivo text-2xl text-white uppercase">
+              <h4 className="font-archivo text-2xl text-white uppercase font-black">
                 BURN CONFIRMED ON SOLANA!
               </h4>
               <p className="text-xs text-zinc-400 max-w-sm mx-auto font-space">
-                <span className="text-acid font-bold">
+                <span className="text-lime-400 font-bold">
                   {amount.toLocaleString()} $BATON
                 </span>{" "}
-                permanently burned on-chain and credited to {coin.name} ($
-                {coin.ticker}) score.
+                permanently burned on-chain to boost{" "}
+                <strong className="text-white">
+                  {displaySymbol ? `$${displaySymbol.toUpperCase()}` : shortMint}
+                </strong>
+                .
               </p>
             </div>
 
@@ -290,7 +514,7 @@ export const BurnModal: React.FC<BurnModalProps> = ({
                 href={`https://solscan.io/tx/${txSignature}`}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-acid hover:underline inline-flex items-center gap-1 font-bold shrink-0 text-xs"
+                className="text-lime-400 hover:underline inline-flex items-center gap-1 font-bold shrink-0 text-xs"
               >
                 <span>View on Solscan</span>
                 <ExternalLink className="w-3.5 h-3.5" />
@@ -299,37 +523,37 @@ export const BurnModal: React.FC<BurnModalProps> = ({
 
             <button
               onClick={onClose}
-              className="w-full py-3.5 rounded-xl bg-acid text-black font-bold uppercase tracking-wider text-xs shadow-[0_0_20px_rgba(212,255,63,0.3)] hover:bg-acid-dim transition-all"
+              className="w-full py-3.5 rounded-xl bg-lime-400 text-black font-bold uppercase tracking-wider text-xs shadow-[0_0_20px_rgba(163,230,53,0.3)] hover:bg-lime-300 transition-all cursor-pointer"
             >
               Done &amp; Return
             </button>
           </div>
         ) : (
           <>
-            {/* 1. Progress Bar to Next Tier */}
-            <div className="p-4 rounded-xl border border-white/10 bg-zinc-900/50 space-y-2.5 font-mono">
+            {/* Progress Bar to Next Tier */}
+            <div className="p-3.5 rounded-xl border border-white/10 bg-zinc-900/50 space-y-2 font-mono">
               <div className="flex items-center justify-between text-xs">
                 <div className="flex items-center gap-1.5 text-zinc-400">
-                  <Zap className="w-3.5 h-3.5 text-lime-400" />
+                  <Zap className="w-3.5 h-3.5 text-orange-400" />
                   <span>Next Tier:</span>
                   <span className="text-white font-bold uppercase">
                     {nextTierName}
                   </span>
                 </div>
-                <span className="text-lime-400 font-bold">
+                <span className="text-orange-400 font-bold">
                   {progressPercent}%
                 </span>
               </div>
 
-              {/* Progress Track with Smooth Gradient */}
-              <div className="w-full h-3 rounded-full bg-zinc-950 border border-white/10 overflow-hidden p-0.5 relative">
+              {/* Progress Track */}
+              <div className="w-full h-2.5 rounded-full bg-zinc-950 border border-white/10 overflow-hidden p-0.5 relative">
                 <div
-                  className="h-full rounded-full bg-gradient-to-r from-lime-400 via-amber-400 to-rose-500 shadow-[0_0_12px_rgba(212,255,63,0.5)] transition-all duration-500"
+                  className="h-full rounded-full bg-gradient-to-r from-orange-500 via-amber-400 to-lime-400 shadow-[0_0_12px_rgba(249,115,22,0.5)] transition-all duration-500"
                   style={{ width: `${progressPercent}%` }}
                 />
               </div>
 
-              <div className="flex items-center justify-between text-[11px] text-zinc-400">
+              <div className="flex items-center justify-between text-[10px] text-zinc-400">
                 <span>Current: {currentBurned.toLocaleString()} $BATON</span>
                 {remainingToNext > 0 ? (
                   <span>
@@ -339,18 +563,22 @@ export const BurnModal: React.FC<BurnModalProps> = ({
                     </strong>
                   </span>
                 ) : (
-                  <span className="text-lime-400 font-bold">★ Diamond League Reached</span>
+                  <span className="text-lime-400 font-bold">
+                    ★ Diamond Rank Reached
+                  </span>
                 )}
               </div>
             </div>
 
-            {/* 2. Amount Input & Wallet Balance */}
-            <div className="space-y-3 font-mono">
+            {/* Amount Input & Wallet Balance */}
+            <div className="space-y-2.5 font-mono">
               <div className="flex items-center justify-between text-xs">
-                <label className="text-zinc-400 font-medium">Burn Amount ($BATON):</label>
+                <label className="text-zinc-400 font-medium">
+                  Burn Amount ($BATON):
+                </label>
                 {connected && (
                   <div className="text-zinc-400 flex items-center gap-1 text-[11px]">
-                    <Wallet className="w-3 h-3 text-acid" />
+                    <Wallet className="w-3 h-3 text-orange-400" />
                     <span>Balance:</span>
                     <span className="text-white font-bold">
                       {balanceLoading
@@ -369,22 +597,22 @@ export const BurnModal: React.FC<BurnModalProps> = ({
                   onChange={(e) => setAmount(Number(e.target.value) || 0)}
                   placeholder="Enter amount..."
                   disabled={isProcessing}
-                  className="w-full bg-zinc-950/80 border border-white/10 rounded-xl px-4 py-3.5 text-lg font-bold text-white placeholder:text-zinc-600 focus:border-acid focus:outline-none transition-colors"
+                  className="w-full bg-zinc-950/80 border border-white/10 rounded-xl px-4 py-3 text-base font-bold text-white placeholder:text-zinc-600 focus:border-orange-500 focus:outline-none transition-colors"
                 />
-                <span className="absolute right-4 top-4 text-xs font-black text-acid uppercase tracking-wider pointer-events-none">
+                <span className="absolute right-4 top-3.5 text-xs font-black text-orange-400 uppercase tracking-wider pointer-events-none">
                   $BATON
                 </span>
               </div>
 
               {/* Quick Increment Buttons */}
-              <div className="grid grid-cols-4 gap-2 pt-1">
+              <div className="grid grid-cols-4 gap-2 pt-0.5">
                 {quickAmounts.map((q) => (
                   <button
                     key={q}
                     type="button"
                     onClick={() => setAmount((prev) => prev + q)}
                     disabled={isProcessing}
-                    className="py-1.5 rounded-lg border border-white/10 bg-zinc-900/60 hover:border-white/25 text-zinc-300 hover:text-white text-xs font-semibold transition-colors"
+                    className="py-1.5 rounded-lg border border-white/10 bg-zinc-900/60 hover:border-white/25 text-zinc-300 hover:text-white text-xs font-semibold transition-colors cursor-pointer"
                   >
                     +{q.toLocaleString()}
                   </button>
@@ -393,7 +621,7 @@ export const BurnModal: React.FC<BurnModalProps> = ({
                   type="button"
                   onClick={handleMaxClick}
                   disabled={isProcessing || !batonBalance}
-                  className="py-1.5 rounded-lg border border-acid/40 bg-acid/10 text-acid font-bold text-xs hover:bg-acid hover:text-black disabled:opacity-40 transition-all"
+                  className="py-1.5 rounded-lg border border-orange-500/40 bg-orange-500/10 text-orange-400 font-bold text-xs hover:bg-orange-500 hover:text-white disabled:opacity-40 transition-all cursor-pointer"
                 >
                   MAX
                 </button>
@@ -409,7 +637,7 @@ export const BurnModal: React.FC<BurnModalProps> = ({
             )}
 
             {/* Action Buttons */}
-            <div className="flex gap-3 pt-2 font-mono">
+            <div className="flex gap-3 pt-1 font-mono">
               {!connected ? (
                 <div className="w-full flex flex-col items-center gap-2">
                   <WalletMultiButton />
@@ -423,7 +651,7 @@ export const BurnModal: React.FC<BurnModalProps> = ({
                     type="button"
                     onClick={onClose}
                     disabled={isProcessing}
-                    className="flex-1 py-3.5 rounded-xl border border-white/10 bg-zinc-900/60 text-zinc-300 hover:text-white text-xs font-bold uppercase tracking-wider transition-colors disabled:opacity-50"
+                    className="flex-1 py-3 rounded-xl border border-white/10 bg-zinc-900/60 text-zinc-300 hover:text-white text-xs font-bold uppercase tracking-wider transition-colors disabled:opacity-50 cursor-pointer"
                   >
                     Cancel
                   </button>
@@ -432,7 +660,7 @@ export const BurnModal: React.FC<BurnModalProps> = ({
                     type="button"
                     onClick={handleBurnSubmit}
                     disabled={isProcessing || amount <= 0}
-                    className="flex-[2] py-3.5 rounded-xl bg-acid text-black text-xs font-black uppercase tracking-wider shadow-[0_0_20px_rgba(212,255,63,0.3)] hover:bg-acid-dim active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center justify-center gap-2"
+                    className="flex-[2] py-3 rounded-xl bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white text-xs font-black uppercase tracking-wider shadow-[0_0_20px_rgba(249,115,22,0.3)] active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center justify-center gap-2 cursor-pointer"
                   >
                     {burnState === "awaiting_approval" ? (
                       <>
@@ -447,7 +675,9 @@ export const BurnModal: React.FC<BurnModalProps> = ({
                     ) : (
                       <>
                         <Flame className="w-4 h-4 fill-current" />
-                        <span>Confirm Burn 🔥</span>
+                        <span>
+                          Confirm Burn 🔥
+                        </span>
                       </>
                     )}
                   </button>
