@@ -8,26 +8,15 @@ import {
 } from "@/lib/types/callouts";
 import { getWatchlistMap, DEFAULT_WATCHLIST } from "@/lib/callouts/watchlist";
 
-export const dynamic = "force-dynamic";
-export const revalidate = 60;
-
-// ── Config ─────────────────────────────────────────────────────────────────────
+// Next.js ISR: Cache this route on the server/edge for 90 seconds
+export const revalidate = 90;
 
 const PROXY_BASE =
   process.env.CALLOUT_PROXY_BASE ||
   "https://pump-callout-proxy.emir1903topuz106.workers.dev/";
 
-const FETCH_TIMEOUT_MS = 9000;
-const CACHE_TTL_MS = 60_000;
-
-// ── SIKIYÖNETİM CACHE (Survives across all requests in the process) ─────────────
-
-let memoryCache: { timestamp: number; payload: (CalloutsApiResponse & { isStale?: boolean }) | null } = {
-  timestamp: 0,
-  payload: null,
-};
-
-// ── Worker Response Schema ─────────────────────────────────────────────────────
+// Fallback in-memory cache in case of edge network drops
+let memoryCache: CalloutsApiResponse | null = null;
 
 interface WorkerWalletResult {
   wallet: string;
@@ -43,167 +32,132 @@ interface WorkerPackageResponse {
   error?: string;
 }
 
-// ── Single Outbound Fetch to Worker ───────────────────────────────────────────
-
-async function fetchAllCalloutsFromWorker(): Promise<WorkerPackageResponse> {
-  const ctrl = new AbortController();
-  const timer = setTimeout(() => ctrl.abort(), FETCH_TIMEOUT_MS);
+export async function GET() {
+  const now = Date.now();
+  const labelMap = getWatchlistMap();
 
   try {
+    // 1. Single ISR fetch to Worker with 90s cache
     const res = await fetch(PROXY_BASE, {
-      method: "GET",
       headers: {
         Accept: "application/json",
       },
-      cache: "no-store",
-      signal: ctrl.signal,
+      next: { revalidate: 90 },
     });
-
-    const text = await res.text();
 
     if (!res.ok) {
-      throw new Error(`Worker HTTP ${res.status}: ${text.slice(0, 120)}`);
+      throw new Error(`Worker HTTP ${res.status}`);
     }
 
-    const data = JSON.parse(text) as WorkerPackageResponse;
-    return data;
-  } finally {
-    clearTimeout(timer);
-  }
-}
+    const workerData = (await res.json()) as WorkerPackageResponse;
 
-// ── GET Handler ────────────────────────────────────────────────────────────────
+    if (!Array.isArray(workerData.results)) {
+      throw new Error("Invalid response format: missing results array");
+    }
 
-export async function GET() {
-  const now = Date.now();
+    const allCallouts: CalloutCard[] = [];
+    const watched: WatchedSummary[] = [];
+    const emptyWallets: string[] = [];
+    const errors: CalloutError[] = [];
 
-  // 1. If memoryCache is fresh (<60s), DO NOT touch the proxy at all
-  if (memoryCache.payload && now - memoryCache.timestamp < CACHE_TTL_MS) {
-    return NextResponse.json(memoryCache.payload, {
-      status: 200,
-      headers: {
-        "Cache-Control": "public, s-maxage=60, stale-while-revalidate=120",
-      },
-    });
-  }
+    // 2. Parse and combine callouts from all 10 wallets
+    for (const item of workerData.results) {
+      const wallet = item.wallet;
+      const label =
+        labelMap[wallet] ??
+        DEFAULT_WATCHLIST[wallet] ??
+        `${wallet.slice(0, 4)}…${wallet.slice(-4)}`;
 
-  const labelMap = getWatchlistMap();
-  const allCallouts: CalloutCard[] = [];
-  const watched: WatchedSummary[] = [];
-  const emptyWallets: string[] = [];
-  const errors: CalloutError[] = [];
+      const isOk = item.ok !== false && (!item.status || item.status === 200);
 
-  try {
-    // 2. Perform EXACTLY ONE fetch to Worker
-    const workerData = await fetchAllCalloutsFromWorker();
-
-    if (Array.isArray(workerData.results)) {
-      for (const item of workerData.results) {
-        const wallet = item.wallet;
-        const label =
-          labelMap[wallet] ??
-          DEFAULT_WATCHLIST[wallet] ??
-          `${wallet.slice(0, 4)}…${wallet.slice(-4)}`;
-
-        const isOk = item.ok !== false && (!item.status || item.status === 200);
-
-        if (!isOk) {
-          errors.push({
-            wallet,
-            status: item.status ?? 500,
-            message: item.error || `Worker returned status ${item.status}`,
-          });
-          watched.push({ wallet, label, count: 0 });
-          continue;
-        }
-
-        const calloutsList = Array.isArray(item.callouts) ? item.callouts : [];
-        const count = calloutsList.length;
-
-        watched.push({ wallet, label, count });
-
-        if (count === 0) {
-          emptyWallets.push(wallet);
-        } else {
-          for (const c of calloutsList) {
-            allCallouts.push({
-              ...c,
-              callerWallet: wallet,
-              callerLabel: label,
-            });
-          }
-        }
+      if (!isOk) {
+        errors.push({
+          wallet,
+          status: item.status ?? 500,
+          message: item.error || `Worker status ${item.status}`,
+        });
+        watched.push({ wallet, label, count: 0 });
+        continue;
       }
 
-      // 3. Sort all callouts newest first (createdAt DESC)
-      allCallouts.sort((a, b) => b.createdAt - a.createdAt);
+      const calloutsList = Array.isArray(item.callouts) ? item.callouts : [];
+      const count = calloutsList.length;
 
-      const response: CalloutsApiResponse & { isStale?: boolean } = {
-        updatedAt: now,
-        watched,
-        callouts: allCallouts,
-        emptyWallets,
-        errors,
-        isStale: false,
-      };
+      watched.push({ wallet, label, count });
 
-      // 4. Update memory cache
-      memoryCache = { timestamp: now, payload: response };
-
-      return NextResponse.json(response, {
-        status: 200,
-        headers: {
-          "Cache-Control": "public, s-maxage=60, stale-while-revalidate=120",
-        },
-      });
-    } else {
-      throw new Error("Invalid response format from worker (missing results array)");
-    }
-  } catch (err: unknown) {
-    const errorMsg = err instanceof Error ? err.message : "Proxy fetch error";
-    console.warn("Worker proxy error:", errorMsg);
-
-    // 5. ASLA SIFIRLAMA KURALI (Fail-Safe):
-    // If Worker returned 429/500/network error and memoryCache exists:
-    // Return last good data with isStale: true. NEVER drop existing callouts!
-    if (memoryCache.payload) {
-      const fallbackPayload: CalloutsApiResponse & { isStale?: boolean } = {
-        ...memoryCache.payload,
-        isStale: true,
-      };
-
-      return NextResponse.json(fallbackPayload, {
-        status: 200,
-        headers: {
-          "Cache-Control": "public, s-maxage=60, stale-while-revalidate=120",
-        },
-      });
+      if (count === 0) {
+        emptyWallets.push(wallet);
+      } else {
+        for (const c of calloutsList) {
+          allCallouts.push({
+            ...c,
+            callerWallet: wallet,
+            callerLabel: label,
+          });
+        }
+      }
     }
 
-    // 6. Only when server has zero data at cold boot, return clean empty list
-    const emptyResponse: CalloutsApiResponse & { isStale?: boolean } = {
+    // 3. Sort all callouts newest first (createdAt DESC)
+    allCallouts.sort((a, b) => b.createdAt - a.createdAt);
+
+    const payload: CalloutsApiResponse = {
       updatedAt: now,
-      watched: Object.entries(labelMap).map(([wallet, label]) => ({
-        wallet,
-        label,
-        count: 0,
-      })),
-      callouts: [],
-      emptyWallets: [],
-      errors: [
-        {
-          wallet: "proxy",
-          message: errorMsg,
-        },
-      ],
-      isStale: true,
+      watched,
+      callouts: allCallouts,
+      emptyWallets,
+      errors,
     };
 
-    return NextResponse.json(emptyResponse, {
+    memoryCache = payload;
+
+    return NextResponse.json(payload, {
       status: 200,
       headers: {
-        "Cache-Control": "public, s-maxage=60, stale-while-revalidate=120",
+        "Cache-Control": "public, s-maxage=90, stale-while-revalidate=180",
       },
     });
+  } catch (err: unknown) {
+    const errorMsg = err instanceof Error ? err.message : "Proxy fetch error";
+
+    // 4. Fail-safe: If Worker fails and previous cache exists, return it without wiping out UI
+    if (memoryCache) {
+      return NextResponse.json(
+        {
+          ...memoryCache,
+          errors: [
+            ...memoryCache.errors,
+            { wallet: "proxy", message: `${errorMsg} (serving cached)` },
+          ],
+        },
+        {
+          status: 200,
+          headers: {
+            "Cache-Control": "public, s-maxage=90, stale-while-revalidate=180",
+          },
+        }
+      );
+    }
+
+    // 5. Cold boot fallback (no mock data)
+    return NextResponse.json(
+      {
+        updatedAt: now,
+        watched: Object.entries(labelMap).map(([wallet, label]) => ({
+          wallet,
+          label,
+          count: 0,
+        })),
+        callouts: [],
+        emptyWallets: [],
+        errors: [{ wallet: "proxy", message: errorMsg }],
+      },
+      {
+        status: 200,
+        headers: {
+          "Cache-Control": "public, s-maxage=90, stale-while-revalidate=180",
+        },
+      }
+    );
   }
 }
