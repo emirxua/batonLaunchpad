@@ -20,7 +20,6 @@ import {
   Check,
   TrendingUp,
   TrendingDown,
-  Sparkles,
   Activity,
 } from "lucide-react";
 
@@ -173,12 +172,9 @@ export default function TerminalPage() {
           {/* Left Column: Trending Tokens Table (8 cols on lg) */}
           <div className="lg:col-span-7 xl:col-span-8 space-y-4">
             <div className="flex items-center justify-between px-1">
-              <div className="flex items-center gap-2 text-xs font-mono text-zinc-400">
-                <Sparkles className="w-4 h-4 text-orange-400" />
-                <span className="font-bold text-white uppercase">
-                  Trending Solana Movers
-                </span>
-              </div>
+              <span className="font-mono text-xs text-zinc-400 font-bold tracking-wider uppercase">
+                TRENDING SOLANA MOVERS
+              </span>
               <span className="text-[11px] font-mono text-zinc-500">
                 Click any row to swap or inspect
               </span>
