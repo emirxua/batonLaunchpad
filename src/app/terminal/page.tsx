@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import useSWR from "swr";
@@ -30,8 +30,15 @@ const DEFAULT_BATON_MINT =
 const lookupFetcher = (url: string) => fetch(url).then((r) => r.json());
 
 export default function TerminalPage() {
-  const [selectedMint, setSelectedMint] = useState<string>(DEFAULT_BATON_MINT);
-  const [selectedSymbol, setSelectedSymbol] = useState<string>("BATON");
+  // 1. Unified Selected Token State
+  const [selectedToken, setSelectedToken] = useState<{
+    mint: string;
+    symbol: string;
+  }>({
+    mint: DEFAULT_BATON_MINT,
+    symbol: "BATON",
+  });
+
   const [selectedTokenMeta, setSelectedTokenMeta] =
     useState<DexTrendingToken | null>(null);
   const [copiedMint, setCopiedMint] = useState<string | null>(null);
@@ -39,9 +46,25 @@ export default function TerminalPage() {
   // Boost modal state
   const [boostCoin, setBoostCoin] = useState<Coin | null>(null);
 
-  // Query detailed token lookup for the selected mint if not already in selectedTokenMeta
+  // Sync with URL query parameter ?token= if present on mount
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const params = new URLSearchParams(window.location.search);
+      const tokenParam = params.get("token");
+      if (tokenParam) {
+        setSelectedToken({
+          mint: tokenParam,
+          symbol: tokenParam.slice(0, 6).toUpperCase(),
+        });
+      }
+    }
+  }, []);
+
+  // Query detailed token lookup for the selected mint
   const { data: lookupData } = useSWR(
-    selectedMint ? `/api/token-lookup?mint=${encodeURIComponent(selectedMint)}` : null,
+    selectedToken.mint
+      ? `/api/token-lookup?mint=${encodeURIComponent(selectedToken.mint)}`
+      : null,
     lookupFetcher,
     {
       revalidateOnFocus: false,
@@ -53,29 +76,26 @@ export default function TerminalPage() {
   );
 
   const displayToken = {
-    name: selectedTokenMeta?.name || lookupData?.name || (selectedSymbol === "BATON" ? "Baton Corporation Ltd" : selectedSymbol),
-    symbol: selectedTokenMeta?.symbol || lookupData?.symbol || selectedSymbol,
-    mint: selectedMint,
+    name:
+      selectedTokenMeta?.name ||
+      lookupData?.name ||
+      (selectedToken.symbol === "BATON"
+        ? "Baton Corporation Ltd"
+        : selectedToken.symbol),
+    symbol:
+      selectedTokenMeta?.symbol || lookupData?.symbol || selectedToken.symbol,
+    mint: selectedToken.mint,
     iconUrl: selectedTokenMeta?.iconUrl || lookupData?.iconUrl || null,
     priceUsd: selectedTokenMeta?.priceUsd ?? lookupData?.priceUsd ?? 0,
     marketCap: selectedTokenMeta?.marketCap ?? lookupData?.marketCap ?? 0,
     volume24h: selectedTokenMeta?.volume24h ?? lookupData?.volume24h ?? 0,
-    priceChange24h: selectedTokenMeta?.priceChange24h ?? lookupData?.priceChange24h ?? 0,
-    pairAddress: selectedTokenMeta?.pairAddress || lookupData?.pairAddress || null,
+    priceChange24h:
+      selectedTokenMeta?.priceChange24h ?? lookupData?.priceChange24h ?? 0,
+    pairAddress:
+      selectedTokenMeta?.pairAddress || lookupData?.pairAddress || null,
   };
 
   const isPositive = displayToken.priceChange24h >= 0;
-
-  const handleSelectToken = (mint: string, symbol: string) => {
-    setSelectedMint(mint);
-    setSelectedSymbol(symbol);
-  };
-
-  const handleTradeToken = (token: DexTrendingToken) => {
-    setSelectedMint(token.mint);
-    setSelectedSymbol(token.symbol);
-    setSelectedTokenMeta(token);
-  };
 
   const handleCopyCA = (mint: string) => {
     navigator.clipboard.writeText(mint);
@@ -164,10 +184,16 @@ export default function TerminalPage() {
               </span>
             </div>
 
+            {/* 2. TrendingTable Props with dynamic onSelectToken and onTradeToken */}
             <TrendingTable
-              selectedMint={selectedMint}
-              onSelectToken={handleSelectToken}
-              onTradeToken={handleTradeToken}
+              selectedMint={selectedToken.mint}
+              onSelectToken={(mint, symbol) => {
+                setSelectedToken({ mint, symbol });
+              }}
+              onTradeToken={(token) => {
+                setSelectedToken({ mint: token.mint, symbol: token.symbol });
+                setSelectedTokenMeta(token);
+              }}
             />
           </div>
 
@@ -294,10 +320,10 @@ export default function TerminalPage() {
               </div>
             </div>
 
-            {/* Jupiter Swap Widget */}
+            {/* 3. Jupiter Swap Widget with dynamic outputMint and outputSymbol */}
             <JupiterSwapWidget
-              initialOutputMint={selectedMint}
-              targetSymbol={displayToken.symbol}
+              outputMint={selectedToken.mint}
+              outputSymbol={selectedToken.symbol}
             />
           </div>
         </section>
