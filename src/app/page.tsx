@@ -289,18 +289,15 @@ export default function OutbidHomePage() {
               <div className="flex items-center gap-2">
                 <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-orange-500/10 border border-orange-500/30 text-orange-600 dark:text-orange-400 font-mono text-[10px] font-bold uppercase tracking-wider">
                   <Radio className="w-3 h-3 text-rose-500 animate-pulse" />
-                  <span>Live DexScreener Stream</span>
-                </span>
-                <span className="px-2 py-0.5 rounded-md bg-orange-500 text-white font-mono text-[9px] font-black tracking-wider">
-                  10x REWARDS
+                  <span>Pump.fun Callout Feed</span>
                 </span>
               </div>
 
               <h2 className="font-archivo text-xl sm:text-2xl font-black tracking-tight text-zinc-900 dark:text-white flex items-center gap-2">
-                <span>🔥 LIVE PUMP.FUN CALLOUT STREAM</span>
+                <span>Tracked Caller Callouts</span>
               </h2>
               <p className="font-space text-xs text-zinc-500 dark:text-zinc-400">
-                Real-time Solana tokens called by verified alpha hunters. Boost rank with $BATON.
+                Live calls from a curated watchlist. Not the official Pump.fun rewards leaderboard.
               </p>
             </div>
 
@@ -308,7 +305,7 @@ export default function OutbidHomePage() {
               href="/callouts"
               className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-orange-500/10 hover:bg-orange-500 text-orange-600 hover:text-white dark:text-orange-400 dark:hover:text-white border border-orange-500/30 font-mono text-xs font-bold transition-all shadow-sm shrink-0"
             >
-              <span>View All Top Callers</span>
+              <span>Tracked Callers</span>
               <ArrowRight className="w-3.5 h-3.5" />
             </Link>
           </div>

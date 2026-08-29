@@ -38,7 +38,7 @@ export const Navbar: React.FC = () => {
 
   const navLinks = [
     { name: "Directory", href: "/" },
-    { name: "Callout Rewards", href: "/callouts", isNew: true, icon: Flame },
+    { name: "Live Callouts", href: "/callouts", icon: Flame },
     { name: "Launchpad Hub", href: "/launchpad" },
     { name: "Leaderboard", href: "/leaderboard" },
     { name: "Submit Token", href: "/submit" },
@@ -108,11 +108,6 @@ export const Navbar: React.FC = () => {
                 >
                   {Icon && <Icon className="w-3.5 h-3.5 text-orange-500 fill-current" />}
                   <span>{link.name}</span>
-                  {link.isNew && (
-                    <span className="px-1.5 py-0.5 rounded-md bg-orange-500/15 border border-orange-500/30 text-orange-600 dark:text-orange-400 text-[9px] font-black tracking-wider shadow-sm animate-pulse">
-                      NEW
-                    </span>
-                  )}
                 </Link>
               );
             })}
@@ -195,11 +190,6 @@ export const Navbar: React.FC = () => {
                         {Icon && <Icon className="w-3.5 h-3.5 text-orange-500 fill-current" />}
                         <span>{link.name}</span>
                       </div>
-                      {link.isNew && (
-                        <span className="px-1.5 py-0.5 rounded-md bg-orange-500/15 border border-orange-500/30 text-orange-600 dark:text-orange-400 text-[9px] font-black tracking-wider">
-                          NEW
-                        </span>
-                      )}
                     </Link>
                   );
                 })}
