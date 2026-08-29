@@ -84,7 +84,7 @@ export const TopHolders: React.FC<TopHoldersProps> = React.memo(({
       </div>
 
       {/* Table Container */}
-      <div className="overflow-x-auto">
+      <div className="overflow-x-auto no-scrollbar">
         <table className="w-full text-left font-mono text-xs">
           <thead>
             <tr className="text-text-faint uppercase text-[11px] border-b border-line/60">

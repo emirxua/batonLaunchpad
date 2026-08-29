@@ -232,7 +232,7 @@ export const TopCallersLeaderboard: React.FC<TopCallersLeaderboardProps> = ({
           </span>
         </div>
 
-        <div className="overflow-x-auto">
+        <div className="overflow-x-auto no-scrollbar">
           <table className="w-full text-left font-mono text-xs">
             <thead className="bg-zinc-50 dark:bg-[#111318] text-zinc-400 uppercase text-[10px] tracking-wider border-b border-zinc-200 dark:border-white/10">
               <tr>

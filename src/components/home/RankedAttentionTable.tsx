@@ -58,7 +58,7 @@ export function RankedAttentionTable({
         </div>
 
         {/* Text-based Category Filters */}
-        <div className="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0 scrollbar-none">
+        <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar pb-1 sm:pb-0 scrollbar-none">
           {CATEGORIES.map((cat) => {
             const isActive = selectedCategory.toLowerCase() === cat.id.toLowerCase();
             return (
@@ -80,7 +80,7 @@ export function RankedAttentionTable({
       </div>
 
       {/* Tight Table Content */}
-      <div className="overflow-x-auto">
+      <div className="overflow-x-auto no-scrollbar">
         <table className="w-full text-left text-xs border-collapse">
           <thead>
             <tr className="border-b border-white/5 bg-zinc-950/80 text-zinc-500 text-[10px] uppercase tracking-wider select-none">

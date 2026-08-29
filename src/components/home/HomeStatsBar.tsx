@@ -23,7 +23,7 @@ export function HomeStatsBar({
   onOutbidClick,
 }: HomeStatsBarProps) {
   return (
-    <div className="w-full bg-zinc-900/40 border border-white/5 px-4 py-2 rounded-lg flex items-center justify-between gap-4 font-mono text-xs text-zinc-400 overflow-x-auto select-none">
+    <div className="w-full bg-zinc-900/40 border border-white/5 px-4 py-2 rounded-lg flex items-center justify-between gap-4 font-mono text-xs text-zinc-400 overflow-x-auto no-scrollbar select-none">
       {/* Metrics Row */}
       <div className="flex items-center gap-3 sm:gap-5 flex-wrap min-w-0">
         {/* On-Chain Burned */}

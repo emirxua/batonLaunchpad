@@ -58,7 +58,7 @@ export const CoinGrid: React.FC<CoinGridProps> = ({
       {/* Header & Controls Bar */}
       <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 bg-bg-raised/70 p-4 rounded-2xl border border-line">
         {/* Left: Filter Buttons */}
-        <div className="flex items-center gap-2 overflow-x-auto pb-1 lg:pb-0 font-mono text-xs">
+        <div className="flex items-center gap-2 overflow-x-auto no-scrollbar pb-1 lg:pb-0 font-mono text-xs">
           <button
             onClick={() => setActiveTab("all")}
             className={`px-3.5 py-2 rounded-xl border transition-all flex items-center gap-1.5 whitespace-nowrap ${

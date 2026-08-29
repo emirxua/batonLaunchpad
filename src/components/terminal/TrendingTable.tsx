@@ -159,7 +159,7 @@ export const TrendingTable: React.FC<TrendingTableProps> = ({
       </div>
 
       {/* ── Table Component ────────────────────────────────────────────── */}
-      <div className="overflow-x-auto">
+      <div className="overflow-x-auto no-scrollbar">
         <table className="w-full text-left font-mono text-xs border-collapse">
           <thead>
             <tr className="border-b border-white/5 bg-zinc-950/90 text-zinc-500 text-[10px] uppercase tracking-wider select-none">
