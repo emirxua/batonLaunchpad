@@ -1,10 +1,10 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import Link from "next/link";
 import { useWallet } from "@solana/wallet-adapter-react";
 import dynamic from "next/dynamic";
-import { ArrowDown, Zap } from "lucide-react";
+import { ArrowDown, Zap, Loader2 } from "lucide-react";
 import { formatNumber } from "@/lib/utils";
 
 const WalletMultiButton = dynamic(
@@ -14,6 +14,7 @@ const WalletMultiButton = dynamic(
 );
 
 const BATON_MINT = "2vdc4owf1MPz54jJCN61y3QSKqjcPpr32wJ9qKkmpump";
+const SOL_MINT = "So11111111111111111111111111111111111111112";
 const PRESETS = [0.1, 0.5, 1.0];
 
 export function QuickSwapCard() {
@@ -22,46 +23,70 @@ export function QuickSwapCard() {
   const [estimatedBaton, setEstimatedBaton] = useState<number>(0);
   const [loadingRate, setLoadingRate] = useState<boolean>(false);
   const [solPriceUsd, setSolPriceUsd] = useState<number>(200);
+  const [batonPriceUsd, setBatonPriceUsd] = useState<number>(0.0004);
 
-  // Fetch live SOL & BATON estimated rate
-  useEffect(() => {
-    let cancelled = false;
+  // Fetch live Jupiter / DexScreener Price API
+  const fetchPrices = useCallback(async () => {
+    setLoadingRate(true);
+    try {
+      // 1. Fetch from Jupiter Price API
+      const jupRes = await fetch(
+        `https://api.jup.ag/price/v2?ids=${SOL_MINT},${BATON_MINT}`
+      );
 
-    async function fetchRate() {
-      setLoadingRate(true);
+      if (jupRes.ok) {
+        const jupData = await jupRes.json();
+        const solP = parseFloat(jupData?.data?.[SOL_MINT]?.price || "0");
+        const batonP = parseFloat(jupData?.data?.[BATON_MINT]?.price || "0");
+
+        if (solP > 0) setSolPriceUsd(solP);
+        if (batonP > 0) setBatonPriceUsd(batonP);
+        return;
+      }
+    } catch {
+      // Fallback to market-stats & coins API
       try {
-        // Fetch SOL price from market stats
-        const res = await fetch("/api/market-stats");
-        if (res.ok) {
-          const json = await res.json();
-          const solCoin = Array.isArray(json.data)
-            ? json.data.find((c: { symbol: string }) => c.symbol === "SOL")
+        const [mRes, cRes] = await Promise.all([
+          fetch("/api/market-stats"),
+          fetch("/api/coins"),
+        ]);
+
+        if (mRes.ok) {
+          const mData = await mRes.json();
+          const solCoin = Array.isArray(mData.data)
+            ? mData.data.find((c: { symbol: string }) => c.symbol === "SOL")
             : null;
-          if (solCoin?.price && !cancelled) {
-            setSolPriceUsd(solCoin.price);
-          }
+          if (solCoin?.price) setSolPriceUsd(solCoin.price);
+        }
+
+        if (cRes.ok) {
+          const cData = await cRes.json();
+          const batonCoin = Array.isArray(cData.data)
+            ? cData.data.find((c: { ticker: string }) => c.ticker === "BATON")
+            : null;
+          if (batonCoin?.priceUsd) setBatonPriceUsd(batonCoin.priceUsd);
         }
       } catch (e) {
-        console.warn("Could not fetch latest SOL price:", e);
-      } finally {
-        if (!cancelled) setLoadingRate(false);
+        console.warn("Fallback price fetch error:", e);
       }
+    } finally {
+      setLoadingRate(false);
     }
-
-    fetchRate();
-    return () => {
-      cancelled = true;
-    };
   }, []);
 
-  // Calculate estimated $BATON tokens (~$0.0004 assumption or live relative cap)
   useEffect(() => {
-    const solVal = parseFloat(solAmount) || 0;
+    fetchPrices();
+    const interval = setInterval(fetchPrices, 30_000);
+    return () => clearInterval(interval);
+  }, [fetchPrices]);
+
+  // Recalculate dynamic $BATON amount
+  useEffect(() => {
+    const solVal = Math.max(0, parseFloat(solAmount) || 0);
     const usdVal = solVal * solPriceUsd;
-    // Assuming estimated price per BATON ~$0.00035 to $0.0005
-    const estimatedPriceBaton = 0.00042;
-    setEstimatedBaton(Math.floor(usdVal / estimatedPriceBaton));
-  }, [solAmount, solPriceUsd]);
+    const effBatonPrice = batonPriceUsd > 0 ? batonPriceUsd : 0.0004;
+    setEstimatedBaton(Math.floor(usdVal / effBatonPrice));
+  }, [solAmount, solPriceUsd, batonPriceUsd]);
 
   return (
     <div className="w-full bg-zinc-900/40 border border-white/10 rounded-xl p-4 flex flex-col gap-3 font-mono shadow-lg select-none">
@@ -71,16 +96,23 @@ export function QuickSwapCard() {
           <Zap className="w-3.5 h-3.5 text-amber-400" />
           QUICK SWAP ROUTE
         </span>
-        <span className="text-[10px] text-zinc-500 bg-zinc-800/80 px-2 py-0.5 rounded border border-white/5 font-medium">
-          SLIPPAGE: 0.5%
-        </span>
+        <div className="flex items-center gap-1.5">
+          {loadingRate && (
+            <Loader2 className="w-3 h-3 text-amber-400 animate-spin" />
+          )}
+          <span className="text-[10px] text-zinc-500 bg-zinc-800/80 px-2 py-0.5 rounded border border-white/5 font-medium">
+            SLIPPAGE: 0.5%
+          </span>
+        </div>
       </div>
 
       {/* Input: Pay SOL */}
       <div className="space-y-1.5">
         <div className="flex items-center justify-between text-[11px] text-zinc-400">
           <span>YOU PAY</span>
-          <span>SOLANA</span>
+          <span className="text-[10px] text-zinc-500">
+            1 SOL ≈ ${solPriceUsd.toFixed(2)}
+          </span>
         </div>
 
         <div className="flex items-center justify-between bg-zinc-950/80 border border-white/10 rounded-lg px-3 py-2 focus-within:border-amber-500/50 transition-colors">
