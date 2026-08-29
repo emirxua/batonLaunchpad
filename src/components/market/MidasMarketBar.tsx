@@ -51,8 +51,8 @@ export const MidasMarketBar: React.FC = () => {
     "/api/market-stats",
     fetcher,
     {
-      refreshInterval: 45_000,
-      dedupingInterval: 30_000,
+      refreshInterval: 20_000,
+      dedupingInterval: 10_000,
       revalidateOnFocus: false,
       revalidateOnReconnect: false,
       errorRetryCount: 2,

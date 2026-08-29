@@ -376,7 +376,7 @@ export default function SubmitCoinPage() {
                   <div className="space-y-1.5">
                     <label className="text-xs font-mono font-bold text-text uppercase tracking-wider flex items-center gap-1.5">
                       <Globe className="w-3.5 h-3.5 text-text-dim" />
-                      <span>Twitter / X Link</span>
+                      <span>X Profile Link</span>
                     </label>
                     <input
                       {...register("twitter")}

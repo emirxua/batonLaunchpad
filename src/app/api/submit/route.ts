@@ -57,7 +57,7 @@ export async function POST(request: Request) {
         `<b>Token Name:</b> ${escapeHtml(name.trim())}`,
         `<b>Ticker:</b> $${escapeHtml(cleanTicker)}`,
         `<b>Mint Address (CA):</b> <code>${escapeHtml(mintAddress.trim())}</code>`,
-        `<b>Twitter / X:</b> ${escapeHtml(twitter?.trim() || "N/A")}`,
+        `<b>X:</b> ${escapeHtml(twitter?.trim() || "N/A")}`,
         `<b>Telegram:</b> ${escapeHtml(telegram?.trim() || "N/A")}`,
         `<b>Description:</b> ${escapeHtml(description?.trim() || "N/A")}`,
         "",

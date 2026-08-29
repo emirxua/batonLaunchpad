@@ -25,8 +25,8 @@ export function LiveSignalsCompact({
     initialCallouts && initialCallouts.length > 0 ? null : "/api/callouts",
     fetcher,
     {
-      refreshInterval: 60_000,
-      dedupingInterval: 30_000,
+      refreshInterval: 90_000,
+      dedupingInterval: 45_000,
       revalidateOnFocus: false,
       keepPreviousData: true,
     }

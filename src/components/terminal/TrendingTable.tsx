@@ -73,8 +73,8 @@ export const TrendingTable: React.FC<TrendingTableProps> = ({
     apiUrl,
     fetcher,
     {
-      refreshInterval: 60_000,
-      dedupingInterval: 30_000,
+      refreshInterval: 30_000,
+      dedupingInterval: 15_000,
       revalidateOnFocus: false,
       revalidateOnReconnect: false,
       errorRetryCount: 2,
