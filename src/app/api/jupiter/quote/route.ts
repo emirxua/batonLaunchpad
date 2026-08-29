@@ -2,47 +2,78 @@ import { NextRequest, NextResponse } from "next/server";
 
 export const dynamic = "force-dynamic";
 
+const SOL_MINT = "So11111111111111111111111111111111111111112";
+
 export async function GET(req: NextRequest) {
   try {
     const { searchParams } = new URL(req.url);
-    const inputMint =
-      searchParams.get("inputMint") ||
-      "So11111111111111111111111111111111111111112";
-    const outputMint = searchParams.get("outputMint");
-    const amount = searchParams.get("amount") || "100000000";
-    const slippageBps = searchParams.get("slippageBps") || "50";
+    const outputMint =
+      searchParams.get("outputMint") ||
+      "2vdc4owf1MPz54jJCN61y3QSKqjcPpr32wJ9qKkpump";
+    const amountStr = searchParams.get("amount") || "500000000"; // 0.5 SOL in lamports
 
-    if (!outputMint) {
-      return NextResponse.json(
-        { error: "outputMint is required" },
-        { status: 400 }
-      );
-    }
-
-    const jupRes = await fetch(
-      `https://quote-api.jup.ag/v6/quote?inputMint=${inputMint}&outputMint=${outputMint}&amount=${amount}&slippageBps=${slippageBps}`,
-      {
+    // 1. Jupiter v6 Standart Quote Denemesi
+    try {
+      const jupUrl = `https://quote-api.jup.ag/v6/quote?inputMint=${SOL_MINT}&outputMint=${outputMint}&amount=${amountStr}&slippageBps=100`;
+      const jupRes = await fetch(jupUrl, {
         headers: {
           Accept: "application/json",
           "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)",
         },
         cache: "no-store",
-      }
-    );
+      });
 
-    if (!jupRes.ok) {
-      const errText = await jupRes.text();
-      return NextResponse.json(
-        { error: "Jupiter API error", details: errText },
-        { status: jupRes.status }
-      );
+      if (jupRes.ok) {
+        const jupData = await jupRes.json();
+        if (jupData && jupData.outAmount) {
+          return NextResponse.json({
+            success: true,
+            ...jupData,
+            source: "jupiter",
+          });
+        }
+      }
+    } catch {
+      // Jupiter rotası yoksa DexScreener köprüsüne geç
     }
 
-    const data = await jupRes.json();
-    return NextResponse.json(data);
-  } catch (error: unknown) {
-    const message =
-      error instanceof Error ? error.message : "Internal Server Error";
-    return NextResponse.json({ error: message }, { status: 500 });
+    // 2. Fallback: DexScreener üzerinden dinamik SOL/$BATON parite hesabı
+    const dexRes = await fetch(
+      `https://api.dexscreener.com/latest/dex/tokens/${outputMint}`,
+      {
+        headers: { Accept: "application/json" },
+        cache: "no-store",
+      }
+    );
+    const dexData = await dexRes.json();
+    const pair = dexData?.pairs?.[0];
+
+    if (pair && pair.priceNative) {
+      const solAmount = Number(amountStr) / 1e9;
+      const priceInSol = parseFloat(pair.priceNative); // 1 Token kaç SOL?
+      if (priceInSol > 0) {
+        const estimatedTokens = solAmount / priceInSol;
+        const decimals = outputMint.endsWith("pump") ? 6 : 9;
+        const outAmountRaw = Math.floor(
+          estimatedTokens * Math.pow(10, decimals)
+        ).toString();
+
+        return NextResponse.json({
+          success: true,
+          outAmount: outAmountRaw,
+          priceImpactPct: "0.01",
+          routePlan: [{ swapInfo: { label: "DexScreener/Pump Bonding" } }],
+          source: "dexscreener_fallback",
+        });
+      }
+    }
+
+    return NextResponse.json(
+      { error: "Route not available" },
+      { status: 404 }
+    );
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : "Quote error";
+    return NextResponse.json({ error: msg }, { status: 500 });
   }
 }
