@@ -15,7 +15,13 @@ const WalletMultiButton = dynamic(
   { ssr: false }
 );
 
-const CATEGORIES = ["Mascots", "Agents", "Memes", "Utility", "DeFi", "Community"];
+const CATEGORIES = [
+  { id: "Mascots", label: "Mascots" },
+  { id: "Agents", label: "AI Agents" },
+  { id: "Memes", label: "Memes" },
+  { id: "Utility", label: "Utility" },
+  { id: "DeFi", label: "DeFi" },
+];
 
 interface OutbidModalProps {
   targetCoin?: Coin | null;
@@ -149,11 +155,11 @@ export function OutbidModal({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-in fade-in duration-150 select-none">
       <div
-        className="w-full max-w-lg bg-zinc-950/95 border border-white/10 rounded-2xl overflow-hidden shadow-2xl font-mono text-xs flex flex-col"
+        className="w-full max-w-lg bg-zinc-950 border border-white/10 rounded-xl p-6 text-zinc-200 font-mono shadow-2xl flex flex-col space-y-4"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="p-4 border-b border-white/10 bg-zinc-900/40 flex items-center justify-between">
+        <div className="flex items-center justify-between pb-3 border-b border-white/10">
           <div className="flex items-center gap-2">
             <Flame className="w-4 h-4 text-amber-400 fill-current" />
             <span className="font-bold text-sm text-white uppercase tracking-wider">
@@ -163,154 +169,151 @@ export function OutbidModal({
           <button
             type="button"
             onClick={onClose}
-            className="p-1 rounded-lg hover:bg-white/10 text-zinc-400 hover:text-white transition-colors"
+            className="p-1 rounded-lg hover:bg-white/10 text-zinc-400 hover:text-white transition-colors cursor-pointer"
           >
             <X className="w-4 h-4" />
           </button>
         </div>
 
-        {/* Content */}
-        <div className="p-5 space-y-4">
-          {/* Target Info Banner */}
-          {targetCoin && (
-            <div className="p-3 rounded-xl bg-zinc-900/60 border border-amber-500/20 flex items-center justify-between text-[11px]">
-              <div>
-                <div className="text-zinc-500 uppercase">Target Current Burn:</div>
-                <div className="font-bold text-white">
-                  {formatNumber(currentBurn)} $BATON
-                </div>
-              </div>
-              <div className="text-right">
-                <div className="text-zinc-500 uppercase">Min. To Overtake (+5%):</div>
-                <div className="font-bold text-amber-400">
-                  {formatNumber(minRequired)} $BATON
-                </div>
+        {/* Target Info Banner */}
+        {targetCoin && (
+          <div className="p-3 rounded-lg bg-zinc-900/80 border border-amber-500/20 flex items-center justify-between text-[11px]">
+            <div>
+              <div className="text-zinc-500 uppercase">Target Current Burn:</div>
+              <div className="font-bold text-white">
+                {formatNumber(currentBurn)} $BATON
               </div>
             </div>
-          )}
-
-          {/* Token Contract Address Input */}
-          <div className="space-y-1.5">
-            <label className="text-[11px] text-zinc-400 uppercase tracking-wider block">
-              Token Contract Address (CA)
-            </label>
-            <input
-              type="text"
-              value={tokenAddress}
-              onChange={(e) => setTokenAddress(e.target.value)}
-              placeholder="Enter Solana token mint address..."
-              className="w-full bg-zinc-900/80 border border-white/10 rounded-lg px-3 py-2 text-white font-mono focus:outline-none focus:border-amber-500/50 transition-colors"
-              disabled={step === "awaiting_approval" || step === "confirming"}
-            />
-          </div>
-
-          {/* Category Selection */}
-          <div className="space-y-1.5">
-            <label className="text-[11px] text-zinc-400 uppercase tracking-wider block">
-              Category
-            </label>
-            <select
-              value={category}
-              onChange={(e) => setCategory(e.target.value)}
-              className="w-full bg-zinc-900/80 border border-white/10 rounded-lg px-3 py-2 text-white font-mono focus:outline-none focus:border-amber-500/50 cursor-pointer"
-              disabled={step === "awaiting_approval" || step === "confirming"}
-            >
-              {CATEGORIES.map((cat) => (
-                <option key={cat} value={cat}>
-                  {cat.toUpperCase()}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          {/* Burn Amount Input & Presets */}
-          <div className="space-y-1.5">
-            <div className="flex items-center justify-between text-[11px] text-zinc-400">
-              <label className="uppercase tracking-wider">Burn Amount ($BATON)</label>
-              <span>
-                Wallet Balance:{" "}
-                <span className="text-amber-400 font-bold">
-                  {balanceLoading ? "..." : formatNumber(batonBalance)}
-                </span>
-              </span>
-            </div>
-
-            <input
-              type="number"
-              min={minRequired}
-              step="1000"
-              value={amount}
-              onChange={(e) => setAmount(Math.max(0, parseInt(e.target.value) || 0))}
-              className="w-full bg-zinc-900/80 border border-white/10 rounded-lg px-3 py-2 text-white font-bold text-sm focus:outline-none focus:border-amber-500/50 font-mono transition-colors"
-              disabled={step === "awaiting_approval" || step === "confirming"}
-            />
-
-            {/* Quick Presets */}
-            <div className="grid grid-cols-4 gap-1.5 pt-1">
-              {[minRequired, minRequired + 5000, minRequired + 25000, minRequired + 100000].map(
-                (preset, idx) => (
-                  <button
-                    key={idx}
-                    type="button"
-                    onClick={() => setAmount(preset)}
-                    className="py-1 rounded bg-zinc-900 hover:bg-zinc-800 border border-white/5 text-zinc-400 hover:text-white text-[10px] font-bold transition-colors cursor-pointer"
-                  >
-                    +{formatNumber(preset - minRequired || preset)}
-                  </button>
-                )
-              )}
-            </div>
-          </div>
-
-          {/* Status / Feedback Area */}
-          {step === "awaiting_approval" && (
-            <div className="p-3 rounded-lg bg-amber-500/10 border border-amber-500/20 text-amber-300 flex items-center gap-2">
-              <Loader2 className="w-4 h-4 animate-spin shrink-0" />
-              <span>Awaiting signature in your Solana wallet…</span>
-            </div>
-          )}
-
-          {step === "confirming" && (
-            <div className="p-3 rounded-lg bg-blue-500/10 border border-blue-500/20 text-blue-300 flex items-center gap-2">
-              <Loader2 className="w-4 h-4 animate-spin shrink-0" />
-              <span>Confirming on-chain transaction…</span>
-            </div>
-          )}
-
-          {step === "success" && (
-            <div className="p-3 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-emerald-300 space-y-1.5">
-              <div className="flex items-center gap-2 font-bold">
-                <CheckCircle2 className="w-4 h-4 shrink-0" />
-                <span>On-chain burn verified successfully!</span>
+            <div className="text-right">
+              <div className="text-zinc-500 uppercase">Min. To Overtake (+5%):</div>
+              <div className="font-bold text-amber-400">
+                {formatNumber(minRequired)} $BATON
               </div>
-              {txSignature && (
-                <a
-                  href={`https://solscan.io/tx/${txSignature}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-[11px] underline flex items-center gap-1 hover:text-white"
-                >
-                  <span>View Solscan Transaction</span>
-                  <ExternalLink className="w-3 h-3" />
-                </a>
-              )}
             </div>
-          )}
+          </div>
+        )}
 
-          {step === "error" && errorMessage && (
-            <div className="p-3 rounded-lg bg-rose-500/10 border border-rose-500/20 text-rose-300 flex items-start gap-2">
-              <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
-              <span className="break-all">{errorMessage}</span>
-            </div>
-          )}
+        {/* Target Token Address Input */}
+        <div className="space-y-1.5">
+          <label className="text-[11px] text-zinc-400 uppercase tracking-wider block">
+            Target Token Address (CA)
+          </label>
+          <input
+            type="text"
+            value={tokenAddress}
+            onChange={(e) => setTokenAddress(e.target.value)}
+            placeholder="Enter Solana token mint address..."
+            className="w-full bg-zinc-900/80 border border-white/10 rounded-lg px-3 py-2 text-white font-mono text-xs focus:outline-none focus:border-amber-500/50 transition-colors"
+            disabled={step === "awaiting_approval" || step === "confirming"}
+          />
         </div>
 
+        {/* Category Selection */}
+        <div className="space-y-1.5">
+          <label className="text-[11px] text-zinc-400 uppercase tracking-wider block">
+            Category
+          </label>
+          <select
+            value={category}
+            onChange={(e) => setCategory(e.target.value)}
+            className="w-full bg-zinc-900/80 border border-white/10 rounded-lg px-3 py-2 text-white font-mono text-xs focus:outline-none focus:border-amber-500/50 cursor-pointer"
+            disabled={step === "awaiting_approval" || step === "confirming"}
+          >
+            {CATEGORIES.map((cat) => (
+              <option key={cat.id} value={cat.id}>
+                {cat.label}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        {/* Burn Amount Input & Presets */}
+        <div className="space-y-1.5">
+          <div className="flex items-center justify-between text-[11px] text-zinc-400">
+            <label className="uppercase tracking-wider">Burn Amount ($BATON)</label>
+            <span>
+              Wallet Balance:{" "}
+              <span className="text-amber-400 font-bold">
+                {balanceLoading ? "..." : formatNumber(batonBalance)}
+              </span>
+            </span>
+          </div>
+
+          <input
+            type="number"
+            min={minRequired}
+            step="1000"
+            value={amount}
+            onChange={(e) => setAmount(Math.max(0, parseInt(e.target.value) || 0))}
+            className="w-full bg-zinc-900/80 border border-white/10 rounded-lg px-3 py-2 text-white font-bold text-sm focus:outline-none focus:border-amber-500/50 font-mono transition-colors"
+            disabled={step === "awaiting_approval" || step === "confirming"}
+          />
+
+          {/* Quick Presets */}
+          <div className="grid grid-cols-4 gap-1.5 pt-1">
+            {[minRequired, minRequired + 5000, minRequired + 25000, minRequired + 100000].map(
+              (preset, idx) => (
+                <button
+                  key={idx}
+                  type="button"
+                  onClick={() => setAmount(preset)}
+                  className="py-1 rounded bg-zinc-900 hover:bg-zinc-800 border border-white/5 text-zinc-400 hover:text-white text-[10px] font-bold transition-colors cursor-pointer"
+                >
+                  +{formatNumber(preset - minRequired || preset)}
+                </button>
+              )
+            )}
+          </div>
+        </div>
+
+        {/* Status / Feedback Area */}
+        {step === "awaiting_approval" && (
+          <div className="p-3 rounded-lg bg-amber-500/10 border border-amber-500/20 text-amber-300 flex items-center gap-2">
+            <Loader2 className="w-4 h-4 animate-spin shrink-0" />
+            <span>Awaiting signature in your Solana wallet…</span>
+          </div>
+        )}
+
+        {step === "confirming" && (
+          <div className="p-3 rounded-lg bg-blue-500/10 border border-blue-500/20 text-blue-300 flex items-center gap-2">
+            <Loader2 className="w-4 h-4 animate-spin shrink-0" />
+            <span>Confirming on-chain transaction…</span>
+          </div>
+        )}
+
+        {step === "success" && (
+          <div className="p-3 rounded-lg bg-emerald-500/10 border border-emerald-500/20 text-emerald-300 space-y-1.5">
+            <div className="flex items-center gap-2 font-bold">
+              <CheckCircle2 className="w-4 h-4 shrink-0" />
+              <span>On-chain burn verified successfully!</span>
+            </div>
+            {txSignature && (
+              <a
+                href={`https://solscan.io/tx/${txSignature}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-[11px] underline flex items-center gap-1 hover:text-white"
+              >
+                <span>View Solscan Transaction</span>
+                <ExternalLink className="w-3 h-3" />
+              </a>
+            )}
+          </div>
+        )}
+
+        {step === "error" && errorMessage && (
+          <div className="p-3 rounded-lg bg-rose-500/10 border border-rose-500/20 text-rose-300 flex items-start gap-2">
+            <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
+            <span className="break-all">{errorMessage}</span>
+          </div>
+        )}
+
         {/* Footer Actions */}
-        <div className="p-4 border-t border-white/10 bg-zinc-900/40 flex items-center justify-end gap-3">
+        <div className="pt-3 border-t border-white/10 flex items-center justify-end gap-3">
           <button
             type="button"
             onClick={onClose}
-            className="px-4 py-2 rounded-lg bg-zinc-900 hover:bg-zinc-800 border border-white/10 text-zinc-400 hover:text-white transition-colors"
+            className="px-4 py-2 rounded-lg bg-zinc-900 hover:bg-zinc-800 border border-white/10 text-zinc-400 hover:text-white transition-colors cursor-pointer"
           >
             Cancel
           </button>
@@ -323,7 +326,7 @@ export function OutbidModal({
             <button
               type="button"
               onClick={onClose}
-              className="px-5 py-2 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-black font-bold uppercase tracking-wider transition-colors"
+              className="px-5 py-2 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-black font-bold uppercase tracking-wider transition-colors cursor-pointer"
             >
               Close
             </button>
@@ -340,7 +343,7 @@ export function OutbidModal({
                   <span>Processing...</span>
                 </>
               ) : (
-                <span>Confirm &amp; Burn $BATON</span>
+                <span>BURN &amp; CLAIM RANK</span>
               )}
             </button>
           )}
