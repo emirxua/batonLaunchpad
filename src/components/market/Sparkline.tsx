@@ -20,19 +20,24 @@ export const Sparkline: React.FC<SparklineProps> = ({
   const gradientId = useId();
 
   const { linePath, areaPath } = useMemo(() => {
+    const padding = 4;
+    const usableHeight = height - padding * 2;
+
+    // If no valid data or fewer than 2 points, render a realistic trend slope based on 24h change
     if (!data || data.length < 2) {
-      const midY = height / 2;
+      const startY = isPositive ? height - padding : padding;
+      const endY = isPositive ? padding : height - padding;
+      const midY = (startY + endY) / 2;
+
       return {
-        linePath: `M 0,${midY} L ${width},${midY}`,
-        areaPath: `M 0,${midY} L ${width},${midY} L ${width},${height} L 0,${height} Z`,
+        linePath: `M 0,${startY.toFixed(1)} Q ${width / 2},${midY.toFixed(1)} ${width},${endY.toFixed(1)}`,
+        areaPath: `M 0,${startY.toFixed(1)} Q ${width / 2},${midY.toFixed(1)} ${width},${endY.toFixed(1)} L ${width},${height} L 0,${height} Z`,
       };
     }
 
     const min = Math.min(...data);
     const max = Math.max(...data);
-    const range = max - min || 1;
-    const padding = 2; // top/bottom padding inside svg
-    const usableHeight = height - padding * 2;
+    const range = max - min === 0 ? 1 : max - min;
 
     const points = data.map((val, idx) => {
       const x = (idx / (data.length - 1)) * width;
@@ -41,7 +46,9 @@ export const Sparkline: React.FC<SparklineProps> = ({
       return { x, y };
     });
 
-    const pathCommands = points.map((p, i) => `${i === 0 ? "M" : "L"} ${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(" ");
+    const pathCommands = points
+      .map((p, i) => `${i === 0 ? "M" : "L"} ${p.x.toFixed(1)},${p.y.toFixed(1)}`)
+      .join(" ");
 
     const areaCommands = `${pathCommands} L ${width},${height} L 0,${height} Z`;
 
@@ -49,7 +56,7 @@ export const Sparkline: React.FC<SparklineProps> = ({
       linePath: pathCommands,
       areaPath: areaCommands,
     };
-  }, [data, width, height]);
+  }, [data, isPositive, width, height]);
 
   const strokeColor = isPositive ? "#34d399" : "#fb7185"; // emerald-400 vs rose-400
   const stopColor = isPositive ? "#10b981" : "#f43f5e";
@@ -83,3 +90,5 @@ export const Sparkline: React.FC<SparklineProps> = ({
     </svg>
   );
 };
+
+export default Sparkline;

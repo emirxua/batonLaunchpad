@@ -76,9 +76,9 @@ export const MidasMarketBar: React.FC = () => {
         </div>
 
         <div className="flex items-center gap-2 text-[10px] font-mono text-zinc-500">
-          <span>Binance Spot Stream</span>
+          <span>Spot Market Pulse</span>
           <span className="px-1.5 py-0.5 rounded bg-zinc-900 border border-zinc-800 text-zinc-400 font-semibold">
-            auto 45s
+            Live Feed (45s)
           </span>
         </div>
       </div>

@@ -121,7 +121,7 @@ export default function TerminalPage() {
               </span>
             </div>
             <p className="text-xs font-mono text-zinc-400">
-              Real-time Binance spot pulse, DexScreener trending Solana tokens (&gt;$50K MCAP), and direct Jupiter DEX routing.
+              Real-time spot pulse, DexScreener trending Solana tokens (&gt;$50K MCAP), and direct Jupiter DEX routing.
             </p>
           </div>
 
