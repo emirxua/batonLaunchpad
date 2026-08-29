@@ -4,6 +4,7 @@ import React, { useState } from "react";
 import Link from "next/link";
 import { Ticker } from "@/components/Ticker";
 import { Navbar } from "@/components/Navbar";
+import { Footer } from "@/components/Footer";
 import { Hero } from "@/components/Hero";
 import { FeaturedCard } from "@/components/FeaturedCard";
 import { TopHolders } from "@/components/TopHolders";
@@ -276,23 +277,7 @@ export default function LaunchpadPage() {
       </main>
 
       {/* Footer */}
-      <footer className="border-t border-zinc-200/80 dark:border-line bg-white dark:bg-bg-raised py-8 mt-16 text-xs text-zinc-500 dark:text-text-faint font-mono">
-        <div className="max-w-7xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-4">
-          <div className="flex items-center gap-2">
-            <ShieldCheck className="w-4 h-4 text-emerald-600 dark:text-acid" />
-            <span>$BATON Launchpad • Solana Community Ecosystem</span>
-          </div>
-          <div className="flex items-center gap-4 text-zinc-600 dark:text-text-dim">
-            <Link href="/" className="hover:text-orange-500 transition-colors">
-              Outbid Directory
-            </Link>
-            <span>•</span>
-            <Link href="/leaderboard" className="hover:text-emerald-600 transition-colors">
-              Leaderboard
-            </Link>
-          </div>
-        </div>
-      </footer>
+      <Footer />
     </div>
   );
 }

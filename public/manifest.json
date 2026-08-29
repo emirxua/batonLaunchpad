@@ -1,7 +1,7 @@
 {
-  "name": "Baton Terminal",
-  "short_name": "Baton",
-  "description": "Solana Pro Terminal, Pump.fun Callouts & On-Chain Burn Multiplier",
+  "name": "Outbid Bond Terminal",
+  "short_name": "Outbid",
+  "description": "Solana Alpha Terminal & Attention Engine with Jupiter DEX Swaps & $BATON Burning",
   "start_url": "/",
   "id": "/",
   "display": "standalone",

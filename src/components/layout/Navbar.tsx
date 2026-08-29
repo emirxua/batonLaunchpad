@@ -87,15 +87,15 @@ export const Navbar: React.FC = () => {
             >
               <div className="flex flex-col gap-1 w-5 h-3.5 justify-center">
                 <span className="w-full h-0.5 bg-zinc-900 dark:bg-white rounded-full transition-transform group-hover:scale-x-110 origin-left" />
-                <span className="w-4/5 h-0.5 bg-orange-500 rounded-full transition-transform group-hover:scale-x-125 origin-left" />
+                <span className="w-4/5 h-0.5 bg-amber-500 rounded-full transition-transform group-hover:scale-x-125 origin-left" />
                 <span className="w-3/5 h-0.5 bg-zinc-900 dark:bg-white rounded-full transition-transform group-hover:scale-x-110 origin-left" />
               </div>
               <span className="font-archivo text-lg sm:text-xl tracking-tight flex items-center select-none">
-                <span className="text-zinc-900 dark:text-white font-black tracking-tight">
-                  BATON
+                <span className="text-amber-500 font-black tracking-tight">
+                  OUTBID
                 </span>
-                <span className="text-orange-500 font-black tracking-tight">
-                  OUTBID.ICU
+                <span className="text-zinc-800 dark:text-zinc-200 font-bold tracking-tight">
+                  .BOND
                 </span>
               </span>
             </Link>

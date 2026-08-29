@@ -4,6 +4,7 @@ import React, { useState, useMemo } from "react";
 import Link from "next/link";
 import { Ticker } from "@/components/Ticker";
 import { Navbar } from "@/components/Navbar";
+import { Footer } from "@/components/Footer";
 import { TierBadge } from "@/components/TierBadge";
 import { BurnModal } from "@/components/BurnModal";
 import { RecentBurns } from "@/components/RecentBurns";
@@ -519,31 +520,7 @@ export default function LeaderboardPage() {
       </main>
 
       {/* Footer */}
-      <footer className="border-t border-zinc-200/80 dark:border-line bg-white dark:bg-bg-raised py-8 mt-16 text-xs text-zinc-500 dark:text-text-faint font-mono">
-        <div className="max-w-7xl mx-auto px-4 flex flex-col sm:flex-row items-center justify-between gap-4">
-          <div className="flex items-center gap-2">
-            <ShieldCheck className="w-4 h-4 text-emerald-600 dark:text-acid" />
-            <span>$BATON Launchpad • Community Burn Leaderboard</span>
-          </div>
-          <div className="flex items-center gap-4 text-zinc-600 dark:text-text-dim">
-            <a
-              href="https://x.com/buybaton"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="hover:text-emerald-600 dark:hover:text-acid transition-colors flex items-center gap-1.5"
-            >
-              <svg className="w-3.5 h-3.5 fill-current" viewBox="0 0 24 24">
-                <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
-              </svg>
-              <span>@buybaton</span>
-            </a>
-            <span>•</span>
-            <Link href="/" className="text-zinc-600 dark:text-text-dim hover:text-emerald-600 dark:hover:text-acid transition-colors">
-              ← Return to Directory
-            </Link>
-          </div>
-        </div>
-      </footer>
+      <Footer />
     </div>
   );
 }

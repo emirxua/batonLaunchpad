@@ -1,5 +1,5 @@
-// Service Worker for Baton Terminal PWA
-const CACHE_NAME = "baton-pwa-cache-v1";
+// Service Worker for Outbid Bond Terminal PWA
+const CACHE_NAME = "outbid-pwa-cache-v1";
 const STATIC_ASSETS = [
   "/",
   "/manifest.json",

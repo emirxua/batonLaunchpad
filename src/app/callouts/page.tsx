@@ -4,6 +4,7 @@ import React, { useState, useEffect, useCallback, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
 import useSWR from "swr";
 import { Navbar } from "@/components/Navbar";
+import { Footer } from "@/components/Footer";
 import { Ticker } from "@/components/Ticker";
 import { LiveCallouts } from "@/components/callouts/LiveCallouts";
 import { TrackedLeaderboard } from "@/components/callouts/TrackedLeaderboard";
@@ -141,6 +142,9 @@ function CalloutsPageContent() {
           </div>
         </div>
       </main>
+
+      {/* Footer */}
+      <Footer />
 
       {selectedCoin && (
         <BurnModal

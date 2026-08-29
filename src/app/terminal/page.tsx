@@ -5,6 +5,7 @@ import Link from "next/link";
 import Image from "next/image";
 import useSWR from "swr";
 import { Navbar } from "@/components/Navbar";
+import { Footer } from "@/components/Footer";
 import { MidasMarketBar } from "@/components/market/MidasMarketBar";
 import { TrendingTable } from "@/components/terminal/TrendingTable";
 import { JupiterSwapWidget } from "@/components/terminal/JupiterSwapWidget";
@@ -336,6 +337,9 @@ export default function TerminalPage() {
           </div>
         </section>
       </main>
+
+      {/* Footer */}
+      <Footer />
 
       {/* Boost Modal Integration */}
       <BurnModal

@@ -33,14 +33,33 @@ export const viewport: Viewport = {
 };
 
 export const metadata: Metadata = {
-  title: "Baton Terminal | Solana Memecoin Showcase & Pro Terminal",
+  metadataBase: new URL("https://outbid.bond"),
+  title: "OUTBID.BOND — Solana Alpha Terminal & Attention Engine",
   description:
-    "Showcase directory for Solana pump.fun memecoins, real-time market terminal, and on-chain $BATON burn multiplier.",
+    "Real-time spot market pulse, curated high-momentum Solana movers (MCap > $70K), on-chain Jupiter DEX swaps, and $BATON attention auction mechanics.",
   manifest: "/manifest.json",
+  alternates: {
+    canonical: "https://outbid.bond",
+  },
+  openGraph: {
+    siteName: "outbid.bond",
+    url: "https://outbid.bond",
+    title: "OUTBID.BOND | Solana Alpha Terminal",
+    description:
+      "Real-time spot market pulse, curated high-momentum Solana movers (MCap > $70K), on-chain Jupiter DEX swaps, and $BATON attention auction mechanics.",
+    locale: "en_US",
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "OUTBID.BOND | Solana Alpha Terminal",
+    description:
+      "Real-time spot market pulse, curated high-momentum Solana movers (MCap > $70K), on-chain Jupiter DEX swaps, and $BATON attention auction mechanics.",
+  },
   appleWebApp: {
     capable: true,
     statusBarStyle: "black-translucent",
-    title: "Baton",
+    title: "Outbid",
   },
   icons: {
     icon: "/icons/icon-192x192.png",
@@ -64,7 +83,7 @@ export default function RootLayout({
         <meta name="mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-        <meta name="apple-mobile-web-app-title" content="Baton" />
+        <meta name="apple-mobile-web-app-title" content="Outbid" />
       </head>
       <body className="bg-bg text-text antialiased min-h-screen selection:bg-acid selection:text-bg">
         <ThemeProvider attribute="class" defaultTheme="dark" enableSystem={false}>

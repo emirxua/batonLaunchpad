@@ -5,6 +5,7 @@ import Link from "next/link";
 import Image from "next/image";
 import useSWR from "swr";
 import { Navbar } from "@/components/Navbar";
+import { Footer } from "@/components/Footer";
 import { BurnModal } from "@/components/BurnModal";
 import { HeroSpotlight } from "@/components/spotlight/HeroSpotlight";
 import { Coin } from "@/types/coin";
@@ -723,6 +724,9 @@ export default function OutbidHomePage() {
           </div>
         )}
       </main>
+
+      {/* Footer */}
+      <Footer />
 
       {/* Burn & Outbid Modal */}
       {selectedCoin && (
