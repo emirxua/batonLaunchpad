@@ -14,6 +14,7 @@ import Image from "next/image";
 import useSWR from "swr";
 import { CalloutsApiResponse, CalloutCard } from "@/lib/types/callouts";
 import { formatCurrency } from "@/lib/utils";
+import { useTokenMetadataMap, ResolvedTokenMeta } from "@/hooks/useTokenMetadataMap";
 import {
   ExternalLink,
   Flame,
@@ -46,12 +47,14 @@ function timeAgo(ms: number): string {
   return `${Math.floor(h / 24)}d ago`;
 }
 
-function fmtX(x: number | null | undefined): string {
-  if (!x || x <= 0) return "—";
-  return `${x.toFixed(2)}x`;
-}
-
 // ── Props ─────────────────────────────────────────────────────────────────────
+
+export interface BoostTarget {
+  mint: string;
+  name?: string;
+  symbol?: string;
+  logo?: string;
+}
 
 interface LiveCalloutsProps {
   // If parent provides SWR state, use it (page layout mode)
@@ -61,8 +64,8 @@ interface LiveCalloutsProps {
   mutate?: () => void;
   copied?: string | null;
   onCopy?: (text: string) => void;
-  // Boost handler
-  onBoostCoin?: (mint: string) => void;
+  // Boost handler with dynamic token data
+  onBoostCoin?: (target: BoostTarget | string) => void;
   // Caller filter
   selectedCaller?: string | null;
   onSelectCaller?: (caller: string | null) => void;
@@ -112,6 +115,13 @@ export const LiveCallouts: React.FC<LiveCalloutsProps> = (props) => {
         c.callerWallet.toLowerCase() === target
     );
   }, [rawCallouts, props.selectedCaller]);
+
+  // Extract unique mint addresses to resolve real dynamic metadata
+  const mints = useMemo(() => {
+    return filteredCallouts.map((c) => c.coinMint);
+  }, [filteredCallouts]);
+
+  const tokenMetaMap = useTokenMetadataMap(mints);
 
   const handleChipClick = (label: string, wallet: string) => {
     if (!props.onSelectCaller) return;
@@ -272,6 +282,7 @@ export const LiveCallouts: React.FC<LiveCalloutsProps> = (props) => {
             <CalloutCardItem
               key={card.calloutId}
               card={card}
+              tokenMeta={tokenMetaMap[card.coinMint]}
               copied={copied}
               onCopy={onCopy}
               onBoostCoin={props.onBoostCoin}
@@ -305,18 +316,30 @@ export const LiveCallouts: React.FC<LiveCalloutsProps> = (props) => {
 
 interface CardProps {
   card: CalloutCard;
+  tokenMeta?: ResolvedTokenMeta;
   copied: string | null;
   onCopy: (t: string) => void;
-  onBoostCoin?: (mint: string) => void;
+  onBoostCoin?: (target: BoostTarget | string) => void;
 }
 
 const CalloutCardItem: React.FC<CardProps> = ({
   card,
+  tokenMeta,
   copied,
   onCopy,
   onBoostCoin,
 }) => {
   const isUp = card.multiple >= 1;
+
+  const handleBoostClick = () => {
+    if (!onBoostCoin) return;
+    onBoostCoin({
+      mint: card.coinMint,
+      name: tokenMeta?.name,
+      symbol: tokenMeta?.symbol,
+      logo: tokenMeta?.imageUrl || card.mediaUrl || undefined,
+    });
+  };
 
   return (
     <div className="p-4 rounded-2xl bg-zinc-900/80 border border-zinc-800 hover:border-zinc-700 flex flex-col gap-3 transition-colors">
@@ -367,16 +390,35 @@ const CalloutCardItem: React.FC<CardProps> = ({
         </p>
       )}
 
-      {/* Mint row */}
+      {/* Dynamic Target Token row: $SYMBOL (if resolved) + short mint + copy */}
       <div className="flex items-center justify-between gap-2 px-2.5 py-1.5 rounded-lg bg-zinc-950/60 border border-zinc-800/60 text-[11px] font-mono">
-        <div className="flex items-center gap-1.5 min-w-0 text-zinc-400">
-          <span className="text-zinc-600">mint</span>
-          <span className="truncate">
-            {card.coinMint.slice(0, 8)}…{card.coinMint.slice(-5)}
+        <div className="flex items-center gap-1.5 min-w-0">
+          {tokenMeta?.imageUrl && (
+            <div className="w-4 h-4 rounded-full overflow-hidden border border-white/10 shrink-0 bg-zinc-900">
+              <Image
+                src={tokenMeta.imageUrl}
+                alt={tokenMeta.symbol || "token"}
+                width={16}
+                height={16}
+                className="w-full h-full object-cover"
+                unoptimized
+              />
+            </div>
+          )}
+
+          {tokenMeta?.symbol ? (
+            <span className="font-bold text-white text-xs truncate">
+              ${tokenMeta.symbol.toUpperCase()}
+            </span>
+          ) : null}
+
+          <span className="text-zinc-500 text-[10px] truncate">
+            mint: {card.coinMint.slice(0, 4)}…{card.coinMint.slice(-4)}
           </span>
+
           <button
             onClick={() => onCopy(card.coinMint)}
-            className="text-zinc-600 hover:text-zinc-300 shrink-0"
+            className="text-zinc-600 hover:text-zinc-300 shrink-0 p-0.5"
             title="Copy mint"
           >
             {copied === card.coinMint ? (
@@ -386,6 +428,7 @@ const CalloutCardItem: React.FC<CardProps> = ({
             )}
           </button>
         </div>
+
         <div className="flex items-center gap-1.5 shrink-0">
           <a
             href={`https://dexscreener.com/solana/${card.coinMint}`}
@@ -461,7 +504,7 @@ const CalloutCardItem: React.FC<CardProps> = ({
       <div className="flex items-center gap-2 pt-1 border-t border-zinc-800/50">
         {BATON_MINT && (
           <button
-            onClick={() => onBoostCoin?.(card.coinMint)}
+            onClick={handleBoostClick}
             className="flex-1 py-1.5 rounded-lg bg-orange-500/15 hover:bg-orange-500/25 border border-orange-500/30 text-orange-300 text-xs font-mono font-bold flex items-center justify-center gap-1.5 transition-all cursor-pointer"
           >
             <Flame className="w-3.5 h-3.5 text-orange-400" />

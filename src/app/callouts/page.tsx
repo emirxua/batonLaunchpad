@@ -62,12 +62,18 @@ function CalloutsPageContent() {
     setTimeout(() => setCopied(null), 2000);
   };
 
-  const handleBoostCoin = (mint: string) => {
+  const handleBoostCoin = (target: { mint: string; name?: string; symbol?: string; logo?: string } | string) => {
+    const mint = typeof target === "string" ? target : target.mint;
+    const name = typeof target === "object" && target.name ? target.name : mint.slice(0, 8);
+    const symbol = typeof target === "object" && target.symbol ? target.symbol : "?";
+    const logo = typeof target === "object" ? target.logo : undefined;
+
     setSelectedCoin({
       id: `callout-${mint}`,
-      name: mint.slice(0, 8),
-      ticker: "?",
+      name: name,
+      ticker: symbol,
       mintAddress: mint,
+      imageUrl: logo,
       iconColor: "#f97316",
       marketCap: 0,
       volume24h: 0,

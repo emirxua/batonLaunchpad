@@ -8,6 +8,7 @@ import { Navbar } from "@/components/Navbar";
 import { BurnModal } from "@/components/BurnModal";
 import { Coin } from "@/types/coin";
 import { CalloutsApiResponse, CalloutCard } from "@/lib/types/callouts";
+import { useTokenMetadataMap } from "@/hooks/useTokenMetadataMap";
 import { useCoinsData } from "@/hooks/useCoinsData";
 import { useTokenStats } from "@/hooks/useTokenStats";
 import { useRecentBurns } from "@/hooks/useRecentBurns";
@@ -64,6 +65,11 @@ export default function OutbidHomePage() {
       }
     );
   const liveCallouts: CalloutCard[] = (calloutsData?.callouts ?? []).slice(0, 4);
+  const calloutMints = useMemo(
+    () => liveCallouts.map((c) => c.coinMint),
+    [liveCallouts]
+  );
+  const tokenMetaMap = useTokenMetadataMap(calloutMints);
 
   const formatTimeAgo = (ts: number): string => {
     if (!ts) return "—";
@@ -126,14 +132,15 @@ export default function OutbidHomePage() {
       );
       if (match) {
         setSelectedCoin(match);
+        return;
       } else {
         // Create candidate coin for burn modal
         setSelectedCoin({
           id: `custom-${Date.now()}`,
-          name: inputToken.length > 12 ? `${inputToken.slice(0, 4)}...${inputToken.slice(-4)}` : inputToken,
-          ticker: inputToken.toUpperCase().slice(0, 8),
-          mintAddress: inputToken.length > 20 ? inputToken : "2vdc4owf1MPz54jJCN61y3QSKqjcPpr32wJ9qKkmpump",
-          iconColor: "#f97316",
+          name: inputToken.trim(),
+          ticker: inputToken.trim().slice(0, 6).toUpperCase(),
+          mintAddress: inputToken.trim(),
+          iconColor: "#ff3d7a",
           category: inputCategory,
           description: `Custom token bid under category ${inputCategory}`,
           marketCap: 0,
@@ -151,11 +158,13 @@ export default function OutbidHomePage() {
 
   const handleBoostCallout = (item: CalloutCard, e: React.MouseEvent) => {
     e.stopPropagation();
+    const meta = tokenMetaMap[item.coinMint];
     setSelectedCoin({
       id: item.calloutId,
-      name: item.coinMint.slice(0, 8),
-      ticker: "?",
+      name: meta?.name || item.coinMint.slice(0, 8),
+      ticker: meta?.symbol || "?",
       mintAddress: item.coinMint,
+      imageUrl: meta?.imageUrl || item.mediaUrl || undefined,
       iconColor: "#f97316",
       marketCap: item.marketCap,
       volume24h: 0,
@@ -375,22 +384,42 @@ export default function OutbidHomePage() {
                       </p>
                     )}
 
-                    {/* Mint short + copy */}
-                    <div className="flex items-center gap-1.5 font-mono text-[10px] text-zinc-400">
-                      <span className="text-zinc-600">mint</span>
-                      <button
-                        type="button"
-                        onClick={(e) => handleCopy(item.coinMint, e)}
-                        className="hover:text-orange-400 inline-flex items-center gap-0.5 transition-colors"
-                        title="Copy mint"
-                      >
-                        {copiedMint === item.coinMint ? (
-                          <Check className="w-2.5 h-2.5 text-emerald-400" />
-                        ) : (
-                          <Copy className="w-2.5 h-2.5" />
+                    {/* Dynamic Target Token row: $SYMBOL (if resolved) + short mint + copy */}
+                    <div className="flex items-center justify-between gap-1.5 font-mono text-[10px] text-zinc-400 px-2 py-1 rounded-lg bg-black/40 border border-white/5">
+                      <div className="flex items-center gap-1.5 min-w-0">
+                        {tokenMetaMap[item.coinMint]?.imageUrl && (
+                          <div className="w-3.5 h-3.5 rounded-full overflow-hidden border border-white/10 shrink-0 bg-zinc-900">
+                            <Image
+                              src={tokenMetaMap[item.coinMint]!.imageUrl!}
+                              alt={tokenMetaMap[item.coinMint]!.symbol || "token"}
+                              width={14}
+                              height={14}
+                              className="w-full h-full object-cover"
+                              unoptimized
+                            />
+                          </div>
                         )}
-                        {item.coinMint.slice(0, 6)}…{item.coinMint.slice(-4)}
-                      </button>
+                        {tokenMetaMap[item.coinMint]?.symbol ? (
+                          <span className="font-bold text-white text-[11px] truncate">
+                            ${tokenMetaMap[item.coinMint]!.symbol!.toUpperCase()}
+                          </span>
+                        ) : null}
+                        <span className="text-zinc-500 truncate">
+                          mint: {item.coinMint.slice(0, 4)}…{item.coinMint.slice(-4)}
+                        </span>
+                        <button
+                          type="button"
+                          onClick={(e) => handleCopy(item.coinMint, e)}
+                          className="hover:text-orange-400 inline-flex items-center gap-0.5 transition-colors p-0.5"
+                          title="Copy mint"
+                        >
+                          {copiedMint === item.coinMint ? (
+                            <Check className="w-2.5 h-2.5 text-emerald-400" />
+                          ) : (
+                            <Copy className="w-2.5 h-2.5" />
+                          )}
+                        </button>
+                      </div>
                     </div>
 
                     {/* Stats: mcap + ATH */}
