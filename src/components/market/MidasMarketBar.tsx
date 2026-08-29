@@ -14,6 +14,13 @@ interface MarketToken {
   sparkline: number[];
 }
 
+function formatVol(vol: number): string {
+  if (!vol || isNaN(vol)) return "VOL: --";
+  if (vol >= 1e9) return `VOL: $${(vol / 1e9).toFixed(1)}B`;
+  if (vol >= 1e6) return `VOL: $${(vol / 1e6).toFixed(1)}M`;
+  return `VOL: $${(vol / 1e3).toFixed(0)}K`;
+}
+
 export function MidasMarketBar() {
   const { data, isLoading } = useSWR("/api/market-stats", fetcher, {
     refreshInterval: 15000,
@@ -24,7 +31,7 @@ export function MidasMarketBar() {
   const tokens: MarketToken[] = data?.data || [];
 
   return (
-    <div className="w-full bg-zinc-950 rounded-xl border border-white/10 p-4 font-mono">
+    <div className="w-full bg-zinc-950 rounded-xl border border-white/10 p-4 font-mono select-none shadow-xl">
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-2 text-xs text-zinc-400">
           <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
@@ -85,7 +92,7 @@ export function MidasMarketBar() {
                         : token.price.toFixed(4)}
                     </div>
                     <div className="text-[10px] text-zinc-500 mt-0.5">
-                      VOL: ${(token.volume24h / 1e9).toFixed(0)}B
+                      {formatVol(token.volume24h)}
                     </div>
                   </div>
 

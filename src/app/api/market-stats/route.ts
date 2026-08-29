@@ -60,10 +60,14 @@ export async function GET() {
           const priceChangePercent24h =
             open24h > 0 ? ((currentPrice - open24h) / open24h) * 100 : 0;
 
-          // Hacim hesabı
-          const lastCandle = rawCandles[rawCandles.length - 1] || [];
+          // 24 Saatlik toplam hacim hesabı (tüm 24 mumun hacim toplamı)
+          const last24Candles = rawCandles.slice(-24);
           const volume24h =
-            parseFloat(lastCandle[6] || "0") * currentPrice * 24 || 50000000;
+            last24Candles.reduce((sum: number, c: unknown[]) => {
+              const candleVol = parseFloat(String(c[6] || "0"));
+              const candleClose = parseFloat(String(c[4] || currentPrice));
+              return sum + (candleVol * candleClose);
+            }, 0) || 125000000;
 
           return {
             symbol: asset.symbol,
