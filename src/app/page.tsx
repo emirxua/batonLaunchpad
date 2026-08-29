@@ -6,7 +6,7 @@ import Image from "next/image";
 import { Navbar } from "@/components/Navbar";
 import { BurnModal } from "@/components/BurnModal";
 import { Coin } from "@/types/coin";
-import { CalloutItem } from "@/app/api/callouts/route";
+import { CalloutCard } from "@/types/callouts";
 import { useCoinsData } from "@/hooks/useCoinsData";
 import { useTokenStats } from "@/hooks/useTokenStats";
 import { useRecentBurns } from "@/hooks/useRecentBurns";
@@ -46,7 +46,7 @@ export default function OutbidHomePage() {
   const [inputCategory, setInputCategory] = useState("Mascots");
   const [selectedCoin, setSelectedCoin] = useState<Coin | null>(null);
   const [copiedMint, setCopiedMint] = useState<string | null>(null);
-  const [liveCallouts, setLiveCallouts] = useState<CalloutItem[]>([]);
+  const [liveCallouts, setLiveCallouts] = useState<CalloutCard[]>([]);
   const [calloutsLoading, setCalloutsLoading] = useState<boolean>(true);
 
   const { coins, isLoading: coinsLoading, refresh } = useCoinsData(15_000);
@@ -59,9 +59,12 @@ export default function OutbidHomePage() {
       const res = await fetch("/api/callouts", { cache: "no-store" });
       if (res.ok) {
         const json = await res.json();
-        if (Array.isArray(json.data)) {
-          setLiveCallouts(json.data.slice(0, 4));
-        }
+        const items = Array.isArray(json.callouts)
+          ? json.callouts
+          : Array.isArray(json.data)
+          ? json.data
+          : [];
+        setLiveCallouts(items.slice(0, 4));
       }
     } catch (e) {
       console.warn("Failed to fetch homepage callouts showcase", e);
@@ -147,22 +150,22 @@ export default function OutbidHomePage() {
     }
   };
 
-  const handleBoostCallout = (item: CalloutItem, e: React.MouseEvent) => {
+  const handleBoostCallout = (item: CalloutCard, e: React.MouseEvent) => {
     e.stopPropagation();
     setSelectedCoin({
       id: item.id,
-      name: item.name,
-      ticker: item.symbol,
+      name: item.tokenName,
+      ticker: item.tokenSymbol,
       mintAddress: item.mint,
       iconColor: "#f97316",
-      imageUrl: item.imageUri || undefined,
-      marketCap: item.marketCapUsd,
+      imageUrl: item.tokenImageUrl || undefined,
+      marketCap: item.currentMcap,
       volume24h: item.volume24h,
       change24h: item.priceChange24h,
       sparkline: [10, 12, 14, 13, 16, 18, 20],
       totalBurnedBaton: 0,
       burnLevel: "none",
-      description: item.description,
+      description: item.thesis || `Native pump.fun callout by ${item.callerUsername || item.caller.slice(0, 6)}.`,
     });
   };
 
@@ -344,26 +347,26 @@ export default function OutbidHomePage() {
                     <div className="flex items-start justify-between gap-3">
                       <div className="flex items-center gap-3 min-w-0">
                         <div className="w-12 h-12 rounded-full border border-white/10 overflow-hidden bg-zinc-800 shrink-0 shadow-md flex items-center justify-center font-archivo text-base font-bold text-orange-400">
-                          {item.imageUri ? (
+                          {item.tokenImageUrl ? (
                             <Image
-                              src={item.imageUri}
-                              alt={item.name}
+                              src={item.tokenImageUrl}
+                              alt={item.tokenName}
                               width={48}
                               height={48}
                               className="w-full h-full object-cover"
                               unoptimized
                             />
                           ) : (
-                            <span>{item.symbol.slice(0, 3)}</span>
+                            <span>{item.tokenSymbol.slice(0, 3)}</span>
                           )}
                         </div>
 
                         <div className="min-w-0">
                           <h3 className="font-archivo text-base font-bold text-white truncate group-hover:text-orange-400 transition-colors">
-                            {item.name}
+                            {item.tokenName}
                           </h3>
                           <div className="flex items-center gap-1.5 font-mono text-xs text-zinc-400 pt-0.5">
-                            <span className="font-bold text-zinc-300">${item.symbol}</span>
+                            <span className="font-bold text-zinc-300">${item.tokenSymbol}</span>
                             <span>•</span>
                             <button
                               type="button"
@@ -392,7 +395,7 @@ export default function OutbidHomePage() {
                       <div>
                         <div className="text-[10px] text-zinc-400 uppercase font-bold">Market Cap</div>
                         <div className="font-bold text-white font-mono-num text-sm sm:text-base">
-                          {item.marketCapUsd > 0 ? formatCurrency(item.marketCapUsd) : "$8.4K"}
+                          {item.currentMcap > 0 ? formatCurrency(item.currentMcap) : "$8.4K"}
                         </div>
                       </div>
 
