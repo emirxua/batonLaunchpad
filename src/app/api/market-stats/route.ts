@@ -1,61 +1,69 @@
 import { NextResponse } from "next/server";
-import {
-  fetchBinanceTickers,
-  fetchBinanceKlines,
-  DEFAULT_BINANCE_SYMBOLS,
-} from "@/lib/api/binance";
+import { fetchAllBinanceMarkets } from "@/lib/api/binance";
 import { BinanceMarketData } from "@/lib/types/terminal";
 
 // Next.js ISR: Cache on server for 45 seconds
 export const revalidate = 45;
 
+let lastGoodMarketStats: BinanceMarketData[] | null = null;
+
 export async function GET() {
   try {
-    const symbols = DEFAULT_BINANCE_SYMBOLS;
+    const data = await fetchAllBinanceMarkets();
 
-    // 1. Fetch 24h tickers from Binance
-    const tickers = await fetchBinanceTickers(symbols);
+    if (data && data.length > 0) {
+      lastGoodMarketStats = data;
 
-    if (!tickers || tickers.length === 0) {
       return NextResponse.json(
         {
-          error: "Failed to fetch market data from Binance public API",
+          updatedAt: Date.now(),
+          data,
         },
-        { status: 502 }
+        {
+          status: 200,
+          headers: {
+            "Cache-Control": "public, s-maxage=45, stale-while-revalidate=90",
+          },
+        }
       );
     }
 
-    // 2. Fetch 24h 1h klines (sparklines) in parallel for all symbols
-    const data: BinanceMarketData[] = await Promise.all(
-      tickers.map(async (t) => {
-        const sparkline = await fetchBinanceKlines(t.symbol);
-        return {
-          symbol: t.symbol,
-          price: parseFloat(t.lastPrice) || 0,
-          priceChangePercent24h: parseFloat(t.priceChangePercent) || 0,
-          volume24h: parseFloat(t.volume) || 0,
-          high24h: parseFloat(t.highPrice) || 0,
-          low24h: parseFloat(t.lowPrice) || 0,
-          sparkline,
-        };
-      })
-    );
+    // If fetch failed but we have last good data in memory, serve it
+    if (lastGoodMarketStats && lastGoodMarketStats.length > 0) {
+      return NextResponse.json(
+        {
+          updatedAt: Date.now(),
+          data: lastGoodMarketStats,
+          warning: "Serving cached market rates",
+        },
+        {
+          status: 200,
+          headers: {
+            "Cache-Control": "public, s-maxage=45, stale-while-revalidate=90",
+          },
+        }
+      );
+    }
 
     return NextResponse.json(
       {
-        updatedAt: Date.now(),
-        data,
+        error: "Failed to fetch market data from Binance / CoinGecko",
       },
-      {
-        status: 200,
-        headers: {
-          "Cache-Control": "public, s-maxage=45, stale-while-revalidate=90",
-        },
-      }
+      { status: 502 }
     );
   } catch (err: unknown) {
+    if (lastGoodMarketStats && lastGoodMarketStats.length > 0) {
+      return NextResponse.json(
+        {
+          updatedAt: Date.now(),
+          data: lastGoodMarketStats,
+        },
+        { status: 200 }
+      );
+    }
+
     const message =
-      err instanceof Error ? err.message : "Unknown error fetching Binance stats";
+      err instanceof Error ? err.message : "Unknown error fetching market stats";
     return NextResponse.json(
       {
         error: message,
