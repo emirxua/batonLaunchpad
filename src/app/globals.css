@@ -55,7 +55,19 @@ html, body {
 /* Custom Thin Scrollbar */
 ::-webkit-scrollbar {
   width: 6px;
+  height: 0px;
+}
+
+::-webkit-scrollbar:vertical {
   height: 6px;
+}
+
+.scrollbar-none::-webkit-scrollbar {
+  display: none;
+}
+.scrollbar-none {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
 }
 
 ::-webkit-scrollbar-track {
