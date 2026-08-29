@@ -34,9 +34,8 @@ export const viewport: Viewport = {
 
 export const metadata: Metadata = {
   metadataBase: new URL("https://outbid.bond"),
-  title: "OUTBID.BOND — Solana Attention Market & Terminal",
-  description:
-    "High-performance Solana terminal, on-chain attention auctions, and live DEX execution.",
+  title: "outbid.bond",
+  description: "Solana Alpha Terminal & Attention Auction Engine",
   manifest: "/manifest.json",
   alternates: {
     canonical: "https://outbid.bond",
@@ -44,17 +43,15 @@ export const metadata: Metadata = {
   openGraph: {
     siteName: "outbid.bond",
     url: "https://outbid.bond",
-    title: "OUTBID.BOND | Solana Attention Market & Terminal",
-    description:
-      "High-performance Solana terminal, on-chain attention auctions, and live DEX execution.",
+    title: "outbid.bond",
+    description: "Solana Alpha Terminal & Attention Auction Engine",
     locale: "en_US",
     type: "website",
   },
   twitter: {
     card: "summary_large_image",
-    title: "OUTBID.BOND | Solana Attention Market & Terminal",
-    description:
-      "High-performance Solana terminal, on-chain attention auctions, and live DEX execution.",
+    title: "outbid.bond",
+    description: "Solana Alpha Terminal & Attention Auction Engine",
   },
   appleWebApp: {
     capable: true,
