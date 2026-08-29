@@ -14,6 +14,7 @@ import { useTokenMetadataMap } from "@/hooks/useTokenMetadataMap";
 import { useCoinsData } from "@/hooks/useCoinsData";
 import { useTokenStats } from "@/hooks/useTokenStats";
 import { useRecentBurns } from "@/hooks/useRecentBurns";
+import { HomeStatsBar } from "@/components/home/HomeStatsBar";
 import { formatNumber, formatCurrency } from "@/lib/utils";
 import {
   Flame,
@@ -188,6 +189,20 @@ export default function OutbidHomePage() {
       <Navbar />
 
       <main className="flex-1 max-w-5xl w-full mx-auto px-4 sm:px-6 py-8 sm:py-12 space-y-8 sm:space-y-10">
+        {/* HomeStatsBar: live on-chain metrics ribbon */}
+        <HomeStatsBar
+          onOutbidClick={() => {
+            // Open BurnModal with the current #1 coin (highest burn)
+            const topCoin =
+              coins
+                .slice()
+                .sort((a, b) => (b.totalBurnedBaton ?? 0) - (a.totalBurnedBaton ?? 0))[0] ??
+              coins[0] ??
+              null;
+            if (topCoin) setSelectedCoin(topCoin);
+          }}
+        />
+
         {/* 2. Top Live Stats Pill */}
         <div className="flex flex-col items-center gap-1.5">
           <Link
