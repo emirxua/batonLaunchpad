@@ -1,13 +1,12 @@
 "use client";
 
-import React, { useEffect, useRef } from "react";
+import React, { useEffect } from "react";
 
 interface JupiterSwapWidgetProps {
   outputMint?: string;
   outputSymbol?: string;
   initialOutputMint?: string;
   targetSymbol?: string;
-  className?: string;
 }
 
 export function JupiterSwapWidget({
@@ -15,50 +14,38 @@ export function JupiterSwapWidget({
   outputSymbol,
   initialOutputMint = "2vdc4owf1MPz54jJCN61y3QSKqjcPpr32wJ9qKkpump",
   targetSymbol = "BATON",
-  className = "",
 }: JupiterSwapWidgetProps) {
   const finalMint = outputMint || initialOutputMint;
   const finalSymbol = outputSymbol || targetSymbol;
-  const isLoadedRef = useRef(false);
 
   useEffect(() => {
-    const scriptId = "jup-terminal-script";
+    const scriptId = "jupiter-terminal-script";
 
-    const initTerminal = () => {
+    const launchJupiter = () => {
       if (
         typeof window !== "undefined" &&
         (window as unknown as { Jupiter?: { init: (props: unknown) => void } }).Jupiter
       ) {
         try {
-          const rpcEndpoint =
-            process.env.NEXT_PUBLIC_SOLANA_RPC_URL ||
-            "https://rpc.ankr.com/solana";
-
-          const container = document.getElementById("integrated-terminal");
-          if (container) {
-            container.innerHTML = "";
-          }
-
           (window as unknown as { Jupiter: { init: (props: unknown) => void } }).Jupiter.init({
             displayMode: "integrated",
             integratedTargetId: "integrated-terminal",
-            endpoint: rpcEndpoint,
+            endpoint: "https://rpc.ankr.com/solana",
             strictTokenList: false,
-            defaultExplorer: "Solscan",
             formProps: {
-              initialInputMint: "So11111111111111111111111111111111111111112",
+              fixedInputMint: false,
+              fixedOutputMint: false,
+              initialInputMint: "So11111111111111111111111111111111111111112", // Native SOL
               initialOutputMint: finalMint,
               initialAmount: "0.1",
-              fixedOutputMint: false,
             },
             palette: {
               background: "#09090b",
               primary: "#f59e0b",
             },
           });
-          isLoadedRef.current = true;
-        } catch (err) {
-          console.error("Jupiter init error:", err);
+        } catch (e) {
+          console.error("Jupiter initialization error:", e);
         }
       }
     };
@@ -69,25 +56,25 @@ export function JupiterSwapWidget({
       script.id = scriptId;
       script.src = "https://terminal.jup.ag/main-v3.js";
       script.async = true;
-      script.onload = () => setTimeout(initTerminal, 150);
+      script.onload = () => {
+        setTimeout(launchJupiter, 200);
+      };
       document.body.appendChild(script);
     } else {
-      setTimeout(initTerminal, 150);
+      setTimeout(launchJupiter, 200);
     }
   }, [finalMint]);
 
   return (
-    <div
-      className={`w-full bg-zinc-950/90 rounded-xl border border-white/10 flex flex-col min-h-[580px] overflow-hidden ${className}`}
-    >
-      <div className="px-4 py-3 border-b border-white/10 flex items-center justify-between">
+    <div className="w-full bg-zinc-950/90 rounded-xl border border-white/10 flex flex-col h-[580px] overflow-hidden">
+      <div className="px-4 py-3 border-b border-white/10 flex items-center justify-between bg-zinc-900/50">
         <span className="font-mono text-xs font-bold text-amber-400 flex items-center gap-1.5">
           ⚡ JUPITER ROUTE: ${finalSymbol}
         </span>
         <span className="text-[10px] text-zinc-400 font-mono">Non-Custodial DEX</span>
       </div>
-      <div className="flex-1 w-full p-2 flex items-center justify-center">
-        <div id="integrated-terminal" className="w-full h-full min-h-[520px]" />
+      <div className="flex-1 w-full p-2 flex items-center justify-center relative">
+        <div id="integrated-terminal" className="w-full h-full min-h-[500px]" />
       </div>
     </div>
   );
