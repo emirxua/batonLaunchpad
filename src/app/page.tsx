@@ -54,11 +54,29 @@ export default function OutbidHomePage() {
 
   // Live callouts for homepage showcase — SWR with keepPreviousData so 429 doesn't blank the grid
   const { data: calloutsData, isLoading: calloutsLoading } =
-    useSWR<CalloutsApiResponse>("/api/callouts", (url: string) => fetch(url).then((r) => r.json()), {
-      refreshInterval: 15_000,
-      keepPreviousData: true,
-    });
+    useSWR<CalloutsApiResponse>(
+      "/api/callouts",
+      (url: string) => fetch(url).then((r) => r.json()),
+      {
+        refreshInterval: 20_000,
+        keepPreviousData: true,
+        revalidateOnFocus: false,
+      }
+    );
   const liveCallouts: CalloutCard[] = (calloutsData?.callouts ?? []).slice(0, 4);
+
+  const formatTimeAgo = (ts: number): string => {
+    if (!ts) return "—";
+    const diff = Math.max(0, Date.now() - ts);
+    const s = Math.floor(diff / 1000);
+    const m = Math.floor(s / 60);
+    const h = Math.floor(m / 60);
+    const d = Math.floor(h / 24);
+    if (m < 1) return "just now";
+    if (m < 60) return `${m}m ago`;
+    if (h < 24) return `${h}h ago`;
+    return `${d}d ago`;
+  };
 
   const handleCopy = (mint: string, e: React.MouseEvent) => {
     e.stopPropagation();
@@ -322,37 +340,45 @@ export default function OutbidHomePage() {
                 {liveCallouts.map((item, index) => (
                   <div
                     key={item.calloutId}
-                    className="bg-[#13161C] border border-white/10 hover:border-orange-500/50 transition-all rounded-2xl p-4 shadow-lg flex flex-col gap-3 group"
+                    className="bg-[#13161C] border border-white/10 hover:border-orange-500/50 transition-all rounded-2xl p-4 shadow-lg flex flex-col justify-between gap-3 group"
                   >
-                    {/* Caller */}
+                    {/* Caller + time ago */}
                     <div className="flex items-center justify-between gap-2">
-                      <div className="flex items-center gap-2 min-w-0">
+                      <Link
+                        href="/callouts"
+                        className="flex items-center gap-2 min-w-0 hover:opacity-80 transition-opacity"
+                      >
                         <div className="w-7 h-7 rounded-full bg-orange-500/20 border border-orange-500/30 flex items-center justify-center text-[10px] font-bold text-orange-300 shrink-0 uppercase">
                           {item.callerLabel.slice(0, 2)}
                         </div>
                         <span className="text-xs font-bold text-white font-mono truncate">
                           {item.callerLabel}
                         </span>
-                      </div>
+                      </Link>
                       <span className="shrink-0 font-mono text-[10px] text-zinc-500">
-                        #{index + 1}
+                        {formatTimeAgo(item.createdAt)}
                       </span>
                     </div>
 
-                    {/* Thesis */}
-                    {item.thesis && (
+                    {/* Thesis (2 lines max) */}
+                    {item.thesis ? (
                       <p className="text-[11px] text-zinc-300 italic line-clamp-2 leading-relaxed">
                         &ldquo;{item.thesis}&rdquo;
                       </p>
+                    ) : (
+                      <p className="text-[11px] text-zinc-600 italic">
+                        Native pump.fun push call
+                      </p>
                     )}
 
-                    {/* Mint */}
+                    {/* Mint short + copy */}
                     <div className="flex items-center gap-1.5 font-mono text-[10px] text-zinc-400">
                       <span className="text-zinc-600">mint</span>
                       <button
                         type="button"
                         onClick={(e) => handleCopy(item.coinMint, e)}
                         className="hover:text-orange-400 inline-flex items-center gap-0.5 transition-colors"
+                        title="Copy mint"
                       >
                         {copiedMint === item.coinMint ? (
                           <Check className="w-2.5 h-2.5 text-emerald-400" />
@@ -364,10 +390,10 @@ export default function OutbidHomePage() {
                     </div>
 
                     {/* Stats: mcap + ATH */}
-                    <div className="grid grid-cols-2 gap-1.5 p-2.5 rounded-xl bg-black/40 border border-white/5 font-mono text-[10px]">
+                    <div className="grid grid-cols-2 gap-1.5 p-2 rounded-xl bg-black/40 border border-white/5 font-mono text-[10px]">
                       <div>
                         <div className="text-zinc-500 uppercase">Mcap</div>
-                        <div className="font-bold text-zinc-200 text-xs">
+                        <div className="font-bold text-zinc-200 text-xs truncate">
                           {item.marketCap > 0 ? formatCurrency(item.marketCap) : "—"}
                         </div>
                       </div>
@@ -379,7 +405,7 @@ export default function OutbidHomePage() {
                       </div>
                     </div>
 
-                    {/* Actions */}
+                    {/* Actions: Boost + Pump.fun + DEX */}
                     <div className="flex items-center gap-1.5 pt-1 border-t border-white/5">
                       <button
                         type="button"
