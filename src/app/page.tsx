@@ -8,7 +8,7 @@ import { LiveCalloutsFeed } from "@/components/home/LiveCalloutsFeed";
 import { KingOfHillCard } from "@/components/home/KingOfHillCard";
 import { RankedAttentionTable } from "@/components/home/RankedAttentionTable";
 import { QuickSwapCard } from "@/components/home/QuickSwapCard";
-import { ArcadeLobbyTeaser } from "@/components/home/ArcadeLobbyTeaser";
+import { LiveSignalsCompact } from "@/components/home/LiveSignalsCompact";
 import { OutbidModal } from "@/components/modals/OutbidModal";
 import { useHomeData } from "@/hooks/useHomeData";
 import { Coin } from "@/types/coin";
@@ -83,13 +83,16 @@ export default function OutbidHomePage() {
             />
           </section>
 
-          {/* Right Column (col-span-4): QuickSwap + Arcade Lobby */}
+          {/* Right Column (col-span-4): QuickSwap + Live Caller Signals */}
           <aside className="lg:col-span-4 space-y-6">
-            {/* Quick Swap Card: SOL -> BATON Route via Jupiter */}
+            {/* 1. Quick Swap Card: SOL -> BATON Route via Jupiter */}
             <QuickSwapCard />
 
-            {/* Degen Arcade Lobby Teaser */}
-            <ArcadeLobbyTeaser />
+            {/* 2. Live Verified Caller Pulse Stream */}
+            <LiveSignalsCompact
+              initialCallouts={recentCallouts}
+              isLoading={isLoading}
+            />
           </aside>
         </div>
       </main>
