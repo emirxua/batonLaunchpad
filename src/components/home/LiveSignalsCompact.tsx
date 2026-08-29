@@ -7,13 +7,22 @@ import { CalloutsApiResponse, CalloutCard } from "@/lib/types/callouts";
 import { formatCurrency } from "@/lib/utils";
 import { Copy, Check, ArrowRight, Radio } from "lucide-react";
 
+interface LiveSignalsCompactProps {
+  initialCallouts?: CalloutCard[];
+  isLoading?: boolean;
+}
+
 const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
-export function LiveSignalsCompact() {
+export function LiveSignalsCompact({
+  initialCallouts,
+  isLoading: parentLoading = false,
+}: LiveSignalsCompactProps) {
   const [copiedMint, setCopiedMint] = useState<string | null>(null);
 
-  const { data, isLoading } = useSWR<CalloutsApiResponse>(
-    "/api/callouts",
+  // If initialCallouts provided from useHomeData, use them; otherwise fetch from /api/callouts
+  const { data, isLoading: swrLoading } = useSWR<CalloutsApiResponse>(
+    initialCallouts && initialCallouts.length > 0 ? null : "/api/callouts",
     fetcher,
     {
       refreshInterval: 60_000,
@@ -23,7 +32,12 @@ export function LiveSignalsCompact() {
     }
   );
 
-  const callouts: CalloutCard[] = (data?.callouts || []).slice(0, 3);
+  const callouts: CalloutCard[] =
+    initialCallouts && initialCallouts.length > 0
+      ? initialCallouts.slice(0, 3)
+      : (data?.callouts || []).slice(0, 3);
+
+  const isLoading = parentLoading || (swrLoading && callouts.length === 0);
 
   const handleCopy = (mint: string, e: React.MouseEvent) => {
     e.stopPropagation();

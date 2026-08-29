@@ -21,6 +21,7 @@ export default function OutbidHomePage() {
     totalBurned,
     activeRooms,
     totalVolume24h,
+    recentCallouts,
     isLoading,
     refresh,
   } = useHomeData();
@@ -81,7 +82,10 @@ export default function OutbidHomePage() {
             <QuickSwapCard />
 
             {/* Live Signals Compact Feed */}
-            <LiveSignalsCompact />
+            <LiveSignalsCompact
+              initialCallouts={recentCallouts}
+              isLoading={isLoading}
+            />
 
             {/* Arcade Lobby Teaser */}
             <ArcadeLobbyTeaser />

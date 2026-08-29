@@ -3,6 +3,8 @@ import { TRACKED_COINS, getFallbackCoins } from "@/lib/tracked-coins";
 import { getCoinsMarketData } from "@/lib/dexscreener";
 import { Connection, PublicKey } from "@solana/web3.js";
 import { getAssociatedTokenAddress } from "@solana/spl-token";
+import { getWatchlistMap, DEFAULT_WATCHLIST } from "@/lib/callouts/watchlist";
+import { CalloutCard } from "@/lib/types/callouts";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 15;
@@ -66,7 +68,52 @@ export async function GET() {
       totalBurned = coins.reduce((acc, c) => acc + (c.totalBurnedBaton || 0), 0);
     }
 
-    // 3. Sort coins by totalBurnedBaton descending
+    // 3. Fetch latest live callouts for unified single-trip response
+    let recentCallouts: CalloutCard[] = [];
+    try {
+      const proxyUrl =
+        process.env.CALLOUT_PROXY_BASE ||
+        process.env.NEXT_PUBLIC_CALLOUT_PROXY_URL ||
+        "https://pump-callout-proxy.emir1903topuz106.workers.dev/";
+
+      const calloutRes = await fetch(proxyUrl, {
+        headers: { Accept: "application/json" },
+        next: { revalidate: 60 },
+      });
+
+      if (calloutRes.ok) {
+        const cData = await calloutRes.json();
+        const labelMap = getWatchlistMap();
+        const rawResults = Array.isArray(cData.results) ? cData.results : [];
+
+        for (const item of rawResults) {
+          const wallet = item.wallet;
+          const label =
+            labelMap[wallet] ??
+            DEFAULT_WATCHLIST[wallet] ??
+            `${wallet.slice(0, 4)}…${wallet.slice(-4)}`;
+
+          const isOk = item.ok !== false && (!item.status || item.status === 200);
+          if (!isOk) continue;
+
+          const calloutsList = Array.isArray(item.callouts) ? item.callouts : [];
+          for (const c of calloutsList) {
+            recentCallouts.push({
+              ...c,
+              callerWallet: wallet,
+              callerLabel: label,
+            });
+          }
+        }
+
+        recentCallouts.sort((a, b) => b.createdAt - a.createdAt);
+        recentCallouts = recentCallouts.slice(0, 6);
+      }
+    } catch {
+      // Keep empty if proxy fails, non-blocking
+    }
+
+    // 4. Sort coins by totalBurnedBaton descending
     const rankedCoins = [...coins].sort(
       (a, b) => (b.totalBurnedBaton || 0) - (a.totalBurnedBaton || 0)
     );
@@ -78,9 +125,13 @@ export async function GET() {
     const payload = {
       success: true,
       timestamp: now,
-      totalBurned: Math.max(totalBurned, coins.reduce((acc, c) => acc + (c.totalBurnedBaton || 0), 0)),
+      totalBurned: Math.max(
+        totalBurned,
+        coins.reduce((acc, c) => acc + (c.totalBurnedBaton || 0), 0)
+      ),
       coins: rankedCoins,
       top1Coin,
+      recentCallouts,
       marketOverview: {
         activeRooms,
         totalVolume24h,
@@ -107,6 +158,7 @@ export async function GET() {
       totalBurned: fallbackCoins.reduce((acc, c) => acc + (c.totalBurnedBaton || 0), 0),
       coins: fallbackCoins,
       top1Coin: fallbackCoins[0] || null,
+      recentCallouts: [],
       marketOverview: {
         activeRooms: fallbackCoins.length,
         totalVolume24h: fallbackCoins.reduce((sum, c) => sum + (c.volume24h || 0), 0),

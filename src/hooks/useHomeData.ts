@@ -2,6 +2,7 @@
 
 import useSWR from "swr";
 import { Coin } from "@/types/coin";
+import { CalloutCard } from "@/lib/types/callouts";
 import { getFallbackCoins } from "@/lib/tracked-coins";
 
 export interface DirectoryApiResponse {
@@ -10,6 +11,7 @@ export interface DirectoryApiResponse {
   totalBurned: number;
   coins: Coin[];
   top1Coin: Coin | null;
+  recentCallouts?: CalloutCard[];
   marketOverview: {
     activeRooms: number;
     totalVolume24h: number;
@@ -58,6 +60,8 @@ export function useHomeData() {
     data?.marketOverview?.totalVolume24h ??
     coins.reduce((acc, c) => acc + (c.volume24h || 0), 0);
 
+  const recentCallouts: CalloutCard[] = data?.recentCallouts || [];
+
   return {
     coins,
     top1Coin,
@@ -65,6 +69,7 @@ export function useHomeData() {
     totalBurned,
     activeRooms,
     totalVolume24h,
+    recentCallouts,
     isLoading: isLoading && !data,
     isError: !!error,
     refresh: () => mutate(),
