@@ -59,7 +59,7 @@ export default function OutbidHomePage() {
       "/api/callouts",
       (url: string) => fetch(url).then((r) => r.json()),
       {
-        refreshInterval: 20_000,
+        refreshInterval: 60_000,
         keepPreviousData: true,
         revalidateOnFocus: false,
       }
