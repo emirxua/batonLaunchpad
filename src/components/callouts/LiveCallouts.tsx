@@ -154,14 +154,15 @@ export const LiveCallouts: React.FC<LiveCalloutsProps> = (props) => {
           </span>
         </div>
 
-        {/* Auto 60s Clock badge */}
+        {/* Auto 60s Clock badge & 6H Window */}
         <div className="flex items-center gap-2">
           {data?.updatedAt && (
             <span className="flex items-center gap-1.5 text-[10px] font-mono text-zinc-500 bg-zinc-900 border border-zinc-800 px-2.5 py-1 rounded-lg">
               <Clock className="w-3 h-3 text-zinc-400" />
               <span>{new Date(data.updatedAt).toLocaleTimeString()}</span>
-              <span className="text-zinc-600 border-l border-zinc-800 pl-1.5 ml-0.5">
-                auto 60s
+              <span className="text-zinc-600 border-l border-zinc-800 pl-1.5 ml-0.5 flex items-center gap-1.5">
+                <span>auto 60s</span>
+                <span className="text-amber-500/80 font-bold border-l border-zinc-800 pl-1.5">6H ACTIVE WINDOW</span>
               </span>
             </span>
           )}
