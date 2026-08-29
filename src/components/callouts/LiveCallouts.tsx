@@ -236,23 +236,7 @@ export const LiveCallouts: React.FC<LiveCalloutsProps> = (props) => {
         </div>
       )}
 
-      {/* ── Errors — thin banner; feed stays visible when callouts exist ── */}
-      {errors.length > 0 && (
-        <div
-          className={`px-3 py-2 rounded-lg border flex items-start gap-2 text-[10px] font-mono ${
-            rawCallouts.length > 0
-              ? "bg-amber-950/20 border-amber-800/30 text-amber-500"
-              : "bg-red-950/30 border-red-800/40 text-red-400"
-          }`}
-        >
-          <AlertCircle className="w-3 h-3 shrink-0 mt-0.5" />
-          <span>
-            {rawCallouts.length > 0
-              ? "Some wallets rate-limited — showing last good data"
-              : `Upstream error: ${errors[0]?.message || "Failed to load"}`}
-          </span>
-        </div>
-      )}
+
 
       {/* ── Cards / Empty States ─────────────────────────────────────── */}
       {isLoading && rawCallouts.length === 0 ? (
