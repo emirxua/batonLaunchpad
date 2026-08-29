@@ -31,7 +31,7 @@ export async function fetchBinanceTickers(
       headers: {
         Accept: "application/json",
       },
-      cache: "no-store",
+      next: { revalidate: 45 },
     });
 
     if (!res.ok) {
@@ -66,7 +66,7 @@ export async function fetchBinanceKlines(symbol: string): Promise<number[]> {
       headers: {
         Accept: "application/json",
       },
-      cache: "no-store",
+      next: { revalidate: 45 },
     });
 
     if (!res.ok) {
