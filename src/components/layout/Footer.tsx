@@ -107,7 +107,7 @@ export const Footer: React.FC = () => {
         <div className="pt-6 border-t border-zinc-200/60 dark:border-white/5 flex flex-col sm:flex-row items-center justify-between gap-3 text-[11px] text-zinc-500 dark:text-zinc-500">
           <div className="flex items-center gap-2">
             <ShieldCheck className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400 shrink-0" />
-            <span>© 2026 OUTBID.BOND — Powered by Solana Engine &amp; Jupiter Routing.</span>
+            <span>© 2026 OUTBID.BOND — High Performance Solana Execution Engine.</span>
           </div>
           <div className="flex items-center gap-4">
             <a

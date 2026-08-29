@@ -1,7 +1,7 @@
 {
   "name": "Outbid Bond Terminal",
   "short_name": "Outbid",
-  "description": "Solana Alpha Terminal & Attention Engine with Jupiter DEX Swaps & $BATON Burning",
+  "description": "High-Performance Solana Attention Market & Terminal",
   "start_url": "/",
   "id": "/",
   "display": "standalone",

@@ -3,16 +3,11 @@
 import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useWallet } from "@solana/wallet-adapter-react";
 import dynamic from "next/dynamic";
 import {
   Menu,
   X,
   Wallet,
-  Zap,
-  Flame,
-  Trophy,
-  FolderTree,
 } from "lucide-react";
 import { ThemeToggle } from "@/components/ThemeToggle";
 
@@ -49,28 +44,28 @@ export const Navbar: React.FC = () => {
     setMobileMenuOpen(false);
   }, [pathname]);
 
-  // 4 Essential Links ONLY
+  // Navigation links — text only, no emojis
   const navLinks = [
     {
       name: "Terminal",
       href: "/terminal",
-      icon: Zap,
       badge: "NEW",
     },
     {
       name: "Live Callouts",
       href: "/callouts",
-      icon: Flame,
     },
     {
       name: "Directory",
       href: "/",
-      icon: FolderTree,
     },
     {
       name: "Leaderboard",
       href: "/leaderboard",
-      icon: Trophy,
+    },
+    {
+      name: "Arcade",
+      href: "/arcade",
     },
   ];
 
@@ -91,10 +86,10 @@ export const Navbar: React.FC = () => {
                 <span className="w-3/5 h-0.5 bg-zinc-900 dark:bg-white rounded-full transition-transform group-hover:scale-x-110 origin-left" />
               </div>
               <span className="font-archivo text-lg sm:text-xl tracking-tight flex items-center select-none">
-                <span className="text-amber-500 font-black tracking-tight">
+                <span className="text-amber-500 font-bold tracking-tight">
                   OUTBID
                 </span>
-                <span className="text-zinc-800 dark:text-zinc-200 font-bold tracking-tight">
+                <span className="text-zinc-300 font-medium">
                   .BOND
                 </span>
               </span>
@@ -103,7 +98,6 @@ export const Navbar: React.FC = () => {
             {/* Desktop Navigation Links: 4 Links Only */}
             <nav className="hidden md:flex items-center gap-1.5 lg:gap-2 font-mono text-xs font-bold">
               {navLinks.map((link) => {
-                const Icon = link.icon;
                 const isActive =
                   link.href === "/"
                     ? pathname === "/" || pathname === "/directory"
@@ -119,7 +113,6 @@ export const Navbar: React.FC = () => {
                         : "text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-white/5"
                     }`}
                   >
-                    {Icon && <Icon className="w-3.5 h-3.5 shrink-0" />}
                     <span>{link.name}</span>
                     {link.badge && (
                       <span className="text-[9px] px-1.5 py-0.2 rounded-full font-black uppercase tracking-wider bg-orange-500 text-white shadow-sm shadow-orange-500/50">
@@ -162,7 +155,6 @@ export const Navbar: React.FC = () => {
         {mobileMenuOpen && (
           <div className="md:hidden border-t border-zinc-200 dark:border-white/10 bg-white/95 dark:bg-[#0D0E12]/95 backdrop-blur-xl px-4 py-3 space-y-1.5 animate-in slide-in-from-top-2 duration-150 font-mono">
             {navLinks.map((link) => {
-              const Icon = link.icon;
               const isActive =
                 link.href === "/"
                   ? pathname === "/" || pathname === "/directory"
@@ -179,10 +171,7 @@ export const Navbar: React.FC = () => {
                       : "text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-white/5"
                   }`}
                 >
-                  <div className="flex items-center gap-2.5">
-                    {Icon && <Icon className="w-4 h-4" />}
-                    <span>{link.name}</span>
-                  </div>
+                  <span>{link.name}</span>
                   {link.badge && (
                     <span className="text-[9px] px-2 py-0.5 rounded-full font-black uppercase tracking-wider bg-orange-500 text-white">
                       {link.badge}
