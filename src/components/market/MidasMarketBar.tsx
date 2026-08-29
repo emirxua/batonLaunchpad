@@ -2,13 +2,22 @@
 
 import React from "react";
 import useSWR from "swr";
-import { BinanceMarketData } from "@/lib/types/terminal";
 import { Sparkline } from "./Sparkline";
 import { TrendingUp, TrendingDown, Activity } from "lucide-react";
 
+interface MarketItem {
+  symbol: string;
+  name: string;
+  price: number;
+  priceChangePercent24h: number;
+  volume24h: number;
+  sparkline: number[];
+}
+
 interface MarketStatsApiResponse {
-  updatedAt: number;
-  data: BinanceMarketData[];
+  success?: boolean;
+  updatedAt?: number;
+  data: MarketItem[];
 }
 
 const fetcher = (url: string): Promise<MarketStatsApiResponse> =>
@@ -43,7 +52,7 @@ function cleanSymbol(sym: string): { label: string; name: string } {
   if (upper.includes("BTC")) return { label: "BTC", name: "Bitcoin" };
   if (upper.includes("ETH")) return { label: "ETH", name: "Ethereum" };
   if (upper.includes("BNB")) return { label: "BNB", name: "BNB Chain" };
-  return { label: upper.replace("USDT", ""), name: upper };
+  return { label: upper.replace("USDT", "").replace("USD", ""), name: upper };
 }
 
 export const MidasMarketBar: React.FC = () => {
@@ -51,8 +60,8 @@ export const MidasMarketBar: React.FC = () => {
     "/api/market-stats",
     fetcher,
     {
-      refreshInterval: 20_000,
-      dedupingInterval: 10_000,
+      refreshInterval: 15_000,
+      dedupingInterval: 8_000,
       revalidateOnFocus: false,
       revalidateOnReconnect: false,
       errorRetryCount: 2,
@@ -61,28 +70,27 @@ export const MidasMarketBar: React.FC = () => {
     }
   );
 
-  const marketList = Array.isArray(data?.data)
+  const marketList: MarketItem[] = Array.isArray(data?.data)
     ? data.data
     : Array.isArray(data)
-    ? (data as unknown as BinanceMarketData[])
+    ? (data as unknown as MarketItem[])
     : [];
 
   return (
-    <div className="w-full bg-[#0D0E12] border border-white/10 rounded-2xl p-3 sm:p-4 shadow-xl">
+    <div className="w-full bg-[#0D0E12] border border-white/10 rounded-2xl p-3 sm:p-4 shadow-xl select-none font-mono">
       {/* Top Header / Live Indicator */}
       <div className="flex items-center justify-between pb-3 mb-3 border-b border-white/5 px-1">
         <div className="flex items-center gap-2">
           <div className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse shadow-[0_0_8px_rgba(52,211,153,0.8)]" />
-          <span className="text-[11px] font-mono uppercase tracking-wider text-zinc-400 font-bold flex items-center gap-1.5">
+          <span className="text-[11px] uppercase tracking-wider text-zinc-400 font-bold flex items-center gap-1.5">
             <Activity className="w-3.5 h-3.5 text-orange-400" />
-            Global Markets 24H
+            Spot Market Pulse (Kraken Live OHLC)
           </span>
         </div>
 
-        <div className="flex items-center gap-2 text-[10px] font-mono text-zinc-500">
-          <span>Spot Market Pulse</span>
+        <div className="flex items-center gap-2 text-[10px] text-zinc-500">
           <span className="px-1.5 py-0.5 rounded bg-zinc-900 border border-zinc-800 text-zinc-400 font-semibold">
-            Live Feed (45s)
+            24H Hourly Candles
           </span>
         </div>
       </div>
@@ -107,7 +115,7 @@ export const MidasMarketBar: React.FC = () => {
             </div>
           ))
         ) : error && marketList.length === 0 ? (
-          <div className="col-span-full py-4 text-center text-xs font-mono text-zinc-500">
+          <div className="col-span-full py-4 text-center text-xs text-zinc-500">
             Market rates temporarily unavailable. Reconnecting...
           </div>
         ) : (
@@ -126,13 +134,13 @@ export const MidasMarketBar: React.FC = () => {
                     <span className="font-archivo font-black text-sm text-white tracking-wide">
                       ${label}
                     </span>
-                    <span className="text-[10px] font-mono text-zinc-500 truncate">
+                    <span className="text-[10px] text-zinc-500 truncate">
                       {name}
                     </span>
                   </div>
 
                   <div
-                    className={`inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] font-mono font-bold shrink-0 ${
+                    className={`inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[10px] font-bold shrink-0 ${
                       isPositive
                         ? "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20"
                         : "bg-rose-500/10 text-rose-400 border border-rose-500/20"
@@ -153,15 +161,15 @@ export const MidasMarketBar: React.FC = () => {
                 {/* Price & Real 24h Sparkline */}
                 <div className="flex items-end justify-between gap-3 pt-1">
                   <div className="space-y-0.5">
-                    <div className="font-mono text-base sm:text-lg font-bold text-white tracking-tight">
+                    <div className="text-base sm:text-lg font-bold text-white tracking-tight font-mono">
                       ${formatPrice(item.price)}
                     </div>
-                    <div className="text-[9px] font-mono text-zinc-500 uppercase">
-                      Vol: ${Math.round(item.volume24h * item.price).toLocaleString("en-US", { notation: "compact" })}
+                    <div className="text-[9px] text-zinc-500 uppercase">
+                      Vol: ${Math.round(item.volume24h).toLocaleString("en-US", { notation: "compact" })}
                     </div>
                   </div>
 
-                  {/* Sparkline Chart */}
+                  {/* Sparkline Chart - Pure dynamic data from API */}
                   <div className="shrink-0">
                     <Sparkline
                       data={item.sparkline}
@@ -180,3 +188,5 @@ export const MidasMarketBar: React.FC = () => {
     </div>
   );
 };
+
+export default MidasMarketBar;
