@@ -1,6 +1,15 @@
 "use client";
 
-import React, { useState } from "react";
+/**
+ * LiveCallouts — callout card stream.
+ *
+ * Accepts SWR state from parent (callouts/page.tsx) so a single fetch
+ * serves both this component and TrackedLeaderboard.
+ *
+ * Can also be used standalone (e.g. homepage snippet) with its own SWR.
+ */
+
+import React from "react";
 import Image from "next/image";
 import useSWR from "swr";
 import { CalloutsApiResponse, CalloutCard } from "@/lib/types/callouts";
@@ -21,7 +30,6 @@ import {
   Radio,
 } from "lucide-react";
 
-// The BATON mint is the CA shown in the site ticker — read from env, no hardcoded substitute
 const BATON_MINT = process.env.NEXT_PUBLIC_BATON_MINT_ADDRESS ?? "";
 
 const fetcher = (url: string): Promise<CalloutsApiResponse> =>
@@ -29,7 +37,7 @@ const fetcher = (url: string): Promise<CalloutsApiResponse> =>
 
 function timeAgo(ms: number): string {
   if (!ms) return "—";
-  const s = Math.floor(Math.max(0, Date.now() - ms) / 1000);
+  const s = Math.max(0, Date.now() - ms) / 1000;
   if (s < 60) return "just now";
   const m = Math.floor(s / 60);
   if (m < 60) return `${m}m ago`;
@@ -38,29 +46,48 @@ function timeAgo(ms: number): string {
   return `${Math.floor(h / 24)}d ago`;
 }
 
-function fmtX(x: number | null | undefined, digits = 2): string {
+function fmtX(x: number | null | undefined): string {
   if (!x || x <= 0) return "—";
-  return `${x.toFixed(digits)}x`;
+  return `${x.toFixed(2)}x`;
 }
 
+// ── Props ─────────────────────────────────────────────────────────────────────
+
 interface LiveCalloutsProps {
+  // If parent provides SWR state, use it (page layout mode)
+  data?: CalloutsApiResponse;
+  isLoading?: boolean;
+  isValidating?: boolean;
+  mutate?: () => void;
+  copied?: string | null;
+  onCopy?: (text: string) => void;
+  // Boost handler
   onBoostCoin?: (mint: string) => void;
 }
 
-export const LiveCallouts: React.FC<LiveCalloutsProps> = ({ onBoostCoin }) => {
-  const [copied, setCopied] = useState<string | null>(null);
+// ── Component ─────────────────────────────────────────────────────────────────
 
-  const { data, isLoading, isValidating, mutate } =
-    useSWR<CalloutsApiResponse>("/api/callouts", fetcher, {
-      refreshInterval: 12_000,
-      keepPreviousData: true,
-    });
+export const LiveCallouts: React.FC<LiveCalloutsProps> = (props) => {
+  // Standalone SWR — only used when parent does NOT pass `data`
+  const standalone = useSWR<CalloutsApiResponse>(
+    props.data === undefined ? "/api/callouts" : null,
+    fetcher,
+    { refreshInterval: 12_000, keepPreviousData: true }
+  );
 
-  const copy = (text: string) => {
+  const data = props.data ?? standalone.data;
+  const isLoading = props.isLoading ?? standalone.isLoading;
+  const isValidating = props.isValidating ?? standalone.isValidating;
+  const mutate = props.mutate ?? standalone.mutate;
+
+  // Local copy state (standalone mode fallback)
+  const [_localCopied, _setLocalCopied] = React.useState<string | null>(null);
+  const copied = props.copied !== undefined ? props.copied : _localCopied;
+  const onCopy = props.onCopy ?? ((text: string) => {
     navigator.clipboard.writeText(text);
-    setCopied(text);
-    setTimeout(() => setCopied(null), 2000);
-  };
+    _setLocalCopied(text);
+    setTimeout(() => _setLocalCopied(null), 2000);
+  });
 
   const callouts = data?.callouts ?? [];
   const watched = data?.watched ?? [];
@@ -71,7 +98,6 @@ export const LiveCallouts: React.FC<LiveCalloutsProps> = ({ onBoostCoin }) => {
     <div className="space-y-5">
       {/* ── Top bar ─────────────────────────────────────────────────── */}
       <div className="flex flex-wrap items-center justify-between gap-3">
-        {/* Status + last updated */}
         <div className="flex items-center gap-2.5">
           <span className="relative flex h-2 w-2">
             <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-60" />
@@ -90,7 +116,7 @@ export const LiveCallouts: React.FC<LiveCalloutsProps> = ({ onBoostCoin }) => {
         </div>
 
         <button
-          onClick={() => mutate()}
+          onClick={() => mutate?.()}
           disabled={isValidating}
           className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 text-xs font-mono text-zinc-300 transition-colors disabled:opacity-40 cursor-pointer"
         >
@@ -118,7 +144,7 @@ export const LiveCallouts: React.FC<LiveCalloutsProps> = ({ onBoostCoin }) => {
         </div>
       )}
 
-      {/* ── Upstream errors ──────────────────────────────────────────── */}
+      {/* ── Errors ───────────────────────────────────────────────────── */}
       {errors.length > 0 && (
         <div className="p-3 rounded-xl bg-red-950/30 border border-red-800/40 space-y-1">
           <div className="flex items-center gap-1.5 text-xs font-mono font-semibold text-red-400">
@@ -140,10 +166,7 @@ export const LiveCallouts: React.FC<LiveCalloutsProps> = ({ onBoostCoin }) => {
       {isLoading && callouts.length === 0 ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           {[1, 2, 3, 4].map((i) => (
-            <div
-              key={i}
-              className="p-4 rounded-2xl bg-zinc-900/60 border border-zinc-800 animate-pulse h-52"
-            />
+            <div key={i} className="p-4 rounded-2xl bg-zinc-900/60 border border-zinc-800 animate-pulse h-52" />
           ))}
         </div>
       ) : callouts.length > 0 ? (
@@ -153,21 +176,20 @@ export const LiveCallouts: React.FC<LiveCalloutsProps> = ({ onBoostCoin }) => {
               key={card.calloutId}
               card={card}
               copied={copied}
-              onCopy={copy}
-              onBoostCoin={onBoostCoin}
+              onCopy={onCopy}
+              onBoostCoin={props.onBoostCoin}
             />
           ))}
         </div>
       ) : (
-        /* Empty state */
         <div className="py-16 flex flex-col items-center gap-3 text-center rounded-2xl border border-zinc-800 bg-zinc-900/30">
           <Radio className="w-7 h-7 text-zinc-700" />
           <p className="text-sm font-mono text-zinc-400 font-semibold">
             No callouts yet from tracked wallets
           </p>
           <p className="text-xs text-zinc-600 max-w-xs font-mono">
-            Callers can only push once every 6 hours. New calls appear automatically
-            as they happen.
+            Callers can only push once every 6 hours. New calls appear
+            automatically as they happen.
           </p>
           {emptyWallets.length > 0 && (
             <p className="text-[10px] font-mono text-zinc-700 mt-1">
@@ -180,7 +202,7 @@ export const LiveCallouts: React.FC<LiveCalloutsProps> = ({ onBoostCoin }) => {
   );
 };
 
-/* ─── Card ──────────────────────────────────────────────────────────────────── */
+// ── Card ──────────────────────────────────────────────────────────────────────
 
 interface CardProps {
   card: CalloutCard;
@@ -195,7 +217,7 @@ const CalloutCardItem: React.FC<CardProps> = ({ card, copied, onCopy, onBoostCoi
   return (
     <div className="p-4 rounded-2xl bg-zinc-900/80 border border-zinc-800 hover:border-zinc-700 flex flex-col gap-3 transition-colors">
 
-      {/* ── Caller row ── */}
+      {/* Caller row */}
       <div className="flex items-center justify-between gap-2">
         <div className="flex items-center gap-2 min-w-0">
           <div className="w-7 h-7 rounded-full bg-zinc-800 border border-zinc-700 flex items-center justify-center text-[10px] font-bold text-zinc-300 uppercase shrink-0">
@@ -211,8 +233,7 @@ const CalloutCardItem: React.FC<CardProps> = ({ card, copied, onCopy, onBoostCoi
           >
             {copied === card.callerWallet
               ? <Check className="w-3 h-3 text-lime-400" />
-              : <Copy className="w-3 h-3" />
-            }
+              : <Copy className="w-3 h-3" />}
           </button>
         </div>
         <span className="text-[10px] font-mono text-zinc-500 shrink-0">
@@ -220,7 +241,7 @@ const CalloutCardItem: React.FC<CardProps> = ({ card, copied, onCopy, onBoostCoi
         </span>
       </div>
 
-      {/* ── Media (if present) ── */}
+      {/* Media */}
       {card.mediaUrl && (
         <div className="rounded-xl overflow-hidden border border-zinc-800 max-h-48 bg-zinc-950">
           <Image
@@ -234,14 +255,14 @@ const CalloutCardItem: React.FC<CardProps> = ({ card, copied, onCopy, onBoostCoi
         </div>
       )}
 
-      {/* ── Thesis ── */}
+      {/* Thesis */}
       {card.thesis && (
         <p className="text-xs text-zinc-300 italic leading-relaxed line-clamp-3 font-sans">
           &ldquo;{card.thesis}&rdquo;
         </p>
       )}
 
-      {/* ── Mint row ── */}
+      {/* Mint row */}
       <div className="flex items-center justify-between gap-2 px-2.5 py-1.5 rounded-lg bg-zinc-950/60 border border-zinc-800/60 text-[11px] font-mono">
         <div className="flex items-center gap-1.5 min-w-0 text-zinc-400">
           <span className="text-zinc-600">mint</span>
@@ -253,33 +274,26 @@ const CalloutCardItem: React.FC<CardProps> = ({ card, copied, onCopy, onBoostCoi
           >
             {copied === card.coinMint
               ? <Check className="w-2.5 h-2.5 text-lime-400" />
-              : <Copy className="w-2.5 h-2.5" />
-            }
+              : <Copy className="w-2.5 h-2.5" />}
           </button>
         </div>
         <div className="flex items-center gap-1.5 shrink-0">
           <a
             href={`https://dexscreener.com/solana/${card.coinMint}`}
-            target="_blank"
-            rel="noreferrer"
-            className="text-zinc-500 hover:text-zinc-200 transition-colors font-bold"
-            title="DexScreener"
-          >
-            DEX
-          </a>
+            target="_blank" rel="noreferrer"
+            className="text-zinc-500 hover:text-zinc-200 font-bold transition-colors"
+          >DEX</a>
           <a
             href={`https://pump.fun/coin/${card.coinMint}`}
-            target="_blank"
-            rel="noreferrer"
+            target="_blank" rel="noreferrer"
             className="text-lime-500 hover:text-lime-300 transition-colors"
-            title="Pump.fun"
           >
             <ExternalLink className="w-3.5 h-3.5" />
           </a>
         </div>
       </div>
 
-      {/* ── Stats grid: mcap, multiple, ATH multiple ── */}
+      {/* Stats: mcap-at-call | current multiple | ATH multiple */}
       <div className="grid grid-cols-3 gap-2 text-[11px] font-mono">
         <div className="px-2 py-1.5 rounded-lg bg-zinc-950/50 border border-zinc-800/50 space-y-0.5">
           <div className="text-[9px] text-zinc-600 uppercase tracking-wide">Mcap at call</div>
@@ -287,40 +301,30 @@ const CalloutCardItem: React.FC<CardProps> = ({ card, copied, onCopy, onBoostCoi
             {card.marketCap > 0 ? formatCurrency(card.marketCap) : "—"}
           </div>
         </div>
-
         <div className="px-2 py-1.5 rounded-lg bg-zinc-950/50 border border-zinc-800/50 space-y-0.5">
-          <div className="text-[9px] text-zinc-600 uppercase tracking-wide">Current</div>
+          <div className="text-[9px] text-zinc-600 uppercase tracking-wide">Now</div>
           <div className={`font-bold flex items-center gap-0.5 ${isUp ? "text-emerald-400" : "text-rose-400"}`}>
             {isUp ? <TrendingUp className="w-3 h-3" /> : <TrendingDown className="w-3 h-3" />}
-            {fmtX(card.multiple)}
+            {card.multiple > 0 ? `${card.multiple.toFixed(2)}x` : "—"}
           </div>
         </div>
-
         <div className="px-2 py-1.5 rounded-lg bg-zinc-950/50 border border-zinc-800/50 space-y-0.5">
           <div className="text-[9px] text-zinc-600 uppercase tracking-wide">ATH</div>
           <div className="font-bold text-amber-400">
-            {fmtX(card.maxMultiplier)}
+            {card.maxMultiplier > 0 ? `${card.maxMultiplier.toFixed(2)}x` : "—"}
           </div>
         </div>
       </div>
 
-      {/* ── Engagement ── */}
+      {/* Engagement */}
       <div className="flex items-center gap-3 text-[10px] font-mono text-zinc-600">
-        <span className="flex items-center gap-1">
-          <Eye className="w-3 h-3" />
-          {card.viewCount.toLocaleString()}
-        </span>
+        <span className="flex items-center gap-1"><Eye className="w-3 h-3" />{card.viewCount.toLocaleString()}</span>
         <span>❤️ {card.likes}</span>
-        <span className="flex items-center gap-1">
-          <MessageSquare className="w-3 h-3" />
-          {card.commentCount}
-        </span>
-        {card.repostCount > 0 && (
-          <span>🔁 {card.repostCount}</span>
-        )}
+        <span className="flex items-center gap-1"><MessageSquare className="w-3 h-3" />{card.commentCount}</span>
+        {card.repostCount > 0 && <span>🔁 {card.repostCount}</span>}
       </div>
 
-      {/* ── Actions ── */}
+      {/* Actions */}
       <div className="flex items-center gap-2 pt-1 border-t border-zinc-800/50">
         {BATON_MINT && (
           <button
@@ -331,20 +335,14 @@ const CalloutCardItem: React.FC<CardProps> = ({ card, copied, onCopy, onBoostCoi
             Boost with $BATON
           </button>
         )}
-
         <a
           href={`https://dexscreener.com/solana/${card.coinMint}`}
-          target="_blank"
-          rel="noreferrer"
+          target="_blank" rel="noreferrer"
           className="px-2.5 py-1.5 rounded-lg bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 text-zinc-400 hover:text-zinc-200 text-[10px] font-mono font-bold transition-colors"
-        >
-          DEX
-        </a>
-
+        >DEX</a>
         <a
           href={`https://pump.fun/coin/${card.coinMint}`}
-          target="_blank"
-          rel="noreferrer"
+          target="_blank" rel="noreferrer"
           className="p-1.5 rounded-lg bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 text-lime-500 hover:text-lime-300 transition-colors"
         >
           <ArrowUpRight className="w-3.5 h-3.5" />
