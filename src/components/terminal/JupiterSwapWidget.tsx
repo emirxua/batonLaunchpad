@@ -30,24 +30,24 @@ export function JupiterSwapWidget({
   const [userBalance, setUserBalance] = useState<number | null>(null);
 
   useEffect(() => {
-    let isSubscribed = true;
-    const fetchBalance = async () => {
+    let isMounted = true;
+    async function updateBalance() {
       if (connected && publicKey && connection) {
         try {
-          const bal = await connection.getBalance(publicKey);
-          if (isSubscribed) setUserBalance(bal / 1e9);
+          const lamports = await connection.getBalance(publicKey, "confirmed");
+          if (isMounted) setUserBalance(lamports / 1e9);
         } catch (_) {
-          if (isSubscribed) setUserBalance(null);
+          if (isMounted) setUserBalance(null);
         }
       } else {
-        if (isSubscribed) setUserBalance(null);
+        if (isMounted) setUserBalance(null);
       }
-    };
-    fetchBalance();
-    const interval = setInterval(fetchBalance, 10000);
+    }
+    updateBalance();
+    const id = setInterval(updateBalance, 8000);
     return () => {
-      isSubscribed = false;
-      clearInterval(interval);
+      isMounted = false;
+      clearInterval(id);
     };
   }, [connected, publicKey, connection]);
 
@@ -123,14 +123,10 @@ export function JupiterSwapWidget({
       setVisible(true);
       return;
     }
-    if (!quoteResponse) {
-      setErrorMsg("Quote expired, please refresh");
-      return;
-    }
 
-    const { success, source, ...cleanQuote } = quoteResponse as any;
-    if (source === "dexscreener_fallback") {
-      setErrorMsg("Token is in bonding phase. Swap via Jupiter is not ready yet.");
+    const num = parseFloat(inputAmount.replace(",", ".").trim());
+    if (isNaN(num) || num <= 0) {
+      setErrorMsg("Geçerli bir miktar girin");
       return;
     }
 
@@ -139,33 +135,34 @@ export function JupiterSwapWidget({
       setErrorMsg(null);
       setTxSuccess(null);
 
-      // Jupiter v6 swap API çağrısı
-      const res = await fetch("https://quote-api.jup.ag/v6/swap", {
+      // 1. PumpPortal Local Trade API Çağrısı (Bonding Curve Direct Buy)
+      const response = await fetch("https://pumpportal.fun/api/trade-local", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+        },
         body: JSON.stringify({
-          quoteResponse: cleanQuote,
-          userPublicKey: publicKey.toBase58(),
-          wrapAndUnwrapSol: true,
-          useSharedAccounts: true,
-          dynamicComputeUnitLimit: true,
-          prioritizationFeeLamports: "auto",
+          publicKey: publicKey.toBase58(),
+          action: "buy",
+          mint: outputMint,
+          denominatedInSol: "true",
+          amount: num,
+          slippage: 10, // %10 slippage
+          priorityFee: 0.0005,
+          pool: "pump",
         }),
       });
 
-      if (!res.ok) {
-        const errJson = await res.json();
-        throw new Error(errJson.error || "Transaction build failed");
+      if (!response.ok) {
+        const errText = await response.text();
+        throw new Error(errText || "Transaction build failed");
       }
 
-      const { swapTransaction } = await res.json();
-      if (!swapTransaction) throw new Error("Transaction build failed");
+      // 2. Binary ArrayBuffer'ı deserialize et
+      const data = await response.arrayBuffer();
+      const tx = VersionedTransaction.deserialize(new Uint8Array(data));
 
-      // Buffer dönüşümü
-      const txBuf = Buffer.from(swapTransaction, "base64");
-      const tx = VersionedTransaction.deserialize(txBuf);
-
-      // Phantom / Solflare imza popup tetikleyici
+      // 3. Solana Cüzdanına İmzalat ve Gönder
       const signature = await sendTransaction(tx, connection, {
         skipPreflight: false,
         maxRetries: 3,
@@ -174,8 +171,8 @@ export function JupiterSwapWidget({
       setTxSuccess(signature);
       fetchQuote(inputAmount);
     } catch (err: any) {
-      console.error("Swap error:", err);
-      setErrorMsg(err.message || "Transaction rejected");
+      console.error("Swap execution error:", err);
+      setErrorMsg(err.message || "Swap execution failed");
     } finally {
       setSwapping(false);
     }
