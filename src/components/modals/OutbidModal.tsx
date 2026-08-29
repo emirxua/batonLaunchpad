@@ -234,7 +234,7 @@ export function OutbidModal({
             <span>
               Wallet Balance:{" "}
               <span className="text-amber-400 font-bold">
-                {balanceLoading ? "..." : formatNumber(batonBalance)}
+                {balanceLoading ? "..." : formatNumber(batonBalance || 0)}
               </span>
             </span>
           </div>

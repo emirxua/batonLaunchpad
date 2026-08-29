@@ -87,16 +87,29 @@ export default function RootLayout({
           <WalletContextProvider>{children}</WalletContextProvider>
         </ThemeProvider>
 
-        {/* PWA Service Worker Registration */}
+        {/* PWA Service Worker Registration & Cache Killer on Localhost */}
         <script
           dangerouslySetInnerHTML={{
             __html: `
               if (typeof window !== 'undefined' && 'serviceWorker' in navigator) {
-                window.addEventListener('load', function() {
-                  navigator.serviceWorker.register('/sw.js').catch(function(err) {
-                    console.log('SW registration note:', err);
+                if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+                  navigator.serviceWorker.getRegistrations().then(function(registrations) {
+                    for (var i = 0; i < registrations.length; i++) {
+                      registrations[i].unregister();
+                    }
                   });
-                });
+                  if ('caches' in window) {
+                    caches.keys().then(function(keys) {
+                      keys.forEach(function(k) { caches.delete(k); });
+                    });
+                  }
+                } else {
+                  window.addEventListener('load', function() {
+                    navigator.serviceWorker.register('/sw.js').catch(function(err) {
+                      console.log('SW registration note:', err);
+                    });
+                  });
+                }
               }
             `,
           }}
