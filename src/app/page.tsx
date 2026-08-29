@@ -345,8 +345,9 @@ export default function OutbidHomePage() {
                     {/* Caller + time ago */}
                     <div className="flex items-center justify-between gap-2">
                       <Link
-                        href="/callouts"
+                        href={`/callouts?caller=${encodeURIComponent(item.callerLabel)}`}
                         className="flex items-center gap-2 min-w-0 hover:opacity-80 transition-opacity"
+                        title={`Filter by @${item.callerLabel}`}
                       >
                         <div className="w-7 h-7 rounded-full bg-orange-500/20 border border-orange-500/30 flex items-center justify-center text-[10px] font-bold text-orange-300 shrink-0 uppercase">
                           {item.callerLabel.slice(0, 2)}
