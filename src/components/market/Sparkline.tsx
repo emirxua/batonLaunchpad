@@ -5,8 +5,7 @@ import React, { useId, useMemo } from "react";
 export interface SparklineProps {
   data: number[];
   isPositive: boolean;
-  /** Optional: symbol string for gradient ID scoping (falls back to useId) */
-  symbol?: string;
+  symbol: string;
   width?: number;
   height?: number;
   className?: string;
@@ -21,14 +20,15 @@ export function Sparkline({
   className = "",
 }: SparklineProps) {
   const uid = useId();
-  // Prefer symbol-based ID when provided (stable across re-renders), otherwise unique ID
-  const gradId = symbol
-    ? `spark-grad-${symbol.toLowerCase().replace(/[^a-z0-9]/g, "")}`
-    : `spark-grad-${uid.replace(/:/g, "")}`;
+  // Stable symbol-scoped gradient ID, useId as fallback for SSR safety
+  const gradId =
+    symbol
+      ? `spark-grad-${symbol.toLowerCase().replace(/[^a-z0-9]/g, "")}`
+      : `spark-grad-${uid.replace(/:/g, "")}`;
 
   const { pathD, areaD } = useMemo(() => {
     if (!data || data.length < 2) {
-      // Fallback: directional flat-to-angled line based on trend
+      // Directional fallback line based on trend
       const startY = isPositive ? height - 6 : 6;
       const endY = isPositive ? 6 : height - 6;
       const midY = height / 2;
@@ -59,7 +59,6 @@ export function Sparkline({
     d += ` T ${points[points.length - 1][0]},${points[points.length - 1][1]}`;
 
     const area = `${d} L ${width},${height} L 0,${height} Z`;
-
     return { pathD: d, areaD: area };
   }, [data, isPositive, width, height]);
 
@@ -87,9 +86,9 @@ export function Sparkline({
           <stop offset="100%" stopColor={strokeColor} stopOpacity="0.0" />
         </linearGradient>
       </defs>
-      {/* Area Gradient Under Curve */}
+      {/* Area gradient fill under curve */}
       <path d={areaD} fill={`url(#${gradId})`} />
-      {/* Smooth Bezier Stroke Line */}
+      {/* Smooth Bezier stroke */}
       <path
         d={pathD}
         fill="none"
