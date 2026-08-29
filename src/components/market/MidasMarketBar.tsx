@@ -166,6 +166,7 @@ export const MidasMarketBar: React.FC = () => {
                     <Sparkline
                       data={item.sparkline}
                       isPositive={isPositive}
+                      symbol={label}
                       width={84}
                       height={28}
                     />

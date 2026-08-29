@@ -5,6 +5,8 @@ import React, { useId, useMemo } from "react";
 export interface SparklineProps {
   data: number[];
   isPositive: boolean;
+  /** Optional: symbol string for gradient ID scoping (falls back to useId) */
+  symbol?: string;
   width?: number;
   height?: number;
   className?: string;
@@ -13,22 +15,25 @@ export interface SparklineProps {
 export function Sparkline({
   data,
   isPositive,
-  width = 120,
-  height = 36,
+  symbol,
+  width = 130,
+  height = 38,
   className = "",
 }: SparklineProps) {
-  const gradientId = useId();
+  const uid = useId();
+  // Prefer symbol-based ID when provided (stable across re-renders), otherwise unique ID
+  const gradId = symbol
+    ? `spark-grad-${symbol.toLowerCase().replace(/[^a-z0-9]/g, "")}`
+    : `spark-grad-${uid.replace(/:/g, "")}`;
 
   const { pathD, areaD } = useMemo(() => {
     if (!data || data.length < 2) {
-      // Fallback: 24h trendine göre minimal eğimli dalga
+      // Fallback: directional flat-to-angled line based on trend
       const startY = isPositive ? height - 6 : 6;
       const endY = isPositive ? 6 : height - 6;
       const midY = height / 2;
-
       const curve = `M 0 ${startY} Q ${width / 2} ${midY} ${width} ${endY}`;
       const area = `${curve} L ${width} ${height} L 0 ${height} Z`;
-
       return { pathD: curve, areaD: area };
     }
 
@@ -44,12 +49,12 @@ export function Sparkline({
       return [x, y];
     });
 
-    // SVG Catmull-Rom / Bezier curve path
+    // Smooth quadratic Bezier spline
     let d = `M ${points[0][0]},${points[0][1]}`;
     for (let i = 0; i < points.length - 1; i++) {
-      const x_mid = (points[i][0] + points[i + 1][0]) / 2;
-      const y_mid = (points[i][1] + points[i + 1][1]) / 2;
-      d += ` Q ${points[i][0]},${points[i][1]} ${x_mid},${y_mid}`;
+      const xMid = (points[i][0] + points[i + 1][0]) / 2;
+      const yMid = (points[i][1] + points[i + 1][1]) / 2;
+      d += ` Q ${points[i][0]},${points[i][1]} ${xMid},${yMid}`;
     }
     d += ` T ${points[points.length - 1][0]},${points[points.length - 1][1]}`;
 
@@ -60,6 +65,15 @@ export function Sparkline({
 
   const strokeColor = isPositive ? "#34d399" : "#f87171";
 
+  if (!pathD) {
+    return (
+      <div
+        style={{ width, height }}
+        className="opacity-20 border-b border-zinc-700"
+      />
+    );
+  }
+
   return (
     <svg
       width={width}
@@ -68,13 +82,13 @@ export function Sparkline({
       className={`overflow-visible shrink-0 ${className}`}
     >
       <defs>
-        <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
+        <linearGradient id={gradId} x1="0" y1="0" x2="0" y2="1">
           <stop offset="0%" stopColor={strokeColor} stopOpacity="0.25" />
           <stop offset="100%" stopColor={strokeColor} stopOpacity="0.0" />
         </linearGradient>
       </defs>
       {/* Area Gradient Under Curve */}
-      <path d={areaD} fill={`url(#${gradientId})`} />
+      <path d={areaD} fill={`url(#${gradId})`} />
       {/* Smooth Bezier Stroke Line */}
       <path
         d={pathD}
