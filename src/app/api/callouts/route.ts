@@ -1,12 +1,13 @@
 import { NextResponse } from "next/server";
 import {
   PumpCallout,
+  PumpCalloutListResponse,
   CalloutCard,
   WatchedSummary,
   CalloutError,
   CalloutsApiResponse,
 } from "@/lib/types/callouts";
-import { getWatchlistMap, DEFAULT_WATCHLIST } from "@/lib/callouts/watchlist";
+import { getWatchlistWallets, getWatchlistMap } from "@/lib/callouts/watchlist";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 60;
@@ -17,37 +18,54 @@ const PROXY_BASE =
   process.env.CALLOUT_PROXY_BASE ||
   "https://pump-callout-proxy.emir1903topuz106.workers.dev";
 
-const FETCH_TIMEOUT_MS = 10000;
+const FETCH_TIMEOUT_MS = 8000;
+const BETWEEN_WALLET_DELAY_MS = 400;
 const CACHE_TTL_MS = 60_000;
 
-// ── Module-level last-good cache ───────────────────────────────────────────────
+// ── Memory Caches (survives across requests in the same instance) ─────────────
 
+interface WalletCacheEntry {
+  callouts: PumpCallout[];
+  empty: boolean;
+}
+
+const walletCache = new Map<string, { data: WalletCacheEntry; ts: number }>();
 let lastGoodPayload: { data: CalloutsApiResponse; ts: number } | null = null;
 
-// ── Worker Response Schema ─────────────────────────────────────────────────────
-
-interface WorkerWalletResult {
-  wallet: string;
-  ok?: boolean;
-  status?: number;
-  callouts?: PumpCallout[];
-  error?: string;
+function getCachedWallet(wallet: string): WalletCacheEntry | null {
+  const entry = walletCache.get(wallet);
+  return entry ? entry.data : null;
 }
 
-interface WorkerResponse {
-  updatedAt?: string | number;
-  results?: WorkerWalletResult[];
-  error?: string;
+function setCachedWallet(wallet: string, data: WalletCacheEntry) {
+  walletCache.set(wallet, { data, ts: Date.now() });
 }
 
-// ── Fetch from Single-Endpoint Worker Proxy ────────────────────────────────────
+function sleep(ms: number) {
+  return new Promise<void>((r) => setTimeout(r, ms));
+}
 
-async function fetchFromWorker(): Promise<WorkerResponse> {
+// ── Per-wallet fetch via Worker proxy (?wallet=...) ───────────────────────────
+
+interface WalletResult {
+  callouts: PumpCallout[];
+  empty: boolean;
+  fromCache?: boolean;
+  error?: { status?: number; message: string; bodySnippet?: string };
+}
+
+async function fetchSingleWallet(wallet: string): Promise<WalletResult> {
+  const url = new URL(PROXY_BASE);
+  url.searchParams.set("wallet", wallet);
+
   const ctrl = new AbortController();
   const timer = setTimeout(() => ctrl.abort(), FETCH_TIMEOUT_MS);
 
+  let res: Response;
+  let text: string;
+
   try {
-    const res = await fetch(PROXY_BASE, {
+    res = await fetch(url.toString(), {
       method: "GET",
       headers: {
         Accept: "application/json",
@@ -55,17 +73,60 @@ async function fetchFromWorker(): Promise<WorkerResponse> {
       cache: "no-store",
       signal: ctrl.signal,
     });
-
-    const text = await res.text();
-    if (!res.ok) {
-      throw new Error(`Worker HTTP ${res.status}: ${text.slice(0, 150)}`);
-    }
-
-    const json = JSON.parse(text) as WorkerResponse;
-    return json;
-  } finally {
+    text = await res.text();
+  } catch (err: unknown) {
     clearTimeout(timer);
+    const cached = getCachedWallet(wallet);
+    if (cached) return { ...cached, fromCache: true };
+    return {
+      callouts: [],
+      empty: true,
+      error: {
+        message: err instanceof Error ? err.message : "Fetch network failed",
+      },
+    };
   }
+  clearTimeout(timer);
+
+  if (!res.ok) {
+    const cached = getCachedWallet(wallet);
+    if (cached) return { ...cached, fromCache: true };
+    return {
+      callouts: [],
+      empty: true,
+      error: {
+        status: res.status,
+        message: `Worker HTTP ${res.status}: ${text.slice(0, 150)}`,
+        bodySnippet: text.slice(0, 200),
+      },
+    };
+  }
+
+  let data: PumpCalloutListResponse;
+  try {
+    data = JSON.parse(text) as PumpCalloutListResponse;
+  } catch {
+    const cached = getCachedWallet(wallet);
+    if (cached) return { ...cached, fromCache: true };
+    return {
+      callouts: [],
+      empty: true,
+      error: {
+        status: res.status,
+        message: "JSON parse error from proxy",
+        bodySnippet: text.slice(0, 200),
+      },
+    };
+  }
+
+  const calloutsList = Array.isArray(data.callouts) ? data.callouts : [];
+  const result: WalletCacheEntry = {
+    callouts: calloutsList,
+    empty: calloutsList.length === 0,
+  };
+
+  setCachedWallet(wallet, result);
+  return result;
 }
 
 // ── GET handler ────────────────────────────────────────────────────────────────
@@ -73,7 +134,7 @@ async function fetchFromWorker(): Promise<WorkerResponse> {
 export async function GET() {
   const now = Date.now();
 
-  // 1. Serve cached data if within 60s TTL
+  // 1. If global cache is fresh (<60s), serve immediately without hitting proxy
   if (lastGoodPayload && now - lastGoodPayload.ts < CACHE_TTL_MS) {
     return NextResponse.json(lastGoodPayload.data, {
       status: 200,
@@ -83,121 +144,85 @@ export async function GET() {
     });
   }
 
+  const wallets = getWatchlistWallets();
   const labelMap = getWatchlistMap();
+
   const allCallouts: CalloutCard[] = [];
   const watched: WatchedSummary[] = [];
   const emptyWallets: string[] = [];
   const errors: CalloutError[] = [];
 
-  try {
-    const workerData = await fetchFromWorker();
+  // 2. Sequential for-of loop with 400ms delay between wallets
+  for (let i = 0; i < wallets.length; i++) {
+    const wallet = wallets[i];
+    const label = labelMap[wallet] ?? `${wallet.slice(0, 4)}…${wallet.slice(-4)}`;
 
-    if (Array.isArray(workerData.results)) {
-      for (const item of workerData.results) {
-        const wallet = item.wallet;
-        const label = labelMap[wallet] ?? DEFAULT_WATCHLIST[wallet] ?? `${wallet.slice(0, 4)}…${wallet.slice(-4)}`;
-        const isOk = item.ok !== false && (!item.status || item.status === 200);
+    const result = await fetchSingleWallet(wallet);
 
-        if (!isOk) {
-          errors.push({
-            wallet,
-            status: item.status ?? 500,
-            message: item.error || `Upstream returned status ${item.status}`,
-          });
-          watched.push({ wallet, label, count: 0 });
-          continue;
-        }
-
-        const calloutsList = Array.isArray(item.callouts) ? item.callouts : [];
-        const count = calloutsList.length;
-
-        watched.push({ wallet, label, count });
-
-        if (count === 0) {
-          emptyWallets.push(wallet);
-        } else {
-          for (const c of calloutsList) {
-            allCallouts.push({
-              ...c,
-              callerWallet: wallet,
-              callerLabel: label,
-            });
-          }
-        }
-      }
-
-      // Sort all callouts newest first
-      allCallouts.sort((a, b) => b.createdAt - a.createdAt);
-
-      const response: CalloutsApiResponse = {
-        updatedAt: now,
-        watched,
-        callouts: allCallouts,
-        emptyWallets,
-        errors,
-      };
-
-      // Store in module memory as last-good
-      lastGoodPayload = { data: response, ts: now };
-
-      return NextResponse.json(response, {
-        status: 200,
-        headers: {
-          "Cache-Control": "public, s-maxage=60, stale-while-revalidate=120",
-        },
-      });
-    } else if (workerData.error) {
-      throw new Error(workerData.error);
-    } else {
-      throw new Error("Invalid response format from worker (missing results array)");
-    }
-  } catch (err: unknown) {
-    const errorMsg = err instanceof Error ? err.message : "Unknown proxy error";
-
-    // 2. If proxy fails (429/5xx/network) and lastGood exists, return lastGood with warning
-    if (lastGoodPayload) {
-      const fallbackResponse: CalloutsApiResponse = {
-        ...lastGoodPayload.data,
-        errors: [
-          ...lastGoodPayload.data.errors,
-          {
-            wallet: "proxy",
-            message: `Proxy error: ${errorMsg} (serving cached last-good feed)`,
-          },
-        ],
-      };
-
-      return NextResponse.json(fallbackResponse, {
-        status: 200,
-        headers: {
-          "Cache-Control": "public, s-maxage=60, stale-while-revalidate=120",
-        },
-      });
-    }
-
-    // 3. If no lastGood exists, return honest error state — NO fake rows
-    const emptyResponse: CalloutsApiResponse = {
-      updatedAt: now,
-      watched: Object.entries(labelMap).map(([wallet, label]) => ({
+    if (result.error) {
+      errors.push({
         wallet,
-        label,
-        count: 0,
-      })),
-      callouts: [],
-      emptyWallets: [],
-      errors: [
-        {
-          wallet: "proxy",
-          message: errorMsg,
-        },
-      ],
-    };
+        status: result.error.status,
+        message: result.fromCache
+          ? `${result.error.message} (serving cached data)`
+          : result.error.message,
+        ...(result.error.bodySnippet ? { bodySnippet: result.error.bodySnippet } : {}),
+      });
+    }
 
-    return NextResponse.json(emptyResponse, {
-      status: 200,
-      headers: {
-        "Cache-Control": "public, s-maxage=60, stale-while-revalidate=120",
-      },
-    });
+    if (result.empty && !result.error) {
+      emptyWallets.push(wallet);
+    }
+
+    watched.push({ wallet, label, count: result.callouts.length });
+
+    for (const c of result.callouts) {
+      allCallouts.push({
+        ...c,
+        callerWallet: wallet,
+        callerLabel: label,
+      });
+    }
+
+    // Await 400ms before next wallet
+    if (i < wallets.length - 1) {
+      await sleep(BETWEEN_WALLET_DELAY_MS);
+    }
   }
+
+  allCallouts.sort((a, b) => b.createdAt - a.createdAt);
+
+  // If widespread failure resulted in 0 callouts but we have an older lastGoodPayload, serve it with warning
+  if (allCallouts.length === 0 && lastGoodPayload && lastGoodPayload.data.callouts.length > 0) {
+    return NextResponse.json(
+      {
+        ...lastGoodPayload.data,
+        errors: errors.length > 0 ? errors : lastGoodPayload.data.errors,
+      },
+      {
+        status: 200,
+        headers: {
+          "Cache-Control": "public, s-maxage=60, stale-while-revalidate=120",
+        },
+      }
+    );
+  }
+
+  const response: CalloutsApiResponse = {
+    updatedAt: now,
+    watched,
+    callouts: allCallouts,
+    emptyWallets,
+    errors,
+  };
+
+  // 3. Store successful response in lastGoodPayload
+  lastGoodPayload = { data: response, ts: now };
+
+  return NextResponse.json(response, {
+    status: 200,
+    headers: {
+      "Cache-Control": "public, s-maxage=60, stale-while-revalidate=120",
+    },
+  });
 }
