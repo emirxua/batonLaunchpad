@@ -39,6 +39,7 @@ export const Navbar: React.FC = () => {
   const navLinks = [
     { name: "Directory", href: "/" },
     { name: "Live Callouts", href: "/callouts", icon: Flame },
+    { name: "Terminal", href: "/terminal" },
     { name: "Launchpad Hub", href: "/launchpad" },
     { name: "Leaderboard", href: "/leaderboard" },
     { name: "Submit Token", href: "/submit" },
