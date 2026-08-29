@@ -10,8 +10,6 @@ interface JupiterSwapWidgetProps {
   outputSymbol?: string;
 }
 
-const SOL_MINT = "So11111111111111111111111111111111111111112";
-
 export function JupiterSwapWidget({
   outputMint = "2vdc4owf1MPz54jJCN61y3QSKqjcPpr32wJ9qKkpump",
   outputSymbol = "BATON",
@@ -30,10 +28,9 @@ export function JupiterSwapWidget({
   const [txSuccess, setTxSuccess] = useState<string | null>(null);
 
   const fetchQuote = useCallback(
-    async (amountSol: string) => {
-      // Virgülü noktaya çevirerek float dönüşüm hatasını engelle
-      const sanitizedAmount = amountSol.replace(",", ".");
-      const val = parseFloat(sanitizedAmount);
+    async (rawAmount: string) => {
+      const sanitized = rawAmount.replace(",", ".").trim();
+      const val = parseFloat(sanitized);
 
       if (isNaN(val) || val <= 0) {
         setOutputAmount("0");
@@ -47,25 +44,19 @@ export function JupiterSwapWidget({
         setErrorMsg(null);
         const lamports = Math.floor(val * 1e9);
 
-        let res = await fetch(
-          `/api/jupiter/quote?inputMint=${SOL_MINT}&outputMint=${outputMint}&amount=${lamports}&slippageBps=50`
+        const res = await fetch(
+          `/api/jupiter/quote?outputMint=${outputMint}&amount=${lamports}`
         );
-
-        if (!res.ok) {
-          res = await fetch(
-            `https://quote-api.jup.ag/v6/quote?inputMint=${SOL_MINT}&outputMint=${outputMint}&amount=${lamports}&slippageBps=50`
-          );
-        }
-
-        if (!res.ok) throw new Error("Route not available");
         const data = await res.json();
 
         if (data && data.outAmount) {
           setQuoteResponse(data);
           const decimals = outputMint.endsWith("pump") ? 6 : 9;
-          const out = Number(data.outAmount) / Math.pow(10, decimals);
+          const outTokens = Number(data.outAmount) / Math.pow(10, decimals);
           setOutputAmount(
-            out.toLocaleString("en-US", { maximumFractionDigits: 2 })
+            outTokens >= 1000
+              ? outTokens.toLocaleString("en-US", { maximumFractionDigits: 0 })
+              : outTokens.toLocaleString("en-US", { maximumFractionDigits: 2 })
           );
           setPriceImpact(
             data.priceImpactPct
@@ -73,7 +64,7 @@ export function JupiterSwapWidget({
               : "< 0.1%"
           );
         } else {
-          throw new Error("Route not available");
+          throw new Error("No route");
         }
       } catch {
         setErrorMsg("Route not available");
@@ -89,7 +80,7 @@ export function JupiterSwapWidget({
   useEffect(() => {
     const timer = setTimeout(() => {
       fetchQuote(inputAmount);
-    }, 300);
+    }, 250);
     return () => clearTimeout(timer);
   }, [inputAmount, fetchQuote]);
 
@@ -106,27 +97,14 @@ export function JupiterSwapWidget({
       setErrorMsg(null);
       setTxSuccess(null);
 
-      const payload = {
-        quoteResponse,
-        userPublicKey: publicKey.toBase58(),
-        wrapAndUnwrapSol: true,
-        dynamicComputeUnitLimit: true,
-        prioritizationFeeLamports: "auto",
-      };
-
-      let swapRes = await fetch("/api/jupiter/swap", {
+      const swapRes = await fetch("/api/jupiter/swap", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
+        body: JSON.stringify({
+          quoteResponse,
+          userPublicKey: publicKey.toBase58(),
+        }),
       });
-
-      if (!swapRes.ok) {
-        swapRes = await fetch("https://quote-api.jup.ag/v6/swap", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(payload),
-        });
-      }
 
       const swapData = await swapRes.json();
       if (!swapData.swapTransaction) throw new Error("Transaction build failed");
@@ -155,24 +133,19 @@ export function JupiterSwapWidget({
       {/* Header */}
       <div className="px-4 py-3 border-b border-white/10 flex items-center justify-between bg-zinc-900/50">
         <div className="flex items-center gap-2">
-          <svg className="w-4 h-4 text-emerald-400 shrink-0" viewBox="0 0 24 24" fill="currentColor">
-            <circle cx="12" cy="12" r="10" fill="none" stroke="currentColor" strokeWidth="2" />
-            <path d="M7 12h10M12 7l5 5-5 5" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
-          </svg>
+          <span className="w-2 h-2 rounded-full bg-amber-400 animate-pulse" />
           <span className="text-xs font-bold text-amber-400 tracking-wide">
             OUTBID SWAP
           </span>
         </div>
         <div className="flex items-center gap-3">
-          <span className="text-[10px] text-zinc-400">
-            Powered by Jupiter
-          </span>
+          <span className="text-[10px] text-zinc-400">Powered by Jupiter</span>
           <button
             type="button"
             onClick={() => fetchQuote(inputAmount)}
             className="text-[10px] text-zinc-400 hover:text-amber-400 transition-colors cursor-pointer"
           >
-            {loadingQuote ? "REFRESHING..." : "REFRESH"}
+            {loadingQuote ? "UPDATING..." : "REFRESH"}
           </button>
         </div>
       </div>
@@ -188,7 +161,7 @@ export function JupiterSwapWidget({
             <input
               type="text"
               value={inputAmount}
-              onChange={(e) => setInputAmount(e.target.value.replace(",", "."))}
+              onChange={(e) => setInputAmount(e.target.value)}
               placeholder="0.0"
               className="bg-transparent text-lg font-bold text-zinc-100 outline-none w-full font-mono"
             />
@@ -218,7 +191,7 @@ export function JupiterSwapWidget({
         <div className="bg-zinc-900/60 border border-white/5 rounded-lg p-3">
           <div className="flex justify-between items-center text-[11px] text-zinc-400 mb-1.5">
             <span>YOU RECEIVE (ESTIMATED)</span>
-            <span className="text-emerald-400 text-[10px] font-bold">Jupiter v6 API</span>
+            <span className="text-emerald-400 text-[10px] font-bold">Best Route</span>
           </div>
           <div className="flex justify-between items-center">
             <span className="text-lg font-bold text-zinc-100 truncate">
@@ -242,7 +215,7 @@ export function JupiterSwapWidget({
           </div>
         </div>
 
-        {/* Errors / Success */}
+        {/* Status Messages */}
         {errorMsg && (
           <div className="text-[11px] text-rose-400 bg-rose-500/10 border border-rose-500/20 px-3 py-1.5 rounded">
             {errorMsg}
@@ -254,7 +227,7 @@ export function JupiterSwapWidget({
           </div>
         )}
 
-        {/* Action Button */}
+        {/* Swap Action */}
         <button
           type="button"
           onClick={handleSwap}
