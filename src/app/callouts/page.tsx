@@ -55,7 +55,7 @@ function CalloutsPageContent() {
       dedupingInterval: 30_000,
       revalidateOnFocus: false,
       revalidateOnReconnect: false,
-      errorRetryCount: 2,
+      errorRetryCount: 3,
       errorRetryInterval: 10_000,
       keepPreviousData: true,
     }
