@@ -89,24 +89,24 @@ export function JupiterSwapWidget({
   }, [outputMint]);
 
   return (
-    <div className="w-full bg-zinc-950 rounded-xl border border-white/10 flex flex-col h-[580px] overflow-hidden">
+    <div className="w-full bg-zinc-950 rounded-xl border border-white/10 flex flex-col overflow-hidden min-h-[480px] max-h-[520px]">
       {/* Header */}
-      <div className="px-4 py-3 border-b border-white/10 flex items-center justify-between bg-zinc-900/40 shrink-0">
-        <span className="font-mono text-xs font-bold text-amber-400 flex items-center gap-1.5">
+      <div className="px-4 py-3 border-b border-white/10 flex items-center justify-between bg-zinc-900/40 font-mono text-xs text-amber-400 shrink-0">
+        <span className="font-bold flex items-center gap-1.5">
           <Zap className="w-3.5 h-3.5 text-amber-400" />
           <span>JUPITER ROUTE: ${outputSymbol}</span>
         </span>
-        <span className="text-[10px] text-zinc-400 font-mono">
+        <span className="text-[10px] text-zinc-400 font-mono font-normal">
           Non-Custodial DEX · Powered by Jupiter
         </span>
       </div>
 
-      {/* Widget or Iframe Fallback */}
-      <div className="flex-1 w-full p-2 flex items-center justify-center relative">
+      {/* Terminal Alanı */}
+      <div className="p-2 w-full flex-1 flex flex-col justify-start items-center relative overflow-hidden">
         {useIframeFallback ? (
           <iframe
             src={`https://jup.ag/swap/SOL-${outputMint}?theme=dark`}
-            className="w-full h-full border-0 rounded-lg min-h-[500px]"
+            className="w-full h-full border-0 rounded-lg min-h-[440px]"
             title="Jupiter Swap"
             allow="clipboard-write"
           />
@@ -114,7 +114,7 @@ export function JupiterSwapWidget({
           <div
             id="integrated-terminal"
             ref={containerRef}
-            className="w-full h-full min-h-[500px]"
+            className="w-full h-full min-h-[440px] flex justify-center items-start"
           />
         )}
       </div>
