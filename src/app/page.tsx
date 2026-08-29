@@ -6,6 +6,7 @@ import Image from "next/image";
 import useSWR from "swr";
 import { Navbar } from "@/components/Navbar";
 import { BurnModal } from "@/components/BurnModal";
+import { HeroSpotlight } from "@/components/spotlight/HeroSpotlight";
 import { Coin } from "@/types/coin";
 import { CalloutsApiResponse, CalloutCard } from "@/lib/types/callouts";
 import { useTokenMetadataMap } from "@/hooks/useTokenMetadataMap";
@@ -474,6 +475,11 @@ export default function OutbidHomePage() {
             )}
           </div>
 
+        </section>
+
+        {/* 4.5 Hero Spotlight: Dynamic #1 Attention Leader */}
+        <section>
+          <HeroSpotlight onBoostCoin={(c) => setSelectedCoin(c)} />
         </section>
 
         {/* 5. Category Filter Pills */}
