@@ -1,53 +1,109 @@
-import { NextRequest, NextResponse } from "next/server";
-import { fetchDexTrendingTokens } from "@/lib/api/dexscreener";
-import { DexTrendingToken } from "@/lib/types/terminal";
+import { NextResponse } from "next/server";
 
-// Next.js ISR: Cache this route on server for 60 seconds
-export const revalidate = 60;
+export const revalidate = 30;
 
-export async function GET(request: NextRequest) {
+interface DexBoostItem {
+  chainId?: string;
+  tokenAddress?: string;
+}
+
+interface DexPair {
+  chainId?: string;
+  pairAddress?: string;
+  baseToken?: {
+    address: string;
+    name: string;
+    symbol: string;
+  };
+  priceUsd?: string;
+  marketCap?: number;
+  fdv?: number;
+  volume?: {
+    h24?: number;
+  };
+  priceChange?: {
+    h24?: number;
+  };
+  liquidity?: {
+    usd?: number;
+  };
+  info?: {
+    imageUrl?: string;
+  };
+}
+
+export async function GET() {
   try {
-    const { searchParams } = new URL(request.url);
-
-    const limitParam = parseInt(searchParams.get("limit") || "30", 10);
-    const limit = Math.min(50, Math.max(1, isNaN(limitParam) ? 30 : limitParam));
-
-    const minMcapParam = parseFloat(searchParams.get("minMcap") || "70000");
-    const minMcap = isNaN(minMcapParam) ? 70_000 : Math.max(0, minMcapParam);
-
-    const sortBy = searchParams.get("sortBy") || "trending";
-
-    // 1. Fetch real trending Solana tokens with >= $70,000 market cap and >= $5,000 liquidity
-    const tokens = await fetchDexTrendingTokens(minMcap, 5_000, sortBy);
-
-    // 2. Apply limit
-    const slicedTokens: DexTrendingToken[] = tokens.slice(0, limit);
-
-    return NextResponse.json(
-      {
-        success: true,
-        updatedAt: Date.now(),
-        count: slicedTokens.length,
-        tokens: slicedTokens,
+    const boostRes = await fetch("https://api.dexscreener.com/token-boosts/top/v1", {
+      next: { revalidate: 30 },
+      headers: {
+        Accept: "application/json",
       },
+    });
+
+    if (!boostRes.ok) throw new Error("DexScreener boosts error");
+    const boosts = (await boostRes.json()) as DexBoostItem[];
+
+    const solanaTokens = (Array.isArray(boosts) ? boosts : [])
+      .filter((b) => b.chainId === "solana" && b.tokenAddress)
+      .map((b) => b.tokenAddress!)
+      .slice(0, 25);
+
+    if (solanaTokens.length === 0) {
+      return NextResponse.json({ success: true, count: 0, tokens: [] });
+    }
+
+    const pairsRes = await fetch(
+      `https://api.dexscreener.com/latest/dex/tokens/${solanaTokens.join(",")}`,
       {
-        status: 200,
+        next: { revalidate: 30 },
         headers: {
-          "Cache-Control": "public, s-maxage=60, stale-while-revalidate=120",
+          Accept: "application/json",
         },
       }
     );
+
+    const pairsData = await pairsRes.json();
+    const pairs: DexPair[] = Array.isArray(pairsData.pairs) ? pairsData.pairs : [];
+
+    // Market cap >= $70,000 filter and deduplication by mint
+    const tokenMap = new Map();
+    for (const p of pairs) {
+      if (p.chainId !== "solana") continue;
+      const mcap = p.marketCap || p.fdv || 0;
+      if (mcap < 70000) continue;
+      const mint = p.baseToken?.address;
+      if (!mint) continue;
+
+      const item = {
+        mint,
+        name: p.baseToken?.name || p.baseToken?.symbol || mint.slice(0, 6),
+        symbol: p.baseToken?.symbol || "TOKEN",
+        priceUsd: parseFloat(p.priceUsd || "0"),
+        marketCap: mcap,
+        volume24h: p.volume?.h24 || 0,
+        priceChange24h: p.priceChange?.h24 || 0,
+        liquidityUsd: p.liquidity?.usd || 0,
+        iconUrl: p.info?.imageUrl || null,
+      };
+
+      const existing = tokenMap.get(mint);
+      if (!existing || item.liquidityUsd > existing.liquidityUsd) {
+        tokenMap.set(mint, item);
+      }
+    }
+
+    const filteredTokens = Array.from(tokenMap.values());
+
+    return NextResponse.json({
+      success: true,
+      count: filteredTokens.length,
+      tokens: filteredTokens,
+    });
   } catch (err: unknown) {
-    const message =
-      err instanceof Error ? err.message : "Unknown error fetching trending tokens";
+    const message = err instanceof Error ? err.message : "Trending fetch error";
     return NextResponse.json(
-      {
-        success: false,
-        updatedAt: Date.now(),
-        count: 0,
-        tokens: [],
-        error: message,
-      },
+      { success: false, count: 0, tokens: [], error: message },
       { status: 500 }
     );
   }
