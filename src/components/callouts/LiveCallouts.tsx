@@ -72,7 +72,7 @@ export const LiveCallouts: React.FC<LiveCalloutsProps> = (props) => {
   const standalone = useSWR<CalloutsApiResponse>(
     props.data === undefined ? "/api/callouts" : null,
     fetcher,
-    { refreshInterval: 12_000, keepPreviousData: true }
+    { refreshInterval: 15_000, keepPreviousData: true }
   );
 
   const data = props.data ?? standalone.data;
@@ -113,6 +113,9 @@ export const LiveCallouts: React.FC<LiveCalloutsProps> = (props) => {
               {new Date(data.updatedAt).toLocaleTimeString()}
             </span>
           )}
+          {isValidating && (
+            <span className="text-[10px] font-mono text-zinc-600 italic">syncing…</span>
+          )}
         </div>
 
         <button
@@ -144,21 +147,19 @@ export const LiveCallouts: React.FC<LiveCalloutsProps> = (props) => {
         </div>
       )}
 
-      {/* ── Errors ───────────────────────────────────────────────────── */}
+      {/* ── Errors — compact banner; feed stays visible when callouts exist ── */}
       {errors.length > 0 && (
-        <div className="p-3 rounded-xl bg-red-950/30 border border-red-800/40 space-y-1">
-          <div className="flex items-center gap-1.5 text-xs font-mono font-semibold text-red-400">
-            <AlertCircle className="w-3.5 h-3.5" />
-            Fetch errors ({errors.length})
-          </div>
-          <ul className="text-[10px] font-mono text-zinc-400 space-y-0.5 pl-5">
-            {errors.map((e, i) => (
-              <li key={i}>
-                <span className="text-zinc-500">{e.wallet.slice(0, 8)}…</span>{" "}
-                {e.status ? `HTTP ${e.status}: ` : ""}{e.message}
-              </li>
-            ))}
-          </ul>
+        <div className={`px-3 py-2 rounded-lg border flex items-start gap-2 text-[10px] font-mono ${
+          callouts.length > 0
+            ? "bg-amber-950/20 border-amber-800/30 text-amber-500"
+            : "bg-red-950/30 border-red-800/40 text-red-400"
+        }`}>
+          <AlertCircle className="w-3 h-3 shrink-0 mt-0.5" />
+          <span>
+            {errors.length} wallet{errors.length > 1 ? "s" : ""} had fetch errors
+            {errors.some((e) => e.status === 429) && " (rate limited — serving cached data where available)"}
+            {callouts.length > 0 && " — showing last good data"}
+          </span>
         </div>
       )}
 

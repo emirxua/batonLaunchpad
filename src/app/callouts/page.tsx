@@ -22,7 +22,7 @@ export default function CalloutsPage() {
   const { data, isLoading, isValidating, mutate } = useSWR<CalloutsApiResponse>(
     "/api/callouts",
     fetcher,
-    { refreshInterval: 12_000, keepPreviousData: true }
+    { refreshInterval: 15_000, keepPreviousData: true }
   );
 
   const handleCopy = (text: string) => {

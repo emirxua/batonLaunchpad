@@ -11,22 +11,50 @@ import { getWatchlistWallets, getWatchlistMap } from "@/lib/callouts/watchlist";
 
 export const dynamic = "force-dynamic";
 
-// ── Config ────────────────────────────────────────────────────────────────────
+// ── Config ─────────────────────────────────────────────────────────────────────
 
 const PROXY_BASE = process.env.CALLOUT_PROXY_BASE ?? "";
 const MAX_PAGES = 2;
 const FETCH_TIMEOUT_MS = 8000;
+/** Wallets fetched sequentially; this delay sits between each one */
+const BETWEEN_WALLET_DELAY_MS = 300;
+/** Module-level result cache TTL: 60 seconds */
+const CACHE_TTL_MS = 60_000;
 
-// ── Per-wallet fetch via CF Worker proxy ──────────────────────────────────────
+// ── Module-level memory cache (survives across requests in the same instance) ──
+
+interface WalletCacheEntry {
+  callouts: PumpCallout[];
+  empty: boolean;
+}
+
+const walletCache = new Map<string, { data: WalletCacheEntry; ts: number }>();
+let globalResponseCache: { response: CalloutsApiResponse; ts: number } | null = null;
+
+function getCachedWallet(wallet: string): WalletCacheEntry | null {
+  const entry = walletCache.get(wallet);
+  if (!entry) return null;
+  // We allow using stale last-good data on errors
+  return entry.data;
+}
+
+function setCachedWallet(wallet: string, data: WalletCacheEntry) {
+  walletCache.set(wallet, { data, ts: Date.now() });
+}
+
+// ── Per-wallet fetch ───────────────────────────────────────────────────────────
 
 interface WalletResult {
   callouts: PumpCallout[];
   empty: boolean;
+  fromCache?: boolean;
   error?: { status?: number; message: string; bodySnippet?: string };
 }
 
 async function fetchWalletCallouts(wallet: string): Promise<WalletResult> {
   if (!PROXY_BASE) {
+    const cached = getCachedWallet(wallet);
+    if (cached) return { ...cached, fromCache: true };
     return {
       callouts: [],
       empty: true,
@@ -52,6 +80,9 @@ async function fetchWalletCallouts(wallet: string): Promise<WalletResult> {
       text = await res.text();
     } catch (err) {
       clearTimeout(timer);
+      // Network / timeout — return last-good cache if available
+      const cached = getCachedWallet(wallet);
+      if (cached) return { ...cached, fromCache: true };
       return {
         callouts: allCallouts,
         empty: allCallouts.length === 0,
@@ -60,7 +91,24 @@ async function fetchWalletCallouts(wallet: string): Promise<WalletResult> {
     }
     clearTimeout(timer);
 
+    if (res.status === 429) {
+      // Rate limited — fall back to last-good cached data for this wallet
+      const cached = getCachedWallet(wallet);
+      if (cached) return { ...cached, fromCache: true };
+      return {
+        callouts: allCallouts,
+        empty: allCallouts.length === 0,
+        error: {
+          status: 429,
+          message: "Proxy rate limited (429) — no cached data for this wallet",
+          bodySnippet: text.slice(0, 200),
+        },
+      };
+    }
+
     if (!res.ok) {
+      const cached = getCachedWallet(wallet);
+      if (cached) return { ...cached, fromCache: true };
       return {
         callouts: allCallouts,
         empty: allCallouts.length === 0,
@@ -76,6 +124,8 @@ async function fetchWalletCallouts(wallet: string): Promise<WalletResult> {
     try {
       data = JSON.parse(text) as PumpCalloutListResponse;
     } catch {
+      const cached = getCachedWallet(wallet);
+      if (cached) return { ...cached, fromCache: true };
       return {
         callouts: allCallouts,
         empty: allCallouts.length === 0,
@@ -95,32 +145,33 @@ async function fetchWalletCallouts(wallet: string): Promise<WalletResult> {
     pageToken = data.nextPageToken;
   }
 
-  return { callouts: allCallouts, empty: allCallouts.length === 0 };
+  // Success — store in per-wallet cache
+  const result: WalletCacheEntry = { callouts: allCallouts, empty: allCallouts.length === 0 };
+  setCachedWallet(wallet, result);
+  return result;
 }
 
-// ── Batch runner: N items per batch, delayMs between batches ─────────────────
+// ── Delay helper ───────────────────────────────────────────────────────────────
 
-async function runInBatches<T, R>(
-  items: T[],
-  batchSize: number,
-  delayMs: number,
-  fn: (item: T) => Promise<R>
-): Promise<PromiseSettledResult<R>[]> {
-  const results: PromiseSettledResult<R>[] = [];
-  for (let i = 0; i < items.length; i += batchSize) {
-    const batch = items.slice(i, i + batchSize);
-    const batchResults = await Promise.allSettled(batch.map(fn));
-    results.push(...batchResults);
-    if (i + batchSize < items.length) {
-      await new Promise<void>((r) => setTimeout(r, delayMs));
-    }
-  }
-  return results;
+function sleep(ms: number) {
+  return new Promise<void>((r) => setTimeout(r, ms));
 }
 
-// ── GET handler ───────────────────────────────────────────────────────────────
+// ── GET handler ────────────────────────────────────────────────────────────────
 
 export async function GET() {
+  const now = Date.now();
+
+  // 1. If within 60s of last full response, serve immediately from memory
+  if (globalResponseCache && now - globalResponseCache.ts < CACHE_TTL_MS) {
+    return NextResponse.json(globalResponseCache.response, {
+      status: 200,
+      headers: {
+        "Cache-Control": "public, s-maxage=60, stale-while-revalidate=120",
+      },
+    });
+  }
+
   const wallets = getWatchlistWallets();
   const labelMap = getWatchlistMap();
 
@@ -129,61 +180,71 @@ export async function GET() {
   const emptyWallets: string[] = [];
   const errors: CalloutError[] = [];
 
-  // 3-wallet batches, 200 ms gap — keeps Worker request rate sane
-  const rawResults = await runInBatches(
-    wallets,
-    3,
-    200,
-    async (wallet) => ({
-      wallet,
-      label: labelMap[wallet] ?? wallet.slice(0, 8) + "…",
-      ...(await fetchWalletCallouts(wallet)),
-    })
-  );
+  // 2. Fetch wallets SEQUENTIALLY with 300 ms gap — avoids flooding proxy
+  for (let i = 0; i < wallets.length; i++) {
+    const wallet = wallets[i];
+    const label = labelMap[wallet] ?? wallet.slice(0, 8) + "…";
 
-  for (const result of rawResults) {
-    if (result.status === "rejected") {
-      errors.push({ wallet: "unknown", message: String(result.reason) });
-      continue;
-    }
+    const result = await fetchWalletCallouts(wallet);
 
-    const { wallet, label, callouts, empty, error } = result.value;
-
-    if (error) {
+    if (result.error) {
       errors.push({
         wallet,
-        status: error.status,
-        message: error.message,
-        ...(error.bodySnippet ? { bodySnippet: error.bodySnippet } : {}),
+        status: result.error.status,
+        message: result.fromCache
+          ? `${result.error.message} (serving cached)`
+          : result.error.message,
+        ...(result.error.bodySnippet ? { bodySnippet: result.error.bodySnippet } : {}),
       });
     }
 
-    // 200 + empty array → emptyWallets (e.g. alonalon), NOT an error
-    if (empty && !error) emptyWallets.push(wallet);
+    // 200 + empty → emptyWallets; 429 with fallback cache → still include callouts
+    if (result.empty && !result.error) emptyWallets.push(wallet);
 
-    watched.push({ wallet, label, count: callouts.length });
+    watched.push({ wallet, label, count: result.callouts.length });
 
-    for (const c of callouts) {
+    for (const c of result.callouts) {
       allCallouts.push({ ...c, callerWallet: wallet, callerLabel: label });
+    }
+
+    if (i < wallets.length - 1) {
+      await sleep(BETWEEN_WALLET_DELAY_MS);
     }
   }
 
   allCallouts.sort((a, b) => b.createdAt - a.createdAt);
 
+  // If this run produced 0 callouts due to widespread failures, but we have an older global cache, use that
+  if (allCallouts.length === 0 && globalResponseCache && globalResponseCache.response.callouts.length > 0) {
+    return NextResponse.json(
+      {
+        ...globalResponseCache.response,
+        errors: errors.length > 0 ? errors : globalResponseCache.response.errors,
+      },
+      {
+        status: 200,
+        headers: {
+          "Cache-Control": "public, s-maxage=60, stale-while-revalidate=120",
+        },
+      }
+    );
+  }
+
   const response: CalloutsApiResponse = {
-    updatedAt: Date.now(),
+    updatedAt: now,
     watched,
     callouts: allCallouts,
     emptyWallets,
     errors,
   };
 
+  // Save to global cache
+  globalResponseCache = { response, ts: now };
+
   return NextResponse.json(response, {
     status: 200,
     headers: {
-      // 30 s shared cache → Vercel Edge caches between user requests,
-      // stale-while-revalidate keeps UI snappy while fresh fetch runs.
-      "Cache-Control": "public, s-maxage=30, stale-while-revalidate=59",
+      "Cache-Control": "public, s-maxage=60, stale-while-revalidate=120",
     },
   });
 }

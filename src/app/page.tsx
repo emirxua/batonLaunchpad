@@ -1,12 +1,13 @@
 "use client";
 
-import React, { useState, useMemo, useEffect, useCallback } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
+import useSWR from "swr";
 import { Navbar } from "@/components/Navbar";
 import { BurnModal } from "@/components/BurnModal";
 import { Coin } from "@/types/coin";
-import { CalloutCard } from "@/types/callouts";
+import { CalloutsApiResponse, CalloutCard } from "@/lib/types/callouts";
 import { useCoinsData } from "@/hooks/useCoinsData";
 import { useTokenStats } from "@/hooks/useTokenStats";
 import { useRecentBurns } from "@/hooks/useRecentBurns";
@@ -46,35 +47,18 @@ export default function OutbidHomePage() {
   const [inputCategory, setInputCategory] = useState("Mascots");
   const [selectedCoin, setSelectedCoin] = useState<Coin | null>(null);
   const [copiedMint, setCopiedMint] = useState<string | null>(null);
-  const [liveCallouts, setLiveCallouts] = useState<CalloutCard[]>([]);
-  const [calloutsLoading, setCalloutsLoading] = useState<boolean>(true);
 
   const { coins, isLoading: coinsLoading, refresh } = useCoinsData(15_000);
   const { totalBurned, refresh: refreshStats } = useTokenStats(15_000);
   const { recentBurns, refresh: refreshBurns } = useRecentBurns(10_000);
 
-  // Fetch live callouts for homepage showcase (first 4 cards)
-  const fetchTopCallouts = useCallback(async () => {
-    try {
-      const res = await fetch("/api/callouts", { cache: "no-store" });
-      if (res.ok) {
-        const json = await res.json();
-        // New route returns { callouts: CalloutCard[] }
-        const items: CalloutCard[] = Array.isArray(json.callouts) ? json.callouts : [];
-        setLiveCallouts(items.slice(0, 4));
-      }
-    } catch (e) {
-      console.warn("Failed to fetch homepage callouts showcase", e);
-    } finally {
-      setCalloutsLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    fetchTopCallouts();
-    const interval = setInterval(fetchTopCallouts, 12_000);
-    return () => clearInterval(interval);
-  }, [fetchTopCallouts]);
+  // Live callouts for homepage showcase — SWR with keepPreviousData so 429 doesn't blank the grid
+  const { data: calloutsData, isLoading: calloutsLoading } =
+    useSWR<CalloutsApiResponse>("/api/callouts", (url: string) => fetch(url).then((r) => r.json()), {
+      refreshInterval: 15_000,
+      keepPreviousData: true,
+    });
+  const liveCallouts: CalloutCard[] = (calloutsData?.callouts ?? []).slice(0, 4);
 
   const handleCopy = (mint: string, e: React.MouseEvent) => {
     e.stopPropagation();
@@ -311,123 +295,125 @@ export default function OutbidHomePage() {
           </div>
 
           {/* Callouts Live Grid */}
-          <div className="relative z-10 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5">
+          <div className="relative z-10">
             {calloutsLoading && liveCallouts.length === 0 ? (
-              [1, 2, 3, 4].map((idx) => (
-                <div
-                  key={idx}
-                  className="h-44 rounded-2xl bg-zinc-100 dark:bg-zinc-800/50 border border-zinc-200 dark:border-white/5 p-4 animate-pulse space-y-3"
-                >
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-xl bg-zinc-200 dark:bg-zinc-700" />
-                    <div className="space-y-1.5 flex-1">
-                      <div className="h-3.5 w-24 bg-zinc-200 dark:bg-zinc-700 rounded" />
-                      <div className="h-2.5 w-14 bg-zinc-200 dark:bg-zinc-700 rounded" />
-                    </div>
-                  </div>
-                  <div className="h-12 bg-zinc-200/60 dark:bg-zinc-700/60 rounded-xl" />
-                </div>
-              ))
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5">
+                {[1, 2, 3, 4].map((idx) => (
+                  <div
+                    key={idx}
+                    className="h-44 rounded-2xl bg-zinc-100 dark:bg-zinc-800/50 border border-zinc-200 dark:border-white/5 animate-pulse"
+                  />
+                ))}
+              </div>
+            ) : liveCallouts.length === 0 ? (
+              <div className="py-8 text-center rounded-2xl border border-zinc-200 dark:border-white/5 bg-zinc-50 dark:bg-zinc-900/30">
+                <p className="text-sm font-mono text-zinc-400">
+                  Waiting for next tracked callout
+                </p>
+                <p className="text-xs font-mono text-zinc-500 mt-1">
+                  Callers operate on a 6-hour cooldown.{" "}
+                  <Link href="/callouts" className="underline hover:text-orange-400 transition-colors">
+                    View feed →
+                  </Link>
+                </p>
+              </div>
             ) : (
-              liveCallouts.map((item, index) => (
-                <div
-                  key={item.calloutId}
-                  className="bg-[#13161C] border border-white/10 hover:border-orange-500/50 transition-all rounded-2xl p-5 shadow-lg flex flex-col justify-between space-y-4 group"
-                >
-                  {/* Caller + timestamp */}
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="flex items-center gap-2 min-w-0">
-                      <div className="w-8 h-8 rounded-full bg-orange-500/20 border border-orange-500/30 flex items-center justify-center text-xs font-bold text-orange-300 shrink-0 uppercase">
-                        {item.callerLabel.slice(0, 2)}
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5">
+                {liveCallouts.map((item, index) => (
+                  <div
+                    key={item.calloutId}
+                    className="bg-[#13161C] border border-white/10 hover:border-orange-500/50 transition-all rounded-2xl p-4 shadow-lg flex flex-col gap-3 group"
+                  >
+                    {/* Caller */}
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="flex items-center gap-2 min-w-0">
+                        <div className="w-7 h-7 rounded-full bg-orange-500/20 border border-orange-500/30 flex items-center justify-center text-[10px] font-bold text-orange-300 shrink-0 uppercase">
+                          {item.callerLabel.slice(0, 2)}
+                        </div>
+                        <span className="text-xs font-bold text-white font-mono truncate">
+                          {item.callerLabel}
+                        </span>
                       </div>
-                      <span className="text-sm font-bold text-white font-mono truncate">
-                        {item.callerLabel}
+                      <span className="shrink-0 font-mono text-[10px] text-zinc-500">
+                        #{index + 1}
                       </span>
                     </div>
-                    <span className="shrink-0 px-2 py-0.5 rounded-lg bg-white/5 border border-white/10 font-mono text-xs font-bold text-zinc-300">
-                      #{index + 1}
-                    </span>
-                  </div>
 
-                  {/* Mint + copy */}
-                  <div className="flex items-center gap-2 font-mono text-xs text-zinc-400">
-                    <span className="text-zinc-500">mint:</span>
-                    <button
-                      type="button"
-                      onClick={(e) => handleCopy(item.coinMint, e)}
-                      className="hover:text-orange-400 inline-flex items-center gap-1"
-                    >
-                      {copiedMint === item.coinMint ? (
-                        <Check className="w-3 h-3 text-emerald-400" />
-                      ) : (
-                        <Copy className="w-3 h-3" />
-                      )}
-                      {item.coinMint.slice(0, 6)}…{item.coinMint.slice(-4)}
-                    </button>
-                  </div>
+                    {/* Thesis */}
+                    {item.thesis && (
+                      <p className="text-[11px] text-zinc-300 italic line-clamp-2 leading-relaxed">
+                        &ldquo;{item.thesis}&rdquo;
+                      </p>
+                    )}
 
-                  {/* Thesis */}
-                  {item.thesis && (
-                    <p className="text-xs text-zinc-300 italic line-clamp-2 leading-relaxed">
-                      &ldquo;{item.thesis}&rdquo;
-                    </p>
-                  )}
+                    {/* Mint */}
+                    <div className="flex items-center gap-1.5 font-mono text-[10px] text-zinc-400">
+                      <span className="text-zinc-600">mint</span>
+                      <button
+                        type="button"
+                        onClick={(e) => handleCopy(item.coinMint, e)}
+                        className="hover:text-orange-400 inline-flex items-center gap-0.5 transition-colors"
+                      >
+                        {copiedMint === item.coinMint ? (
+                          <Check className="w-2.5 h-2.5 text-emerald-400" />
+                        ) : (
+                          <Copy className="w-2.5 h-2.5" />
+                        )}
+                        {item.coinMint.slice(0, 6)}…{item.coinMint.slice(-4)}
+                      </button>
+                    </div>
 
-                  {/* Stats */}
-                  <div className="grid grid-cols-2 gap-2 p-3 rounded-xl bg-black/40 border border-white/5 font-mono">
-                    <div>
-                      <div className="text-[10px] text-zinc-400 uppercase font-bold">Market Cap</div>
-                      <div className="font-bold text-white text-sm">
-                        {item.marketCap > 0 ? formatCurrency(item.marketCap) : "—"}
+                    {/* Stats: mcap + ATH */}
+                    <div className="grid grid-cols-2 gap-1.5 p-2.5 rounded-xl bg-black/40 border border-white/5 font-mono text-[10px]">
+                      <div>
+                        <div className="text-zinc-500 uppercase">Mcap</div>
+                        <div className="font-bold text-zinc-200 text-xs">
+                          {item.marketCap > 0 ? formatCurrency(item.marketCap) : "—"}
+                        </div>
+                      </div>
+                      <div>
+                        <div className="text-zinc-500 uppercase">ATH</div>
+                        <div className="font-bold text-amber-400 text-xs">
+                          {item.maxMultiplier > 0 ? `${item.maxMultiplier.toFixed(2)}x` : "—"}
+                        </div>
                       </div>
                     </div>
-                    <div>
-                      <div className="text-[10px] text-zinc-400 uppercase font-bold">Multiple</div>
-                      <div className={`font-bold text-sm flex items-center gap-0.5 ${
-                        item.multiple >= 1 ? "text-emerald-400" : "text-rose-400"
-                      }`}>
-                        {item.multiple >= 1
-                          ? <TrendingUp className="w-3.5 h-3.5" />
-                          : <TrendingDown className="w-3.5 h-3.5" />
-                        }
-                        {item.multiple > 0 ? `${item.multiple.toFixed(2)}x` : "—"}
-                      </div>
+
+                    {/* Actions */}
+                    <div className="flex items-center gap-1.5 pt-1 border-t border-white/5">
+                      <button
+                        type="button"
+                        onClick={(e) => handleBoostCallout(item, e)}
+                        className="flex-1 py-1.5 rounded-lg bg-gradient-to-r from-orange-500/80 to-amber-500/80 hover:from-orange-500 hover:to-amber-500 text-white font-mono text-[10px] font-bold flex items-center justify-center gap-1 transition-all"
+                      >
+                        <Flame className="w-3 h-3 fill-current" />
+                        Boost
+                      </button>
+                      <a
+                        href={`https://pump.fun/coin/${item.coinMint}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="p-1.5 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 text-zinc-300 hover:text-white transition-colors"
+                        title="Pump.fun"
+                      >
+                        <ExternalLink className="w-3.5 h-3.5" />
+                      </a>
+                      <a
+                        href={`https://dexscreener.com/solana/${item.coinMint}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="p-1.5 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 text-zinc-300 hover:text-white transition-colors"
+                        title="DexScreener"
+                      >
+                        <ArrowUpRight className="w-3.5 h-3.5" />
+                      </a>
                     </div>
                   </div>
-
-                  {/* Actions */}
-                  <div className="flex items-center gap-2 pt-2 border-t border-white/5">
-                    <button
-                      type="button"
-                      onClick={(e) => handleBoostCallout(item, e)}
-                      className="flex-1 py-2 px-3 rounded-xl bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white font-mono text-xs font-bold uppercase tracking-wider shadow-md shadow-orange-500/20 active:scale-95 transition-all flex items-center justify-center gap-1.5"
-                    >
-                      <Flame className="w-3.5 h-3.5 fill-current" />
-                      <span>Boost with $BATON</span>
-                    </button>
-                    <a
-                      href={`https://pump.fun/coin/${item.coinMint}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="p-2 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-zinc-300 hover:text-white transition-colors"
-                      title="Pump.fun"
-                    >
-                      <ExternalLink className="w-4 h-4" />
-                    </a>
-                    <a
-                      href={`https://dexscreener.com/solana/${item.coinMint}`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="p-2 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-zinc-300 hover:text-white transition-colors"
-                      title="DexScreener"
-                    >
-                      <ArrowUpRight className="w-4 h-4" />
-                    </a>
-                  </div>
-                </div>
-              ))
+                ))}
+              </div>
             )}
           </div>
+
         </section>
 
         {/* 5. Category Filter Pills */}
