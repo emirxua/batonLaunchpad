@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useMemo, useCallback } from "react";
 import Image from "next/image";
 import useSWR from "swr";
 import { DexTrendingToken, TerminalActiveTab } from "@/lib/types/terminal";
@@ -77,26 +77,29 @@ export const TrendingTable: React.FC<TrendingTableProps> = ({
     fetcher,
     {
       refreshInterval: 60_000,
-      keepPreviousData: true,
+      dedupingInterval: 30_000,
       revalidateOnFocus: false,
       revalidateOnReconnect: false,
+      errorRetryCount: 2,
+      errorRetryInterval: 10_000,
+      keepPreviousData: true,
     }
   );
 
-  const tokens = data?.tokens || [];
+  const tokens = useMemo(() => data?.tokens || [], [data?.tokens]);
 
-  const handleCopy = (mint: string, e: React.MouseEvent) => {
+  const handleCopy = React.useCallback((mint: string, e: React.MouseEvent) => {
     e.stopPropagation();
     navigator.clipboard.writeText(mint);
     setCopiedMint(mint);
     setTimeout(() => setCopiedMint(null), 2000);
-  };
+  }, []);
 
-  const handleTradeClick = (token: DexTrendingToken, e: React.MouseEvent) => {
+  const handleTradeClick = React.useCallback((token: DexTrendingToken, e: React.MouseEvent) => {
     e.stopPropagation();
     onSelectToken(token.mint, token.symbol);
     onTradeToken?.(token);
-  };
+  }, [onSelectToken, onTradeToken]);
 
   return (
     <div className="w-full bg-[#0D0E12] border border-white/10 rounded-2xl overflow-hidden shadow-2xl flex flex-col">
@@ -226,7 +229,7 @@ export const TrendingTable: React.FC<TrendingTableProps> = ({
                 </td>
               </tr>
             ) : (
-              tokens.map((token, index) => {
+              tokens.map((token: DexTrendingToken, index: number) => {
                 const isSelected =
                   selectedMint?.toLowerCase() === token.mint.toLowerCase();
                 const isPositive = token.priceChange24h >= 0;

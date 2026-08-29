@@ -18,32 +18,34 @@ export const CoinCard: React.FC<CoinCardProps> = React.memo(({ coin, onBurnClick
   const isPositive = coin.change24h >= 0;
   const tierInfo = getBurnTierInfo(coin.totalBurnedBaton);
   const isDiamond = tierInfo.level === "diamond";
-
-  // Generate SVG Polyline points for sparkline based on 24h change trend
-  const sparklineData =
-    coin.sparkline && coin.sparkline.length > 0
-      ? coin.sparkline
-      : isPositive
-      ? [10, 11, 13, 12, 16, 15, 19, 22]
-      : [22, 20, 18, 19, 14, 15, 11, 10];
-
-  const minVal = Math.min(...sparklineData);
-  const maxVal = Math.max(...sparklineData);
-  const range = maxVal - minVal || 1;
-
   const width = 240;
   const height = 40;
-  const padding = 4;
 
-  const points = sparklineData
-    .map((val, index) => {
-      const x = (index / (sparklineData.length - 1)) * width;
-      const y = height - padding - ((val - minVal) / range) * (height - padding * 2);
-      return `${x.toFixed(1)},${y.toFixed(1)}`;
-    })
-    .join(" ");
+  // Generate SVG Polyline points for sparkline based on 24h change trend
+  const { points, strokeColor } = React.useMemo(() => {
+    const sparklineData =
+      coin.sparkline && coin.sparkline.length > 0
+        ? coin.sparkline
+        : isPositive
+        ? [10, 11, 13, 12, 16, 15, 19, 22]
+        : [22, 20, 18, 19, 14, 15, 11, 10];
 
-  const strokeColor = isPositive ? "#22c55e" : "#ef4444";
+    const minVal = Math.min(...sparklineData);
+    const maxVal = Math.max(...sparklineData);
+    const range = maxVal - minVal || 1;
+    const padding = 4;
+
+    const pts = sparklineData
+      .map((val, index) => {
+        const x = (index / (sparklineData.length - 1)) * width;
+        const y = height - padding - ((val - minVal) / range) * (height - padding * 2);
+        return `${x.toFixed(1)},${y.toFixed(1)}`;
+      })
+      .join(" ");
+
+    const color = isPositive ? "#22c55e" : "#ef4444";
+    return { points: pts, strokeColor: color };
+  }, [coin.sparkline, isPositive, width, height]);
 
   return (
     <div

@@ -51,9 +51,12 @@ function CalloutsPageContent() {
     fetcher,
     {
       refreshInterval: 60_000,
-      keepPreviousData: true,
+      dedupingInterval: 30_000,
       revalidateOnFocus: false,
       revalidateOnReconnect: false,
+      errorRetryCount: 2,
+      errorRetryInterval: 10_000,
+      keepPreviousData: true,
     }
   );
 

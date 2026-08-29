@@ -52,9 +52,12 @@ export const MidasMarketBar: React.FC = () => {
     fetcher,
     {
       refreshInterval: 45_000,
-      keepPreviousData: true,
+      dedupingInterval: 30_000,
       revalidateOnFocus: false,
       revalidateOnReconnect: false,
+      errorRetryCount: 2,
+      errorRetryInterval: 10_000,
+      keepPreviousData: true,
     }
   );
 

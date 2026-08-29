@@ -61,9 +61,12 @@ export default function OutbidHomePage() {
       (url: string) => fetch(url).then((r) => r.json()),
       {
         refreshInterval: 60_000,
-        keepPreviousData: true,
+        dedupingInterval: 30_000,
         revalidateOnFocus: false,
         revalidateOnReconnect: false,
+        errorRetryCount: 2,
+        errorRetryInterval: 10_000,
+        keepPreviousData: true,
       }
     );
   const liveCallouts: CalloutCard[] = (calloutsData?.callouts ?? []).slice(0, 4);

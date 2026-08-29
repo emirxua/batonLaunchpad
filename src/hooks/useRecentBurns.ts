@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { RecordedBurn } from "@/app/api/burns/route";
 
-export function useRecentBurns(intervalMs: number = 10_000) {
+export function useRecentBurns(intervalMs: number = 60_000) {
   const [recentBurns, setRecentBurns] = useState<RecordedBurn[]>([]);
   const [totalRecordedBurns, setTotalRecordedBurns] = useState<number>(0);
   const [totalBurnedAmount, setTotalBurnedAmount] = useState<number>(0);

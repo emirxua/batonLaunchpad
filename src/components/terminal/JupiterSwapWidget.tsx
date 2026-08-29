@@ -103,6 +103,14 @@ export const JupiterSwapWidget: React.FC<JupiterSwapWidgetProps> = ({
       console.warn("Jupiter init error:", err);
       setIsInitializing(false);
     }
+
+    return () => {
+      try {
+        if (targetEl) targetEl.innerHTML = "";
+      } catch {
+        // ignore
+      }
+    };
   }, [isScriptLoaded, initialOutputMint]);
 
   return (

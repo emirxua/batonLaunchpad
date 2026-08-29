@@ -45,7 +45,10 @@ export default function TerminalPage() {
     lookupFetcher,
     {
       revalidateOnFocus: false,
+      revalidateOnReconnect: false,
       dedupingInterval: 30_000,
+      errorRetryCount: 2,
+      errorRetryInterval: 10_000,
     }
   );
 
