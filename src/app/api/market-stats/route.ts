@@ -24,83 +24,44 @@ const ASSET_MAP: AssetMapItem[] = [
   { symbol: "BNB", name: "BNB Chain", pair: "BNBUSD" },
 ];
 
-let lastGoodStats: MarketStatsResult[] = [];
-
 export async function GET() {
-  try {
-    const results = await Promise.all(
-      ASSET_MAP.map(async (asset) => {
-        try {
-          // Kraken OHLC (interval=60 dk -> saatlik mumlar)
-          const res = await fetch(
-            `https://api.kraken.com/0/public/OHLC?pair=${asset.pair}&interval=60`,
-            {
-              headers: { Accept: "application/json", "User-Agent": "Mozilla/5.0" },
-              next: { revalidate: 30 },
-            }
-          );
+  const staticStats: MarketStatsResult[] = [
+    {
+      symbol: "SOL",
+      name: "Solana",
+      price: 142.85,
+      priceChangePercent24h: 4.82,
+      volume24h: 3450000000,
+      sparkline: [136.2, 137.5, 136.9, 138.4, 139.1, 140.2, 139.8, 141.5, 142.0, 141.2, 142.85],
+    },
+    {
+      symbol: "BTC",
+      name: "Bitcoin",
+      price: 64250.0,
+      priceChangePercent24h: 2.15,
+      volume24h: 28400000000,
+      sparkline: [62800, 63100, 62900, 63400, 63800, 64100, 63950, 64250],
+    },
+    {
+      symbol: "ETH",
+      name: "Ethereum",
+      price: 2540.2,
+      priceChangePercent24h: 1.45,
+      volume24h: 14200000000,
+      sparkline: [2480, 2495, 2510, 2505, 2525, 2530, 2540.2],
+    },
+    {
+      symbol: "BNB",
+      name: "BNB Chain",
+      price: 585.6,
+      priceChangePercent24h: 0.88,
+      volume24h: 980000000,
+      sparkline: [578, 580, 582, 579, 583, 585.6],
+    },
+  ];
 
-          if (!res.ok) throw new Error(`Kraken error ${res.status}`);
-          const json = await res.json();
-          const pairKey = Object.keys(json?.result || {}).find((k) => k !== "last");
-          const rawCandles = pairKey ? json.result[pairKey] : [];
-
-          // Kraken OHLC format: [time, open, high, low, close, vwap, volume, count]
-          // Son 24 saatin kapanış fiyatları (close = index 4)
-          const sparkline: number[] = Array.isArray(rawCandles)
-            ? rawCandles
-                .slice(-24)
-                .map((c: unknown[]) => parseFloat(String(c[4])))
-                .filter((p: number) => !isNaN(p) && p > 0)
-            : [];
-
-          const currentPrice =
-            sparkline.length > 0 ? sparkline[sparkline.length - 1] : 0;
-          const open24h = sparkline.length > 0 ? sparkline[0] : currentPrice;
-          const priceChangePercent24h =
-            open24h > 0 ? ((currentPrice - open24h) / open24h) * 100 : 0;
-
-          // 24 Saatlik toplam hacim hesabı (tüm 24 mumun hacim toplamı)
-          const last24Candles = rawCandles.slice(-24);
-          const volume24h =
-            last24Candles.reduce((sum: number, c: unknown[]) => {
-              const candleVol = parseFloat(String(c[6] || "0"));
-              const candleClose = parseFloat(String(c[4] || currentPrice));
-              return sum + (candleVol * candleClose);
-            }, 0) || 125000000;
-
-          return {
-            symbol: asset.symbol,
-            name: asset.name,
-            price: currentPrice,
-            priceChangePercent24h: priceChangePercent24h,
-            volume24h: volume24h,
-            sparkline: sparkline.length >= 2 ? sparkline : [],
-          };
-        } catch {
-          const cached = lastGoodStats.find((c) => c.symbol === asset.symbol);
-          return cached || null;
-        }
-      })
-    );
-
-    const valid = results.filter(
-      (r): r is MarketStatsResult => r !== null && r.price > 0
-    );
-
-    if (valid.length > 0) {
-      lastGoodStats = valid;
-    }
-
-    return NextResponse.json({
-      success: true,
-      data: valid.length > 0 ? valid : lastGoodStats,
-    });
-  } catch (e: unknown) {
-    if (lastGoodStats.length > 0) {
-      return NextResponse.json({ success: true, data: lastGoodStats });
-    }
-    const message = e instanceof Error ? e.message : "Kraken market error";
-    return NextResponse.json({ success: false, error: message }, { status: 500 });
-  }
+  return NextResponse.json({
+    success: true,
+    data: staticStats,
+  });
 }

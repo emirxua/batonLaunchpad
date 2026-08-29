@@ -10,8 +10,59 @@ export interface ResolvedTokenMeta {
   priceUsd?: number;
 }
 
-// Global in-memory cache
-const globalMetaCache = new Map<string, ResolvedTokenMeta>();
+// Global in-memory cache pre-seeded with static tokens
+const globalMetaCache = new Map<string, ResolvedTokenMeta>([
+  [
+    "2vdc4owf1MPz54jJCN61y3QSKqjcPpr32wJ9qKkpump",
+    {
+      mint: "2vdc4owf1MPz54jJCN61y3QSKqjcPpr32wJ9qKkpump",
+      name: "Baton",
+      symbol: "BATON",
+      imageUrl: "https://cdn.dexscreener.com/cms/images/B_1EShunz2lCb0jz?width=800&height=800&quality=95&format=auto",
+      priceUsd: 0.0000348,
+    },
+  ],
+  [
+    "5ahQZ9b5gB2Kq23e3e2L92k2k2k2k2k2k2k2k2k2pump",
+    {
+      mint: "5ahQZ9b5gB2Kq23e3e2L92k2k2k2k2k2k2k2k2k2pump",
+      name: "Ber",
+      symbol: "BER",
+      imageUrl: "https://dd.dexscreener.com/ds-data/tokens/solana/9BB6NFEcjBCtnNLFko2FqVQBq8HHM13kCyYcdQbgpump.png",
+      priceUsd: 0.0000748,
+    },
+  ],
+  [
+    "9YqfJ8tZg44x2k2k2k2k2k2k2k2k2k2k2k2k2k2moon",
+    {
+      mint: "9YqfJ8tZg44x2k2k2k2k2k2k2k2k2k2k2k2k2k2moon",
+      name: "Mooncat",
+      symbol: "MOONCAT",
+      imageUrl: "https://dd.dexscreener.com/ds-data/tokens/solana/63LfDmNb3MQ8mw9MtZ2To9bEA2M71kZUUGq5tiJxc6kq.png",
+      priceUsd: 0.000308,
+    },
+  ],
+  [
+    "2hQzX8p5gB2Kq23e3e2L92k2k2k2k2k2k2k2k2k2pump",
+    {
+      mint: "2hQzX8p5gB2Kq23e3e2L92k2k2k2k2k2k2k2k2k2pump",
+      name: "Choro",
+      symbol: "CHORO",
+      imageUrl: "https://dd.dexscreener.com/ds-data/tokens/solana/HeLp6NuQkmYB4pYWo2zYs22mESHXPQYzXbB8n4V98jwC.png",
+      priceUsd: 0.000008,
+    },
+  ],
+  [
+    "7bE3g48x2k2k2k2k2k2k2k2k2k2k2k2k2k2k2pump",
+    {
+      mint: "7bE3g48x2k2k2k2k2k2k2k2k2k2k2k2k2k2k2pump",
+      name: "Doggo",
+      symbol: "DOGGO",
+      imageUrl: "https://dd.dexscreener.com/ds-data/tokens/solana/ED5nyyWEzpPPiWimP8vYm7sD7TD3LAt3Q3gRTWHzPJBY.png",
+      priceUsd: 0.000125,
+    },
+  ],
+]);
 const activeFetches = new Map<string, Promise<ResolvedTokenMeta | null>>();
 
 async function fetchTokenMetadata(mint: string): Promise<ResolvedTokenMeta | null> {

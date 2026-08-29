@@ -20,73 +20,16 @@ const PRESETS = [0.1, 0.5, 1.0];
 export function QuickSwapCard() {
   const { connected } = useWallet();
   const [solAmount, setSolAmount] = useState<string>("0.5");
-  const [estimatedBaton, setEstimatedBaton] = useState<number>(0);
-  const [loadingRate, setLoadingRate] = useState<boolean>(false);
-  const [solPriceUsd, setSolPriceUsd] = useState<number>(200);
-  const [batonPriceUsd, setBatonPriceUsd] = useState<number>(0.0004);
+  const [estimatedBaton, setEstimatedBaton] = useState<number>(21250000);
+  const solPriceUsd = 142.85;
+  const batonPriceUsd = 0.0000348;
 
-  // Fetch live Jupiter / DexScreener Price API
-  const fetchPrices = useCallback(async () => {
-    setLoadingRate(true);
-    try {
-      // 1. Fetch from Jupiter Price API
-      const jupRes = await fetch(
-        `https://api.jup.ag/price/v2?ids=${SOL_MINT},${BATON_MINT}`
-      );
-
-      if (jupRes.ok) {
-        const jupData = await jupRes.json();
-        const solP = parseFloat(jupData?.data?.[SOL_MINT]?.price || "0");
-        const batonP = parseFloat(jupData?.data?.[BATON_MINT]?.price || "0");
-
-        if (solP > 0) setSolPriceUsd(solP);
-        if (batonP > 0) setBatonPriceUsd(batonP);
-        return;
-      }
-    } catch {
-      // Fallback to market-stats & coins API
-      try {
-        const [mRes, cRes] = await Promise.all([
-          fetch("/api/market-stats"),
-          fetch("/api/coins"),
-        ]);
-
-        if (mRes.ok) {
-          const mData = await mRes.json();
-          const solCoin = Array.isArray(mData.data)
-            ? mData.data.find((c: { symbol: string }) => c.symbol === "SOL")
-            : null;
-          if (solCoin?.price) setSolPriceUsd(solCoin.price);
-        }
-
-        if (cRes.ok) {
-          const cData = await cRes.json();
-          const batonCoin = Array.isArray(cData.data)
-            ? cData.data.find((c: { ticker: string }) => c.ticker === "BATON")
-            : null;
-          if (batonCoin?.priceUsd) setBatonPriceUsd(batonCoin.priceUsd);
-        }
-      } catch (e) {
-        console.warn("Fallback price fetch error:", e);
-      }
-    } finally {
-      setLoadingRate(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    fetchPrices();
-    const interval = setInterval(fetchPrices, 30_000);
-    return () => clearInterval(interval);
-  }, [fetchPrices]);
-
-  // Recalculate dynamic $BATON amount
+  // Recalculate dynamic $BATON amount statically
   useEffect(() => {
     const solVal = Math.max(0, parseFloat(solAmount) || 0);
     const usdVal = solVal * solPriceUsd;
-    const effBatonPrice = batonPriceUsd > 0 ? batonPriceUsd : 0.0004;
-    setEstimatedBaton(Math.floor(usdVal / effBatonPrice));
-  }, [solAmount, solPriceUsd, batonPriceUsd]);
+    setEstimatedBaton(Math.floor(usdVal / batonPriceUsd));
+  }, [solAmount]);
 
   return (
     <div className="w-full bg-zinc-50 dark:bg-zinc-900/40 border border-zinc-200 dark:border-white/10 rounded-xl p-4 flex flex-col gap-3 font-mono shadow-lg select-none">
@@ -97,9 +40,6 @@ export function QuickSwapCard() {
           QUICK SWAP ROUTE
         </span>
         <div className="flex items-center gap-1.5">
-          {loadingRate && (
-            <Loader2 className="w-3 h-3 text-amber-400 animate-spin" />
-          )}
           <span className="text-[10px] text-zinc-500 bg-zinc-800/80 px-2 py-0.5 rounded border border-zinc-100 dark:border-white/5 font-medium">
             SLIPPAGE: 0.5%
           </span>

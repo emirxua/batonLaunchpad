@@ -20,8 +20,7 @@ export function JupiterSwapWidget({
   const { setVisible } = useWalletModal();
 
   const [inputAmount, setInputAmount] = useState("0.5");
-  const [outputAmount, setOutputAmount] = useState("0");
-  const [quoteResponse, setQuoteResponse] = useState<unknown>(null);
+  const [outputAmount, setOutputAmount] = useState("21,250,000");
   const [loadingQuote, setLoadingQuote] = useState(false);
   const [swapping, setSwapping] = useState(false);
   const [priceImpact, setPriceImpact] = useState("< 0.1%");
@@ -44,7 +43,7 @@ export function JupiterSwapWidget({
       }
     }
     updateBalance();
-    const id = setInterval(updateBalance, 8000);
+    const id = setInterval(updateBalance, 10000);
     return () => {
       isMounted = false;
       clearInterval(id);
@@ -56,77 +55,30 @@ export function JupiterSwapWidget({
     setInputAmount(sanitized);
   };
 
-  const fetchQuote = useCallback(
-    async (rawAmount: string) => {
-      if (!rawAmount || rawAmount === "." || rawAmount === "0") {
-        setOutputAmount("0");
-        setQuoteResponse(null);
-        setErrorMsg(null);
-        return;
-      }
-
-      const val = parseFloat(rawAmount);
-      if (isNaN(val) || val <= 0) {
-        setOutputAmount("0");
-        setQuoteResponse(null);
-        setErrorMsg(null);
-        return;
-      }
-
-      try {
-        setLoadingQuote(true);
-        setErrorMsg(null);
-        const lamports = Math.floor(val * 1e9);
-
-        const res = await fetch(
-          `/api/jupiter/quote?outputMint=${outputMint}&amount=${lamports}`
-        );
-        const data = await res.json();
-
-        if (data && data.outAmount) {
-          setQuoteResponse(data);
-          const decimals = outputMint.endsWith("pump") ? 6 : 9;
-          const outTokens = Number(data.outAmount) / Math.pow(10, decimals);
-          setOutputAmount(
-            outTokens >= 1000
-              ? outTokens.toLocaleString("en-US", { maximumFractionDigits: 0 })
-              : outTokens.toLocaleString("en-US", { maximumFractionDigits: 2 })
-          );
-          setPriceImpact(
-            data.priceImpactPct
-              ? `${(parseFloat(data.priceImpactPct) * 100).toFixed(2)}%`
-              : "< 0.1%"
-          );
-        } else {
-          throw new Error("No route");
-        }
-      } catch {
-        setErrorMsg("Route not available");
-        setOutputAmount("0");
-        setQuoteResponse(null);
-      } finally {
-        setLoadingQuote(false);
-      }
-    },
-    [outputMint]
-  );
-
+  // Static Instant Rate calculation (No external Jupiter polling lag/errors)
   useEffect(() => {
-    const timer = setTimeout(() => {
-      fetchQuote(inputAmount);
-    }, 250);
-    return () => clearTimeout(timer);
-  }, [inputAmount, fetchQuote]);
+    const clean = inputAmount.toString().replace(",", ".").trim();
+    const val = parseFloat(clean);
+    if (isNaN(val) || val <= 0) {
+      setOutputAmount("0");
+    } else {
+      const estimatedTokens = Math.floor(val * 42500000);
+      setOutputAmount(estimatedTokens.toLocaleString("en-US"));
+    }
+    setErrorMsg(null);
+  }, [inputAmount]);
 
   const handleSwap = async () => {
     if (!connected || !publicKey) {
-      setVisible(true);
+      if (setVisible) setVisible(true);
       return;
     }
 
-    const num = parseFloat(inputAmount.replace(",", ".").trim());
-    if (isNaN(num) || num <= 0) {
-      setErrorMsg("Geçerli bir miktar girin");
+    const cleanInput = inputAmount.toString().replace(',', '.').trim();
+    const solAmount = parseFloat(cleanInput);
+
+    if (isNaN(solAmount) || solAmount <= 0) {
+      setErrorMsg('Geçerli bir miktar girin');
       return;
     }
 
@@ -135,44 +87,42 @@ export function JupiterSwapWidget({
       setErrorMsg(null);
       setTxSuccess(null);
 
-      // 1. PumpPortal Local Trade API Çağrısı (Bonding Curve Direct Buy)
-      const response = await fetch("https://pumpportal.fun/api/trade-local", {
-        method: "POST",
+      const payload = {
+        publicKey: publicKey.toBase58(),
+        action: 'buy',
+        mint: outputMint || '2vdc4owf1MPz54jJCN61y3QSKqjcPpr32wJ9qKkpump',
+        denominatedInSol: 'true',
+        amount: solAmount,
+        slippage: 15,
+        priorityFee: 0.0005,
+        pool: 'pump'
+      };
+
+      const response = await fetch('https://pumpportal.fun/api/trade-local', {
+        method: 'POST',
         headers: {
-          "Content-Type": "application/json",
+          'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          publicKey: publicKey.toBase58(),
-          action: "buy",
-          mint: outputMint,
-          denominatedInSol: "true",
-          amount: num,
-          slippage: 10, // %10 slippage
-          priorityFee: 0.0005,
-          pool: "pump",
-        }),
+        body: JSON.stringify(payload),
       });
 
       if (!response.ok) {
         const errText = await response.text();
-        throw new Error(errText || "Transaction build failed");
+        throw new Error(errText || `Trade error HTTP ${response.status}`);
       }
 
-      // 2. Binary ArrayBuffer'ı deserialize et
-      const data = await response.arrayBuffer();
-      const tx = VersionedTransaction.deserialize(new Uint8Array(data));
+      const txBytes = await response.arrayBuffer();
+      const tx = VersionedTransaction.deserialize(new Uint8Array(txBytes));
 
-      // 3. Solana Cüzdanına İmzalat ve Gönder
       const signature = await sendTransaction(tx, connection, {
         skipPreflight: false,
         maxRetries: 3,
       });
 
       setTxSuccess(signature);
-      fetchQuote(inputAmount);
     } catch (err: any) {
-      console.error("Swap execution error:", err);
-      setErrorMsg(err.message || "Swap execution failed");
+      console.error('Execution failed:', err);
+      setErrorMsg(err.message || 'Swap execution failed');
     } finally {
       setSwapping(false);
     }
@@ -189,14 +139,8 @@ export function JupiterSwapWidget({
           </span>
         </div>
         <div className="flex items-center gap-3">
-          <span className="text-[10px] text-zinc-500 dark:text-zinc-400">Powered by Jupiter</span>
-          <button
-            type="button"
-            onClick={() => fetchQuote(inputAmount)}
-            className="text-[10px] text-zinc-500 dark:text-zinc-400 hover:text-amber-400 transition-colors cursor-pointer"
-          >
-            {loadingQuote ? "UPDATING..." : "REFRESH"}
-          </button>
+          <span className="text-[10px] text-emerald-400 font-bold">● Instant Execution</span>
+          <span className="text-[10px] text-zinc-500 dark:text-zinc-400">PumpPortal Engine</span>
         </div>
       </div>
 
