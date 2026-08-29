@@ -1,13 +1,6 @@
 import { NextResponse } from "next/server";
 
-export const revalidate = 15;
-
-interface CoinConfig {
-  id: string;
-  symbol: string;
-  name: string;
-  binanceSymbol: string;
-}
+export const revalidate = 30; // 30 saniye güvenli cache
 
 interface MarketStatsItem {
   symbol: string;
@@ -18,88 +11,124 @@ interface MarketStatsItem {
   sparkline: number[];
 }
 
-const TARGET_COINS: CoinConfig[] = [
-  { id: "solana", symbol: "SOL", name: "Solana", binanceSymbol: "SOLUSDT" },
-  { id: "bitcoin", symbol: "BTC", name: "Bitcoin", binanceSymbol: "BTCUSDT" },
-  { id: "ethereum", symbol: "ETH", name: "Ethereum", binanceSymbol: "ETHUSDT" },
-  { id: "binancecoin", symbol: "BNB", name: "BNB Chain", binanceSymbol: "BNBUSDT" },
-];
-
 let lastGoodStats: MarketStatsItem[] = [];
 
 export async function GET() {
   try {
-    // 4 Coini PARALEL VE BİRBİRİNDEN TAMAMEN BAĞIMSIZ ÇEK
-    const dataPromises = TARGET_COINS.map(async (coin): Promise<MarketStatsItem | null> => {
-      try {
-        // 1. 24h Ticker Fiyat & Yüzde
-        const tickerRes = await fetch(
-          `https://api.binance.com/api/v3/ticker/24hr?symbol=${coin.binanceSymbol}`,
-          { next: { revalidate: 15 } }
-        );
-        const ticker = await tickerRes.json();
+    // Tek istekte 4 coinin fiyatını, yüzdesini, hacmini ve 7 günlük sparkline mumlarını al
+    const url =
+      "https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&ids=solana,bitcoin,ethereum,binancecoin&sparkline=true";
 
-        // 2. Coinin KENDİNE ÖZEL 24 Saatlik Mumları
-        const klineRes = await fetch(
-          `https://api.binance.com/api/v3/klines?symbol=${coin.binanceSymbol}&interval=1h&limit=24`,
-          { next: { revalidate: 30 } }
-        );
-        const klines = await klineRes.json();
-
-        // Sadece bu coinin kapanış fiyatları
-        const coinSparkline: number[] = Array.isArray(klines)
-          ? klines.map((candle: [number, string, string, string, string]) => parseFloat(candle[4]))
-          : [];
-
-        return {
-          symbol: coin.symbol,
-          name: coin.name,
-          price: parseFloat(ticker.lastPrice || "0"),
-          priceChangePercent24h: parseFloat(ticker.priceChangePercent || "0"),
-          volume24h: parseFloat(ticker.quoteVolume || "0"),
-          sparkline: coinSparkline, // Her coinin kendi özel dizisi
-        };
-      } catch {
-        // Yedek: Binance bloklarsa o coin için özel CoinGecko isteği
-        try {
-          const cgRes = await fetch(
-            `https://api.coingecko.com/api/v3/coins/${coin.id}/market_chart?vs_currency=usd&days=1`,
-            { next: { revalidate: 60 } }
-          );
-          const cgData = await cgRes.json();
-          const prices: number[] = Array.isArray(cgData?.prices)
-            ? cgData.prices.map((p: [number, number]) => p[1])
-            : [];
-          return {
-            symbol: coin.symbol,
-            name: coin.name,
-            price: prices[prices.length - 1] || 0,
-            priceChangePercent24h: 0,
-            volume24h: 0,
-            sparkline: prices.slice(-24),
-          };
-        } catch {
-          return null;
-        }
-      }
+    const res = await fetch(url, {
+      headers: {
+        Accept: "application/json",
+        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
+      },
+      next: { revalidate: 30 },
     });
 
-    const results = await Promise.all(dataPromises);
-    const validData = results.filter((item): item is MarketStatsItem => Boolean(item && item.sparkline && item.sparkline.length > 0));
+    if (!res.ok) {
+      // Yedek Fallback: Binance tek toplu sorgu
+      try {
+        const bRes = await fetch(
+          'https://api.binance.com/api/v3/ticker/24hr?symbols=["SOLUSDT","BTCUSDT","ETHUSDT","BNBUSDT"]',
+          { next: { revalidate: 30 } }
+        );
+        if (bRes.ok) {
+          const bData = await bRes.json();
+          const bMap: Record<string, string> = {
+            SOLUSDT: "SOL",
+            BTCUSDT: "BTC",
+            ETHUSDT: "ETH",
+            BNBUSDT: "BNB",
+          };
+          const bNameMap: Record<string, string> = {
+            SOLUSDT: "Solana",
+            BTCUSDT: "Bitcoin",
+            ETHUSDT: "Ethereum",
+            BNBUSDT: "BNB Chain",
+          };
 
-    if (validData.length > 0) {
-      lastGoodStats = validData;
+          const fallbackList: MarketStatsItem[] = Array.isArray(bData)
+            ? bData.map((item: { symbol: string; lastPrice?: string; priceChangePercent?: string; quoteVolume?: string }) => {
+                const sym = bMap[item.symbol] || item.symbol;
+                const cached = lastGoodStats.find((c) => c.symbol === sym);
+                return {
+                  symbol: sym,
+                  name: bNameMap[item.symbol] || item.symbol,
+                  price: parseFloat(item.lastPrice || "0"),
+                  priceChangePercent24h: parseFloat(item.priceChangePercent || "0"),
+                  volume24h: parseFloat(item.quoteVolume || "0"),
+                  sparkline: cached?.sparkline && cached.sparkline.length > 0 ? cached.sparkline : [],
+                };
+              })
+            : [];
+
+          if (fallbackList.length > 0) {
+            return NextResponse.json({ success: true, data: fallbackList });
+          }
+        }
+      } catch {
+        // Continue to check lastGoodStats
+      }
+
+      if (lastGoodStats.length > 0) {
+        return NextResponse.json({ success: true, data: lastGoodStats });
+      }
+
+      throw new Error(`Upstream API failed: ${res.status}`);
+    }
+
+    const data = await res.json();
+
+    if (!Array.isArray(data)) {
+      if (lastGoodStats.length > 0) {
+        return NextResponse.json({ success: true, data: lastGoodStats });
+      }
+      throw new Error("Invalid response format from CoinGecko");
+    }
+
+    const order = ["solana", "bitcoin", "ethereum", "binancecoin"];
+    const symbolMap: Record<string, { symbol: string; name: string }> = {
+      solana: { symbol: "SOL", name: "Solana" },
+      bitcoin: { symbol: "BTC", name: "Bitcoin" },
+      ethereum: { symbol: "ETH", name: "Ethereum" },
+      binancecoin: { symbol: "BNB", name: "BNB Chain" },
+    };
+
+    const formatted: MarketStatsItem[] = order
+      .map((id) => {
+        const coin = data.find((c: { id: string }) => c.id === id);
+        if (!coin) return null;
+
+        // Son 24 saatlik fiyat noktaları (CoinGecko 168 eleman döner, son 24'ünü alıyoruz)
+        const rawSparkline: number[] = coin.sparkline_in_7d?.price || [];
+        const sparkline24h = rawSparkline.slice(-24);
+
+        return {
+          symbol: symbolMap[id].symbol,
+          name: symbolMap[id].name,
+          price: coin.current_price || 0,
+          priceChangePercent24h: coin.price_change_percentage_24h || 0,
+          volume24h: coin.total_volume || 0,
+          sparkline: sparkline24h.length >= 2 ? sparkline24h : [],
+        };
+      })
+      .filter((item): item is MarketStatsItem => item !== null);
+
+    if (formatted.length > 0) {
+      lastGoodStats = formatted;
     }
 
     return NextResponse.json({
       success: true,
-      data: validData.length > 0 ? validData : lastGoodStats,
+      data: formatted.length > 0 ? formatted : lastGoodStats,
     });
   } catch (err: unknown) {
     if (lastGoodStats.length > 0) {
       return NextResponse.json({ success: true, data: lastGoodStats });
     }
-    const message = err instanceof Error ? err.message : "Internal Server Error";
+    const message = err instanceof Error ? err.message : "Failed to fetch market stats";
     return NextResponse.json({ success: false, error: message }, { status: 500 });
   }
 }
