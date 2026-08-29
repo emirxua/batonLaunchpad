@@ -2,9 +2,13 @@ import { NextResponse } from "next/server";
 
 export const revalidate = 30;
 
+interface BoostItem {
+  chainId?: string;
+  tokenAddress?: string;
+}
+
 interface DexPair {
   chainId?: string;
-  pairAddress?: string;
   baseToken?: {
     address: string;
     name: string;
@@ -19,91 +23,101 @@ interface DexPair {
   info?: { imageUrl?: string };
 }
 
-// in-memory stale cache
-let lastGoodTokens: unknown[] = [];
-
-async function fetchTrendingPairs(sortBy: string, limit: number, minMcap: number) {
-  // Strategy 1: DexScreener Solana trending pairs via search (gerçek anlık trend)
-  const trendingRes = await fetch(
-    "https://api.dexscreener.com/latest/dex/search?q=solana",
-    {
-      next: { revalidate: 30 },
-      headers: { Accept: "application/json" },
-    }
-  );
-
-  if (!trendingRes.ok) throw new Error(`DexScreener search failed: ${trendingRes.status}`);
-
-  const trendingData = await trendingRes.json();
-  const pairs: DexPair[] = Array.isArray(trendingData?.pairs)
-    ? trendingData.pairs
-    : [];
-
-  // Deduplicate by baseToken.address (highest liquidity pair wins)
-  const tokenMap = new Map<
-    string,
-    {
-      mint: string;
-      name: string;
-      symbol: string;
-      priceUsd: number;
-      marketCap: number;
-      volume24h: number;
-      priceChange24h: number;
-      liquidityUsd: number;
-      iconUrl: string | null;
-    }
-  >();
-
-  for (const p of pairs) {
-    if (p.chainId !== "solana") continue;
-    const mint = p.baseToken?.address;
-    if (!mint) continue;
-
-    const mcap = p.marketCap ?? p.fdv ?? 0;
-    if (mcap < minMcap) continue;
-
-    const liquidityUsd = p.liquidity?.usd ?? 0;
-    const existing = tokenMap.get(mint);
-
-    if (!existing || liquidityUsd > existing.liquidityUsd) {
-      tokenMap.set(mint, {
-        mint,
-        name: p.baseToken?.name ?? p.baseToken?.symbol ?? mint.slice(0, 6),
-        symbol: p.baseToken?.symbol ?? "TOKEN",
-        priceUsd: parseFloat(p.priceUsd ?? "0"),
-        marketCap: mcap,
-        volume24h: p.volume?.h24 ?? 0,
-        priceChange24h: p.priceChange?.h24 ?? 0,
-        liquidityUsd,
-        iconUrl: p.info?.imageUrl ?? null,
-      });
-    }
-  }
-
-  let results = Array.from(tokenMap.values());
-
-  // Sort
-  if (sortBy === "gainers") {
-    results = results.sort((a, b) => b.priceChange24h - a.priceChange24h);
-  } else if (sortBy === "volume") {
-    results = results.sort((a, b) => b.volume24h - a.volume24h);
-  } else {
-    // trending: sort by volume (DexScreener returns by relevance but we re-sort by volume)
-    results = results.sort((a, b) => b.volume24h - a.volume24h);
-  }
-
-  return results.slice(0, limit);
+interface TokenItem {
+  mint: string;
+  name: string;
+  symbol: string;
+  priceUsd: number;
+  marketCap: number;
+  volume24h: number;
+  priceChange24h: number;
+  liquidityUsd: number;
+  iconUrl: string | null;
 }
+
+// Stale-while-revalidate in-memory cache
+let lastGoodTokens: TokenItem[] = [];
 
 export async function GET(req: Request) {
   const { searchParams } = new URL(req.url);
-  const limit = Math.min(parseInt(searchParams.get("limit") ?? "30"), 50);
   const minMcap = parseInt(searchParams.get("minMcap") ?? "70000");
+  const limit = Math.min(parseInt(searchParams.get("limit") ?? "30"), 50);
   const sortBy = searchParams.get("sortBy") ?? "trending";
 
   try {
-    const tokens = await fetchTrendingPairs(sortBy, limit, minMcap);
+    const boostRes = await fetch(
+      "https://api.dexscreener.com/token-boosts/top/v1",
+      {
+        headers: { "User-Agent": "Mozilla/5.0" },
+        next: { revalidate: 30 },
+      }
+    );
+
+    if (!boostRes.ok) throw new Error("DexScreener boosts error");
+    const boosts = (await boostRes.json()) as BoostItem[];
+
+    const solanaAddresses = (Array.isArray(boosts) ? boosts : [])
+      .filter((b) => b.chainId === "solana" && b.tokenAddress)
+      .map((b) => b.tokenAddress as string)
+      .slice(0, 30);
+
+    if (solanaAddresses.length === 0) {
+      return NextResponse.json({
+        success: true,
+        count: lastGoodTokens.length,
+        tokens: lastGoodTokens,
+      });
+    }
+
+    const pairsRes = await fetch(
+      `https://api.dexscreener.com/latest/dex/tokens/${solanaAddresses.join(",")}`,
+      {
+        headers: { "User-Agent": "Mozilla/5.0" },
+        next: { revalidate: 30 },
+      }
+    );
+    const pairsData = await pairsRes.json();
+    const pairs: DexPair[] = Array.isArray(pairsData?.pairs)
+      ? pairsData.pairs
+      : [];
+
+    // Deduplicate by mint — keep highest liquidity pair per token
+    const tokenMap = new Map<string, TokenItem>();
+    for (const p of pairs) {
+      if (p.chainId !== "solana") continue;
+      const mint = p.baseToken?.address;
+      if (!mint) continue;
+      const mcap = p.marketCap ?? p.fdv ?? 0;
+      if (mcap < minMcap) continue;
+
+      const liquidityUsd = p.liquidity?.usd ?? 0;
+      const existing = tokenMap.get(mint);
+      if (!existing || liquidityUsd > existing.liquidityUsd) {
+        tokenMap.set(mint, {
+          mint,
+          name: p.baseToken?.name ?? p.baseToken?.symbol ?? mint.slice(0, 6),
+          symbol: p.baseToken?.symbol ?? "TOKEN",
+          priceUsd: parseFloat(p.priceUsd ?? "0"),
+          marketCap: mcap,
+          volume24h: p.volume?.h24 ?? 0,
+          priceChange24h: p.priceChange?.h24 ?? 0,
+          liquidityUsd,
+          iconUrl: p.info?.imageUrl ?? null,
+        });
+      }
+    }
+
+    let tokens = Array.from(tokenMap.values());
+
+    // Apply sort
+    if (sortBy === "gainers") {
+      tokens = tokens.sort((a, b) => b.priceChange24h - a.priceChange24h);
+    } else if (sortBy === "volume") {
+      tokens = tokens.sort((a, b) => b.volume24h - a.volume24h);
+    }
+    // "trending" → preserve boost rank order (DexScreener boost list order)
+
+    tokens = tokens.slice(0, limit);
 
     if (tokens.length > 0) {
       lastGoodTokens = tokens;
