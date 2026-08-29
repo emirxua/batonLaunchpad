@@ -4,10 +4,10 @@ import React, { useState } from "react";
 import { Navbar } from "@/components/layout/Navbar";
 import { Footer } from "@/components/layout/Footer";
 import { HomeStatsBar } from "@/components/home/HomeStatsBar";
+import { LiveCalloutsFeed } from "@/components/home/LiveCalloutsFeed";
 import { KingOfHillCard } from "@/components/home/KingOfHillCard";
 import { RankedAttentionTable } from "@/components/home/RankedAttentionTable";
 import { QuickSwapCard } from "@/components/home/QuickSwapCard";
-import { LiveSignalsCompact } from "@/components/home/LiveSignalsCompact";
 import { ArcadeLobbyTeaser } from "@/components/home/ArcadeLobbyTeaser";
 import { OutbidModal } from "@/components/modals/OutbidModal";
 import { useHomeData } from "@/hooks/useHomeData";
@@ -44,7 +44,7 @@ export default function OutbidHomePage() {
       {/* 1. Navbar */}
       <Navbar />
 
-      {/* 2. Main Content Grid */}
+      {/* 2. Main Content */}
       <main className="flex-1 max-w-7xl w-full mx-auto px-4 py-6 space-y-6">
         {/* Top Live Stats Bar */}
         <HomeStatsBar
@@ -57,9 +57,16 @@ export default function OutbidHomePage() {
           onOutbidClick={() => handleOpenOutbid(top1Coin)}
         />
 
-        {/* 2-Column Split Grid */}
+        {/* ── PRIMARY FOCUS: Callouts Stream (Hero) ───────────────────── */}
+        <LiveCalloutsFeed
+          initialCallouts={recentCallouts}
+          isLoading={isLoading}
+          onBoostCoin={handleOpenOutbid}
+        />
+
+        {/* ── 2-Column Split Grid: Attention Ladder & Side Tools ───────── */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-          {/* Left Column (col-span-8): #1 King + #2-10 Ranked Table */}
+          {/* Left Column (col-span-8): #1 King + #2-10 Ranked Attention Ladder */}
           <section className="lg:col-span-8 space-y-6">
             {/* Rank #1 King of the Hill Card */}
             <KingOfHillCard
@@ -76,18 +83,12 @@ export default function OutbidHomePage() {
             />
           </section>
 
-          {/* Right Column (col-span-4): QuickSwap + Live Signals + Arcade Lobby */}
+          {/* Right Column (col-span-4): QuickSwap + Arcade Lobby */}
           <aside className="lg:col-span-4 space-y-6">
-            {/* Quick Swap Card: SOL -> BATON Route */}
+            {/* Quick Swap Card: SOL -> BATON Route via Jupiter */}
             <QuickSwapCard />
 
-            {/* Live Signals Compact Feed */}
-            <LiveSignalsCompact
-              initialCallouts={recentCallouts}
-              isLoading={isLoading}
-            />
-
-            {/* Arcade Lobby Teaser */}
+            {/* Degen Arcade Lobby Teaser */}
             <ArcadeLobbyTeaser />
           </aside>
         </div>
