@@ -8,15 +8,15 @@ import {
 } from "@/lib/types/callouts";
 import { getWatchlistMap, DEFAULT_WATCHLIST } from "@/lib/callouts/watchlist";
 
-// Next.js ISR: Cache this route on the server/edge for 90 seconds
+// 1. Next.js 90s ISR Cache
 export const revalidate = 90;
 
 const PROXY_BASE =
   process.env.CALLOUT_PROXY_BASE ||
   "https://pump-callout-proxy.emir1903topuz106.workers.dev/";
 
-// Fallback in-memory cache in case of edge network drops
-let memoryCache: CalloutsApiResponse | null = null;
+// 2. Fail-Safe: In-memory last good payload that survives across requests
+let lastGoodPayload: CalloutsApiResponse | null = null;
 
 interface WorkerWalletResult {
   wallet: string;
@@ -37,7 +37,7 @@ export async function GET() {
   const labelMap = getWatchlistMap();
 
   try {
-    // 1. Single ISR fetch to Worker with 90s cache
+    // 3. Single fetch to Worker root endpoint with 90s ISR
     const res = await fetch(PROXY_BASE, {
       headers: {
         Accept: "application/json",
@@ -60,7 +60,7 @@ export async function GET() {
     const emptyWallets: string[] = [];
     const errors: CalloutError[] = [];
 
-    // 2. Parse and combine callouts from all 10 wallets
+    // Combine all 10 wallets
     for (const item of workerData.results) {
       const wallet = item.wallet;
       const label =
@@ -98,7 +98,7 @@ export async function GET() {
       }
     }
 
-    // 3. Sort all callouts newest first (createdAt DESC)
+    // Sort newest first (createdAt DESC)
     allCallouts.sort((a, b) => b.createdAt - a.createdAt);
 
     const payload: CalloutsApiResponse = {
@@ -109,7 +109,8 @@ export async function GET() {
       errors,
     };
 
-    memoryCache = payload;
+    // Save to lastGoodPayload
+    lastGoodPayload = payload;
 
     return NextResponse.json(payload, {
       status: 200,
@@ -120,14 +121,14 @@ export async function GET() {
   } catch (err: unknown) {
     const errorMsg = err instanceof Error ? err.message : "Proxy fetch error";
 
-    // 4. Fail-safe: If Worker fails and previous cache exists, return it without wiping out UI
-    if (memoryCache) {
+    // 4. Fail-Safe: If Worker returns error/429 and lastGoodPayload exists, return it (never wipe feed to 0)
+    if (lastGoodPayload) {
       return NextResponse.json(
         {
-          ...memoryCache,
+          ...lastGoodPayload,
           errors: [
-            ...memoryCache.errors,
-            { wallet: "proxy", message: `${errorMsg} (serving cached)` },
+            ...lastGoodPayload.errors,
+            { wallet: "proxy", message: `${errorMsg} (serving last good data)` },
           ],
         },
         {
@@ -139,7 +140,7 @@ export async function GET() {
       );
     }
 
-    // 5. Cold boot fallback (no mock data)
+    // Cold boot fallback only (zero mock data)
     return NextResponse.json(
       {
         updatedAt: now,
