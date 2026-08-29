@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef } from "react";
 import { useWallet } from "@solana/wallet-adapter-react";
 
 interface JupiterSwapWidgetProps {
@@ -12,41 +12,36 @@ export function JupiterSwapWidget({
   outputMint = "2vdc4owf1MPz54jJCN61y3QSKqjcPpr32wJ9qKkpump",
   outputSymbol = "BATON",
 }: JupiterSwapWidgetProps) {
-  const [mounted, setMounted] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
   const walletContext = useWallet();
 
   useEffect(() => {
-    setMounted(true);
-  }, []);
-
-  useEffect(() => {
-    if (!mounted) return;
-
     const scriptId = "jupiter-terminal-script";
     let script = document.getElementById(scriptId) as HTMLScriptElement | null;
 
-    const initTerminal = () => {
+    const launchJupiter = () => {
       if (
         typeof window !== "undefined" &&
         (window as unknown as { Jupiter?: { init: (c: unknown) => void } })
-          .Jupiter
+          .Jupiter &&
+        containerRef.current
       ) {
         try {
-          // Hedef div'i temizle ve Jupiter'i içine yükle
-          const target = document.getElementById("integrated-terminal");
-          if (target) target.innerHTML = "";
+          // Önceki içeriği sıfırla
+          containerRef.current.innerHTML = "";
 
           (
             window as unknown as { Jupiter: { init: (c: unknown) => void } }
           ).Jupiter.init({
             displayMode: "integrated",
             integratedTargetId: "integrated-terminal",
+            endpoint: "https://api.mainnet-beta.solana.com", // Kritik: RPC bağlantısı zorunlu
             strictTokenList: false,
             defaultExplorer: "Solscan",
             enableWalletPassthrough: true,
             passthroughWalletContextState: walletContext,
             formProps: {
-              initialInputMint: "So11111111111111111111111111111111111111112",
+              initialInputMint: "So11111111111111111111111111111111111111112", // Native SOL
               initialOutputMint: outputMint,
               initialAmount: "0.1",
               fixedOutputMint: false,
@@ -57,7 +52,7 @@ export function JupiterSwapWidget({
             },
           });
         } catch (e) {
-          console.error("Jupiter initialization error:", e);
+          console.error("Jupiter load failed:", e);
         }
       }
     };
@@ -68,15 +63,21 @@ export function JupiterSwapWidget({
       script.src = "https://terminal.jup.ag/main-v3.js";
       script.async = true;
       script.onload = () => {
-        setTimeout(initTerminal, 300);
+        setTimeout(launchJupiter, 250);
       };
-      document.body.appendChild(script);
+      document.head.appendChild(script);
     } else {
-      setTimeout(initTerminal, 300);
+      setTimeout(launchJupiter, 250);
     }
-  }, [mounted, outputMint, walletContext]);
 
-  // Cüzdan bağlama passthrough senkronizasyonu
+    return () => {
+      if (containerRef.current) {
+        containerRef.current.innerHTML = "";
+      }
+    };
+  }, [outputMint, walletContext]);
+
+  // Cüzdan senkronizasyonu
   useEffect(() => {
     if (
       typeof window !== "undefined" &&
@@ -106,9 +107,13 @@ export function JupiterSwapWidget({
         </span>
       </div>
 
-      {/* Yerleşik Terminal Alanı - Harici yönlendirme yok, form doğrudan burada çalışır */}
-      <div className="w-full p-2 flex flex-col items-center justify-start min-h-[440px] bg-zinc-950 relative">
-        <div id="integrated-terminal" className="w-full h-full min-h-[420px]" />
+      {/* Yerleşik Terminal Kapsayıcısı */}
+      <div className="w-full p-2 flex flex-col items-center justify-start min-h-[460px] bg-zinc-950">
+        <div
+          id="integrated-terminal"
+          ref={containerRef}
+          className="w-full h-full min-h-[440px] flex flex-col"
+        />
       </div>
     </div>
   );
