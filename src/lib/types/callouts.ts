@@ -54,6 +54,10 @@ export interface CalloutError {
   wallet: string;
   status?: number;
   message: string;
+  /** First 200 chars of the upstream body — only present when all fallbacks return non-2xx */
+  bodySnippet?: string;
+  /** Cloudflare Ray ID from the cf-ray header — helps trace WAF blocks */
+  cfRay?: string | null;
 }
 
 export interface CalloutsApiResponse {
