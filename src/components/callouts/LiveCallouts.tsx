@@ -82,6 +82,7 @@ export const LiveCallouts: React.FC<LiveCalloutsProps> = (props) => {
       refreshInterval: 60_000,
       keepPreviousData: true,
       revalidateOnFocus: false,
+      revalidateOnReconnect: false,
     }
   );
 

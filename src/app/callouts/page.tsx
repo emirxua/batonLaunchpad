@@ -53,6 +53,7 @@ function CalloutsPageContent() {
       refreshInterval: 60_000,
       keepPreviousData: true,
       revalidateOnFocus: false,
+      revalidateOnReconnect: false,
     }
   );
 

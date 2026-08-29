@@ -17,12 +17,15 @@ const PROXY_BASE =
   process.env.CALLOUT_PROXY_BASE ||
   "https://pump-callout-proxy.emir1903topuz106.workers.dev/";
 
-const FETCH_TIMEOUT_MS = 10000;
+const FETCH_TIMEOUT_MS = 9000;
 const CACHE_TTL_MS = 60_000;
 
-// ── Module-level lastGood memory cache ─────────────────────────────────────────
+// ── SIKIYÖNETİM CACHE (Survives across all requests in the process) ─────────────
 
-let lastGoodPayload: { data: CalloutsApiResponse; ts: number } | null = null;
+let memoryCache: { timestamp: number; payload: (CalloutsApiResponse & { isStale?: boolean }) | null } = {
+  timestamp: 0,
+  payload: null,
+};
 
 // ── Worker Response Schema ─────────────────────────────────────────────────────
 
@@ -59,7 +62,7 @@ async function fetchAllCalloutsFromWorker(): Promise<WorkerPackageResponse> {
     const text = await res.text();
 
     if (!res.ok) {
-      throw new Error(`Worker HTTP ${res.status}: ${text.slice(0, 150)}`);
+      throw new Error(`Worker HTTP ${res.status}: ${text.slice(0, 120)}`);
     }
 
     const data = JSON.parse(text) as WorkerPackageResponse;
@@ -74,9 +77,9 @@ async function fetchAllCalloutsFromWorker(): Promise<WorkerPackageResponse> {
 export async function GET() {
   const now = Date.now();
 
-  // 1. Serve directly from in-memory cache if fresh (<60s)
-  if (lastGoodPayload && now - lastGoodPayload.ts < CACHE_TTL_MS) {
-    return NextResponse.json(lastGoodPayload.data, {
+  // 1. If memoryCache is fresh (<60s), DO NOT touch the proxy at all
+  if (memoryCache.payload && now - memoryCache.timestamp < CACHE_TTL_MS) {
+    return NextResponse.json(memoryCache.payload, {
       status: 200,
       headers: {
         "Cache-Control": "public, s-maxage=60, stale-while-revalidate=120",
@@ -135,16 +138,17 @@ export async function GET() {
       // 3. Sort all callouts newest first (createdAt DESC)
       allCallouts.sort((a, b) => b.createdAt - a.createdAt);
 
-      const response: CalloutsApiResponse = {
+      const response: CalloutsApiResponse & { isStale?: boolean } = {
         updatedAt: now,
         watched,
         callouts: allCallouts,
         emptyWallets,
         errors,
+        isStale: false,
       };
 
-      // Store in module memory as last-good
-      lastGoodPayload = { data: response, ts: now };
+      // 4. Update memory cache
+      memoryCache = { timestamp: now, payload: response };
 
       return NextResponse.json(response, {
         status: 200,
@@ -152,28 +156,23 @@ export async function GET() {
           "Cache-Control": "public, s-maxage=60, stale-while-revalidate=120",
         },
       });
-    } else if (workerData.error) {
-      throw new Error(workerData.error);
     } else {
       throw new Error("Invalid response format from worker (missing results array)");
     }
   } catch (err: unknown) {
-    const errorMsg = err instanceof Error ? err.message : "Unknown proxy error";
+    const errorMsg = err instanceof Error ? err.message : "Proxy fetch error";
+    console.warn("Worker proxy error:", errorMsg);
 
-    // 4. Fallback: If Worker returned 429/1015/5xx and lastGood exists, return lastGood + warning
-    if (lastGoodPayload) {
-      const fallbackResponse: CalloutsApiResponse = {
-        ...lastGoodPayload.data,
-        errors: [
-          ...lastGoodPayload.data.errors,
-          {
-            wallet: "proxy",
-            message: `Proxy rate-limited/error: ${errorMsg} (serving cached last-good feed)`,
-          },
-        ],
+    // 5. ASLA SIFIRLAMA KURALI (Fail-Safe):
+    // If Worker returned 429/500/network error and memoryCache exists:
+    // Return last good data with isStale: true. NEVER drop existing callouts!
+    if (memoryCache.payload) {
+      const fallbackPayload: CalloutsApiResponse & { isStale?: boolean } = {
+        ...memoryCache.payload,
+        isStale: true,
       };
 
-      return NextResponse.json(fallbackResponse, {
+      return NextResponse.json(fallbackPayload, {
         status: 200,
         headers: {
           "Cache-Control": "public, s-maxage=60, stale-while-revalidate=120",
@@ -181,8 +180,8 @@ export async function GET() {
       });
     }
 
-    // 5. If no lastGood exists, return honest error state — NO fake/mock rows
-    const emptyResponse: CalloutsApiResponse = {
+    // 6. Only when server has zero data at cold boot, return clean empty list
+    const emptyResponse: CalloutsApiResponse & { isStale?: boolean } = {
       updatedAt: now,
       watched: Object.entries(labelMap).map(([wallet, label]) => ({
         wallet,
@@ -197,6 +196,7 @@ export async function GET() {
           message: errorMsg,
         },
       ],
+      isStale: true,
     };
 
     return NextResponse.json(emptyResponse, {
