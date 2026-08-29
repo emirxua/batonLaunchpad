@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useRef, useState } from "react";
+import { Zap } from "lucide-react";
 
 interface JupiterSwapWidgetProps {
   outputMint?: string;
@@ -92,7 +93,8 @@ export function JupiterSwapWidget({
       {/* Header */}
       <div className="px-4 py-3 border-b border-white/10 flex items-center justify-between bg-zinc-900/40 shrink-0">
         <span className="font-mono text-xs font-bold text-amber-400 flex items-center gap-1.5">
-          ⚡ JUPITER ROUTE: ${outputSymbol}
+          <Zap className="w-3.5 h-3.5 text-amber-400" />
+          <span>JUPITER ROUTE: ${outputSymbol}</span>
         </span>
         <span className="text-[10px] text-zinc-400 font-mono">
           Non-Custodial DEX · Powered by Jupiter

@@ -58,12 +58,11 @@ export const Navbar: React.FC = () => {
     }
   };
 
-  // Navigation links — text only, no emojis
+  // 4 Essential Navigation links — text only, no badges, no emojis
   const navLinks = [
     {
       name: "Terminal",
       href: "/terminal",
-      badge: "NEW",
     },
     {
       name: "Live Callouts",
@@ -71,15 +70,11 @@ export const Navbar: React.FC = () => {
     },
     {
       name: "Directory",
-      href: "/",
+      href: "/directory",
     },
     {
       name: "Leaderboard",
       href: "/leaderboard",
-    },
-    {
-      name: "Arcade",
-      href: "/arcade",
     },
   ];
 
@@ -87,7 +82,7 @@ export const Navbar: React.FC = () => {
     <>
       <header className="w-full bg-white/95 dark:bg-[#090A0D]/95 backdrop-blur-md border-b border-zinc-200 dark:border-white/10 sticky top-0 z-40 transition-colors">
         <div className="max-w-7xl mx-auto px-4 w-full flex items-center justify-between gap-4 py-2.5 sm:py-3">
-          {/* ── Left: Logo + Navigation Links ─────────────────────────── */}
+          {/* ── Left: Logo + 4 Essential Links ─────────────────────────── */}
           <div className="flex items-center gap-4 lg:gap-8 min-w-0">
             {/* Brand Logo */}
             <Link
@@ -109,11 +104,11 @@ export const Navbar: React.FC = () => {
               </span>
             </Link>
 
-            {/* Desktop Navigation Links */}
+            {/* Desktop Navigation Links: 4 Links Only */}
             <nav className="hidden md:flex items-center gap-1.5 lg:gap-2 font-mono text-xs font-bold">
               {navLinks.map((link) => {
                 const isActive =
-                  link.href === "/"
+                  link.href === "/directory" || link.href === "/"
                     ? pathname === "/" || pathname === "/directory"
                     : pathname?.startsWith(link.href);
 
@@ -128,11 +123,6 @@ export const Navbar: React.FC = () => {
                     }`}
                   >
                     <span>{link.name}</span>
-                    {link.badge && (
-                      <span className="text-[9px] px-1.5 py-0.2 rounded-full font-black uppercase tracking-wider bg-orange-500 text-white shadow-sm shadow-orange-500/50">
-                        {link.badge}
-                      </span>
-                    )}
                   </Link>
                 );
               })}
@@ -197,7 +187,7 @@ export const Navbar: React.FC = () => {
           <div className="md:hidden border-t border-zinc-200 dark:border-white/10 bg-white/95 dark:bg-[#0D0E12]/95 backdrop-blur-xl px-4 py-3 space-y-1.5 animate-in slide-in-from-top-2 duration-150 font-mono">
             {navLinks.map((link) => {
               const isActive =
-                link.href === "/"
+                link.href === "/directory" || link.href === "/"
                   ? pathname === "/" || pathname === "/directory"
                   : pathname?.startsWith(link.href);
 
@@ -213,11 +203,6 @@ export const Navbar: React.FC = () => {
                   }`}
                 >
                   <span>{link.name}</span>
-                  {link.badge && (
-                    <span className="text-[9px] px-2 py-0.5 rounded-full font-black uppercase tracking-wider bg-orange-500 text-white">
-                      {link.badge}
-                    </span>
-                  )}
                 </Link>
               );
             })}

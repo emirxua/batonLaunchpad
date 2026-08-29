@@ -142,7 +142,7 @@ export default function TerminalPage() {
               </span>
             </div>
             <p className="text-xs font-mono text-zinc-400">
-              Real-time spot pulse, DexScreener trending Solana tokens (&gt;$50K MCAP), and direct Jupiter DEX routing.
+              Spot Market Pulse, DexScreener Trending Solana Movers (&gt;$70K MCAP), and Direct Jupiter DEX Routing.
             </p>
           </div>
 
@@ -176,9 +176,9 @@ export default function TerminalPage() {
               <div className="flex items-center gap-2 text-xs font-mono text-zinc-400">
                 <Sparkles className="w-4 h-4 text-orange-400" />
                 <span className="font-bold text-white uppercase">
-                  Trending Solana Movers
+                  DexScreener Trending Solana Movers
                 </span>
-                <span className="text-zinc-600">(&gt;$50k MCAP)</span>
+                <span className="text-zinc-600">(&gt;$70K MCAP)</span>
               </div>
               <span className="text-[11px] font-mono text-zinc-500">
                 Click any row to swap or inspect
