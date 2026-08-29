@@ -72,7 +72,11 @@ export const LiveCallouts: React.FC<LiveCalloutsProps> = (props) => {
   const standalone = useSWR<CalloutsApiResponse>(
     props.data === undefined ? "/api/callouts" : null,
     fetcher,
-    { refreshInterval: 15_000, keepPreviousData: true }
+    {
+      refreshInterval: 20_000,
+      keepPreviousData: true,
+      revalidateOnFocus: false,
+    }
   );
 
   const data = props.data ?? standalone.data;
@@ -105,7 +109,7 @@ export const LiveCallouts: React.FC<LiveCalloutsProps> = (props) => {
           </span>
           <span className="text-xs font-mono text-zinc-400">
             {callouts.length} callout{callouts.length !== 1 ? "s" : ""} from{" "}
-            {watched.filter((w) => w.count > 0).length}/{watched.length} wallets
+            {watched.filter((w) => w.count > 0).length}/{watched.length || 10} wallets
           </span>
           {data?.updatedAt && (
             <span className="hidden sm:flex items-center gap-1 text-[10px] font-mono text-zinc-600">
@@ -128,7 +132,7 @@ export const LiveCallouts: React.FC<LiveCalloutsProps> = (props) => {
         </button>
       </div>
 
-      {/* ── Wallet pills ─────────────────────────────────────────────── */}
+      {/* ── Wallet pills (chips) ─────────────────────────────────────── */}
       {watched.length > 0 && (
         <div className="flex flex-wrap gap-1.5">
           {watched.map(({ wallet, label, count }) => (
@@ -147,7 +151,7 @@ export const LiveCallouts: React.FC<LiveCalloutsProps> = (props) => {
         </div>
       )}
 
-      {/* ── Errors — compact banner; feed stays visible when callouts exist ── */}
+      {/* ── Errors — thin banner; feed stays visible when callouts exist ── */}
       {errors.length > 0 && (
         <div className={`px-3 py-2 rounded-lg border flex items-start gap-2 text-[10px] font-mono ${
           callouts.length > 0
@@ -156,9 +160,9 @@ export const LiveCallouts: React.FC<LiveCalloutsProps> = (props) => {
         }`}>
           <AlertCircle className="w-3 h-3 shrink-0 mt-0.5" />
           <span>
-            {errors.length} wallet{errors.length > 1 ? "s" : ""} had fetch errors
-            {errors.some((e) => e.status === 429) && " (rate limited — serving cached data where available)"}
-            {callouts.length > 0 && " — showing last good data"}
+            {callouts.length > 0
+              ? "Some wallets rate-limited — showing last good data"
+              : `Upstream error: ${errors[0]?.message || "Failed to load"}`}
           </span>
         </div>
       )}
