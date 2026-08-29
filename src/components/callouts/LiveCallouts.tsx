@@ -15,6 +15,7 @@ import useSWR from "swr";
 import { CalloutsApiResponse, CalloutCard } from "@/lib/types/callouts";
 import { formatCurrency } from "@/lib/utils";
 import { useTokenMetadataMap, ResolvedTokenMeta } from "@/hooks/useTokenMetadataMap";
+import { useWatchlist } from "@/lib/hooks/useWatchlist";
 import {
   ExternalLink,
   Flame,
@@ -29,6 +30,7 @@ import {
   AlertCircle,
   Radio,
   X,
+  Star,
 } from "lucide-react";
 
 const BATON_MINT = process.env.NEXT_PUBLIC_BATON_MINT_ADDRESS ?? "";
@@ -331,6 +333,9 @@ const CalloutCardItem: React.FC<CardProps> = ({
   onBoostCoin,
 }) => {
   const isUp = card.multiple >= 1;
+  const { toggleWatchCaller, isWatchedCaller, toggleWatchToken, isWatchedToken } = useWatchlist();
+  const isCallerFav = isWatchedCaller(card.callerWallet);
+  const isTokenFav = isWatchedToken(card.coinMint);
 
   const handleBoostClick = () => {
     if (!onBoostCoin) return;
@@ -347,6 +352,20 @@ const CalloutCardItem: React.FC<CardProps> = ({
       {/* Caller row */}
       <div className="flex items-center justify-between gap-2">
         <div className="flex items-center gap-2 min-w-0">
+          <button
+            type="button"
+            onClick={() => toggleWatchCaller(card.callerWallet)}
+            className="text-zinc-600 hover:text-amber-400 transition-colors p-0.5"
+            title={isCallerFav ? "Unfavorite Caller" : "Favorite Caller"}
+          >
+            <Star
+              className={`w-3.5 h-3.5 ${
+                isCallerFav
+                  ? "fill-amber-400 text-amber-400"
+                  : "text-zinc-600 hover:text-amber-400"
+              }`}
+            />
+          </button>
           <div className="w-7 h-7 rounded-full bg-zinc-800 border border-zinc-700 flex items-center justify-center text-[10px] font-bold text-zinc-300 uppercase shrink-0">
             {card.callerLabel.slice(0, 2)}
           </div>
@@ -391,9 +410,24 @@ const CalloutCardItem: React.FC<CardProps> = ({
         </p>
       )}
 
-      {/* Dynamic Target Token row: $SYMBOL (if resolved) + short mint + copy */}
+      {/* Dynamic Target Token row: $SYMBOL (if resolved) + short mint + copy + favorite */}
       <div className="flex items-center justify-between gap-2 px-2.5 py-1.5 rounded-lg bg-zinc-950/60 border border-zinc-800/60 text-[11px] font-mono">
         <div className="flex items-center gap-1.5 min-w-0">
+          <button
+            type="button"
+            onClick={() => toggleWatchToken(card.coinMint)}
+            className="text-zinc-600 hover:text-amber-400 transition-colors p-0.5 shrink-0"
+            title={isTokenFav ? "Unfavorite Token" : "Favorite Token"}
+          >
+            <Star
+              className={`w-3 h-3 ${
+                isTokenFav
+                  ? "fill-amber-400 text-amber-400"
+                  : "text-zinc-600 hover:text-amber-400"
+              }`}
+            />
+          </button>
+
           {tokenMeta?.imageUrl && (
             <div className="w-4 h-4 rounded-full overflow-hidden border border-white/10 shrink-0 bg-zinc-900">
               <Image

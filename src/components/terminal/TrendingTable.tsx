@@ -4,6 +4,7 @@ import React, { useState } from "react";
 import Image from "next/image";
 import useSWR from "swr";
 import { DexTrendingToken, TerminalActiveTab } from "@/lib/types/terminal";
+import { useWatchlist } from "@/lib/hooks/useWatchlist";
 import { formatCurrency } from "@/lib/utils";
 import {
   Flame,
@@ -16,6 +17,7 @@ import {
   ExternalLink,
   ArrowRightLeft,
   Loader2,
+  Star,
 } from "lucide-react";
 
 interface TrendingApiResponse {
@@ -64,6 +66,7 @@ export const TrendingTable: React.FC<TrendingTableProps> = ({
 }) => {
   const [activeTab, setActiveTab] = useState<TerminalActiveTab>("all");
   const [copiedMint, setCopiedMint] = useState<string | null>(null);
+  const { toggleWatchToken, isWatchedToken } = useWatchlist();
 
   // Map tab to API sortBy parameter
   const sortByParam = activeTab === "gainers" ? "gainers" : "volume";
@@ -160,7 +163,7 @@ export const TrendingTable: React.FC<TrendingTableProps> = ({
         <table className="w-full text-left font-mono text-xs border-collapse">
           <thead>
             <tr className="border-b border-white/5 bg-zinc-950/90 text-zinc-500 text-[10px] uppercase tracking-wider select-none">
-              <th className="py-3 px-4 w-12 text-center">#</th>
+              <th className="py-3 px-4 w-16 text-center">#</th>
               <th className="py-3 px-4">Token</th>
               <th className="py-3 px-4 text-right">Price</th>
               <th className="py-3 px-4 text-right">24h Change</th>
@@ -227,6 +230,7 @@ export const TrendingTable: React.FC<TrendingTableProps> = ({
                 const isSelected =
                   selectedMint?.toLowerCase() === token.mint.toLowerCase();
                 const isPositive = token.priceChange24h >= 0;
+                const isFav = isWatchedToken(token.mint);
 
                 return (
                   <tr
@@ -238,9 +242,30 @@ export const TrendingTable: React.FC<TrendingTableProps> = ({
                         : "hover:bg-white/[0.03]"
                     }`}
                   >
-                    {/* Rank */}
-                    <td className="py-3.5 px-4 text-center font-bold text-zinc-500 group-hover:text-orange-400 transition-colors">
-                      {index + 1}
+                    {/* Rank & Favorite Star */}
+                    <td className="py-3.5 px-4 text-center">
+                      <div className="flex items-center justify-center gap-1.5">
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            toggleWatchToken(token.mint);
+                          }}
+                          className="p-1 hover:scale-125 transition-transform cursor-pointer"
+                          title={isFav ? "Remove from Watchlist" : "Add to Watchlist"}
+                        >
+                          <Star
+                            className={`w-3.5 h-3.5 transition-colors ${
+                              isFav
+                                ? "fill-amber-400 text-amber-400"
+                                : "text-zinc-600 hover:text-amber-400"
+                            }`}
+                          />
+                        </button>
+                        <span className="font-bold text-zinc-500 group-hover:text-orange-400 transition-colors text-xs">
+                          {index + 1}
+                        </span>
+                      </div>
                     </td>
 
                     {/* Token Info: Logo, Symbol, Name, CA */}
