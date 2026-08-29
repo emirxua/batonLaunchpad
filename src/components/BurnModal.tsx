@@ -6,7 +6,7 @@ import { Coin } from "@/types/coin";
 import { useConnection, useWallet } from "@solana/wallet-adapter-react";
 import { useUserBatonBalance } from "@/hooks/useUserBatonBalance";
 import { prepareRealBurnTransaction } from "@/lib/burn";
-import { getBurnLevel } from "@/lib/burn-levels";
+import { getBurnTierInfo } from "@/lib/burn-levels";
 import confetti from "canvas-confetti";
 import dynamic from "next/dynamic";
 import {
@@ -20,7 +20,7 @@ import {
   Zap,
   Copy,
   Check,
-  TrendingUp,
+  Sparkles,
 } from "lucide-react";
 
 // Dynamic wallet button for unconnected state
@@ -73,6 +73,11 @@ export const BurnModal: React.FC<BurnModalProps> = ({
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [copiedCA, setCopiedCA] = useState<boolean>(false);
 
+  // Dynamic verified on-chain burn state for this specific coin
+  const [verifiedCoinBurn, setVerifiedCoinBurn] = useState<number>(
+    coin?.totalBurnedBaton || 0
+  );
+
   // Dynamic token metadata resolution
   const [dynamicMeta, setDynamicMeta] = useState<DynamicTokenMetadata | null>(
     null
@@ -84,6 +89,29 @@ export const BurnModal: React.FC<BurnModalProps> = ({
     if (!mintAddress) return "";
     return `${mintAddress.slice(0, 4)}…${mintAddress.slice(-4)}`;
   }, [mintAddress]);
+
+  // Fetch verified burns from API for this coin
+  const fetchLiveCoinBurns = useCallback(async (coinId: string, mint: string) => {
+    try {
+      const res = await fetch("/api/burns");
+      if (res.ok) {
+        const data = await res.json();
+        const records = Array.isArray(data.recentBurns) ? data.recentBurns : [];
+        const matched = records
+          .filter(
+            (b: { coinId?: string; userAddress?: string; amount?: number }) =>
+              b.coinId === coinId || b.coinId === mint
+          )
+          .reduce(
+            (sum: number, b: { amount?: number }) => sum + (Number(b.amount) || 0),
+            0
+          );
+        setVerifiedCoinBurn(matched);
+      }
+    } catch {
+      // ignore
+    }
+  }, []);
 
   // Fetch real on-chain / DexScreener / Pump metadata dynamically if coin has generic placeholder
   const resolveMetadata = useCallback(async (mint: string) => {
@@ -144,6 +172,12 @@ export const BurnModal: React.FC<BurnModalProps> = ({
       setErrorMessage(null);
       setBurnState("idle");
       setCopiedCA(false);
+      setVerifiedCoinBurn(coin.totalBurnedBaton || 0);
+
+      // Fetch dynamic verified burns from backend store
+      if (coin.id || coin.mintAddress) {
+        fetchLiveCoinBurns(coin.id, coin.mintAddress);
+      }
 
       // Check if coin already has verified metadata or needs resolution
       const hasVerifiedTicker =
@@ -168,7 +202,99 @@ export const BurnModal: React.FC<BurnModalProps> = ({
     return () => {
       document.body.style.overflow = "";
     };
-  }, [isOpen, coin, initialAmount, resolveMetadata]);
+  }, [isOpen, coin, initialAmount, resolveMetadata, fetchLiveCoinBurns]);
+
+  // ── DYNAMIC TIER CALCULATION ─────────────────────────────────────────────────
+  // Tier thresholds (exact specification):
+  // Bronze: 10,000 $BATON
+  // Silver: 50,000 $BATON
+  // Gold: 250,000 $BATON
+  // Diamond: 1,000,000+ $BATON
+
+  const currentBurned = verifiedCoinBurn; // 100% dynamic, 0 if 0
+
+  const {
+    nextTierName,
+    nextTierThreshold,
+    currentTierBase,
+    progressPercent,
+    remainingToNext,
+    simulatedTotal,
+    simulatedProgressPercent,
+    willUpgradeTier,
+    simulatedTierLabel,
+  } = useMemo(() => {
+    let nextTier = "Bronze";
+    let threshold = 10_000;
+    let base = 0;
+
+    if (currentBurned >= 1_000_000) {
+      nextTier = "Diamond (Max Tier)";
+      threshold = 1_000_000;
+      base = 1_000_000;
+    } else if (currentBurned >= 250_000) {
+      nextTier = "Diamond";
+      threshold = 1_000_000;
+      base = 250_000;
+    } else if (currentBurned >= 50_000) {
+      nextTier = "Gold";
+      threshold = 250_000;
+      base = 50_000;
+    } else if (currentBurned >= 10_000) {
+      nextTier = "Silver";
+      threshold = 50_000;
+      base = 10_000;
+    } else {
+      nextTier = "Bronze";
+      threshold = 10_000;
+      base = 0;
+    }
+
+    const remaining = Math.max(0, threshold - currentBurned);
+    const progress =
+      currentBurned >= 1_000_000
+        ? 100
+        : Math.min(
+            100,
+            Math.max(
+              0,
+              Math.round(
+                ((currentBurned - base) / (threshold - base)) * 100
+              )
+            )
+          );
+
+    // Live simulation with user entered burn amount
+    const simTotal = currentBurned + (amount > 0 ? amount : 0);
+    const simProgress =
+      simTotal >= 1_000_000
+        ? 100
+        : Math.min(
+            100,
+            Math.max(
+              0,
+              Math.round(
+                ((simTotal - base) / (threshold - base)) * 100
+              )
+            )
+          );
+
+    const currentTierInfo = getBurnTierInfo(currentBurned);
+    const simTierInfo = getBurnTierInfo(simTotal);
+    const upgrade = simTierInfo.level !== currentTierInfo.level && simTotal > currentBurned;
+
+    return {
+      nextTierName: nextTier,
+      nextTierThreshold: threshold,
+      currentTierBase: base,
+      progressPercent: progress,
+      remainingToNext: remaining,
+      simulatedTotal: simTotal,
+      simulatedProgressPercent: simProgress,
+      willUpgradeTier: upgrade,
+      simulatedTierLabel: simTierInfo.label,
+    };
+  }, [currentBurned, amount]);
 
   if (!isOpen || !coin) return null;
 
@@ -189,48 +315,6 @@ export const BurnModal: React.FC<BurnModalProps> = ({
   const modalSubtitle = displaySymbol
     ? `Burn $BATON on-chain to boost $${displaySymbol.toUpperCase()} visibility and climb rank.`
     : `Burn $BATON on-chain to boost ${shortMint} visibility and climb rank.`;
-
-  // Calculate Next Tier Progress
-  const currentBurned = coin.totalBurnedBaton || 0;
-  const currentTier = getBurnLevel(currentBurned);
-
-  let nextTierName = "Bronze";
-  let nextTierTarget = 10000;
-  let currentTierBase = 0;
-
-  if (currentTier === "diamond") {
-    nextTierName = "Max Tier (Diamond)";
-    nextTierTarget = 1000000;
-    currentTierBase = 1000000;
-  } else if (currentTier === "gold") {
-    nextTierName = "Diamond";
-    nextTierTarget = 1000000;
-    currentTierBase = 200000;
-  } else if (currentTier === "silver") {
-    nextTierName = "Gold";
-    nextTierTarget = 200000;
-    currentTierBase = 50000;
-  } else if (currentTier === "bronze") {
-    nextTierName = "Silver";
-    nextTierTarget = 50000;
-    currentTierBase = 10000;
-  }
-
-  const remainingToNext = Math.max(0, nextTierTarget - currentBurned);
-  const progressPercent =
-    currentTier === "diamond"
-      ? 100
-      : Math.min(
-          100,
-          Math.max(
-            5,
-            Math.round(
-              ((currentBurned - currentTierBase) /
-                (nextTierTarget - currentTierBase)) *
-                100
-            )
-          )
-        );
 
   const quickAmounts = [1000, 5000, 25000];
 
@@ -322,6 +406,7 @@ export const BurnModal: React.FC<BurnModalProps> = ({
       // 5. Success state & Confetti
       setTxSignature(signature);
       setBurnState("success");
+      setVerifiedCoinBurn((prev) => prev + amount);
       onSuccess?.(coin.id, amount);
       refetch();
 
@@ -530,35 +615,59 @@ export const BurnModal: React.FC<BurnModalProps> = ({
           </div>
         ) : (
           <>
-            {/* Progress Bar to Next Tier */}
-            <div className="p-3.5 rounded-xl border border-white/10 bg-zinc-900/50 space-y-2 font-mono">
+            {/* 1. Dynamic Tier Progress Bar with Live Simulation Preview */}
+            <div className="p-3.5 rounded-xl border border-white/10 bg-zinc-900/50 space-y-2.5 font-mono">
               <div className="flex items-center justify-between text-xs">
                 <div className="flex items-center gap-1.5 text-zinc-400">
                   <Zap className="w-3.5 h-3.5 text-orange-400" />
                   <span>Next Tier:</span>
                   <span className="text-white font-bold uppercase">
-                    {nextTierName}
+                    {nextTierName} ({nextTierThreshold.toLocaleString()} $BATON)
                   </span>
                 </div>
-                <span className="text-orange-400 font-bold">
-                  {progressPercent}%
-                </span>
+                <div className="flex items-center gap-1.5">
+                  <span className="text-orange-400 font-bold">
+                    {progressPercent}%
+                  </span>
+                  {amount > 0 && simulatedProgressPercent > progressPercent && (
+                    <span className="text-lime-400 text-[11px] font-bold">
+                      → {simulatedProgressPercent}%
+                    </span>
+                  )}
+                </div>
               </div>
 
-              {/* Progress Track */}
-              <div className="w-full h-2.5 rounded-full bg-zinc-950 border border-white/10 overflow-hidden p-0.5 relative">
+              {/* Progress Track: base fill + simulated boost preview */}
+              <div className="w-full h-3 rounded-full bg-zinc-950 border border-white/10 overflow-hidden p-0.5 relative flex">
+                {/* Existing Burned Base */}
                 <div
-                  className="h-full rounded-full bg-gradient-to-r from-orange-500 via-amber-400 to-lime-400 shadow-[0_0_12px_rgba(249,115,22,0.5)] transition-all duration-500"
+                  className="h-full rounded-l-full bg-gradient-to-r from-orange-500 via-amber-400 to-orange-400 shadow-[0_0_12px_rgba(249,115,22,0.5)] transition-all duration-300"
                   style={{ width: `${progressPercent}%` }}
                 />
+                {/* Simulated Boost Delta */}
+                {amount > 0 && simulatedProgressPercent > progressPercent && (
+                  <div
+                    className="h-full bg-gradient-to-r from-lime-400 to-emerald-400 animate-pulse shadow-[0_0_10px_rgba(163,230,53,0.8)] transition-all duration-300 rounded-r-full"
+                    style={{
+                      width: `${simulatedProgressPercent - progressPercent}%`,
+                    }}
+                  />
+                )}
               </div>
 
-              <div className="flex items-center justify-between text-[10px] text-zinc-400">
-                <span>Current: {currentBurned.toLocaleString()} $BATON</span>
+              {/* Dynamic Stats Row */}
+              <div className="flex items-center justify-between text-[10px] text-zinc-400 pt-0.5">
+                <span>
+                  Current:{" "}
+                  <strong className="text-zinc-200">
+                    {currentBurned.toLocaleString()} $BATON
+                  </strong>
+                </span>
+
                 {remainingToNext > 0 ? (
                   <span>
                     Remaining:{" "}
-                    <strong className="text-white font-semibold">
+                    <strong className="text-orange-400 font-semibold">
                       {remainingToNext.toLocaleString()} $BATON
                     </strong>
                   </span>
@@ -568,9 +677,20 @@ export const BurnModal: React.FC<BurnModalProps> = ({
                   </span>
                 )}
               </div>
+
+              {/* Tier Upgrade Live Banner if simulated burn achieves next rank */}
+              {willUpgradeTier && (
+                <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-lime-400/10 border border-lime-400/30 text-lime-400 text-[10px] font-bold animate-pulse">
+                  <Sparkles className="w-3 h-3 shrink-0" />
+                  <span>
+                    This burn (+{amount.toLocaleString()} $BATON) unlocks the{" "}
+                    {simulatedTierLabel} Tier!
+                  </span>
+                </div>
+              )}
             </div>
 
-            {/* Amount Input & Wallet Balance */}
+            {/* 2. Amount Input & Wallet Balance */}
             <div className="space-y-2.5 font-mono">
               <div className="flex items-center justify-between text-xs">
                 <label className="text-zinc-400 font-medium">
@@ -675,9 +795,7 @@ export const BurnModal: React.FC<BurnModalProps> = ({
                     ) : (
                       <>
                         <Flame className="w-4 h-4 fill-current" />
-                        <span>
-                          Confirm Burn 🔥
-                        </span>
+                        <span>Confirm Burn 🔥</span>
                       </>
                     )}
                   </button>

@@ -42,7 +42,7 @@ export const BURN_TIERS_CONFIG: Record<BurnLevel, BurnTierConfig> = {
     level: "gold",
     label: "Gold",
     badgeText: "✦ GOLD",
-    minBurn: 200_000,
+    minBurn: 250_000,
     color: "#ffd700",
     badgeClass: "border-[#ffd700]/50 bg-[#ffd700]/10 text-[#ffe033]",
     glowClass: "shadow-[0_0_12px_rgba(255,215,0,0.25)]",
@@ -60,7 +60,7 @@ export const BURN_TIERS_CONFIG: Record<BurnLevel, BurnTierConfig> = {
 
 export function getBurnLevel(totalBurnedBaton: number): BurnLevel {
   if (totalBurnedBaton >= 1_000_000) return "diamond";
-  if (totalBurnedBaton >= 200_000) return "gold";
+  if (totalBurnedBaton >= 250_000) return "gold";
   if (totalBurnedBaton >= 50_000) return "silver";
   if (totalBurnedBaton >= 10_000) return "bronze";
   return "none";
