@@ -31,8 +31,8 @@ export const Footer: React.FC = () => {
                 <span className="w-3/5 h-0.5 bg-zinc-900 dark:bg-white rounded-full transition-transform group-hover:scale-x-110 origin-left" />
               </div>
               <span className="font-archivo text-lg tracking-tight flex items-center select-none">
-                <span className="text-amber-500 font-black tracking-tight">OUTBID</span>
-                <span className="text-zinc-800 dark:text-zinc-200 font-bold tracking-tight">.BOND</span>
+                <span className="text-amber-500 font-bold tracking-tight">OUTBID</span>
+                <span className="text-zinc-300 font-medium tracking-tight">.BOND</span>
               </span>
             </Link>
             <p className="text-[11px] text-zinc-500 dark:text-zinc-500 max-w-sm">
@@ -81,7 +81,7 @@ export const Footer: React.FC = () => {
             <button
               type="button"
               onClick={handleCopyCA}
-              className="p-1 rounded hover:bg-zinc-200 dark:hover:bg-white/10 text-zinc-500 hover:text-zinc-900 dark:hover:text-white transition-colors ml-1"
+              className="p-1 rounded hover:bg-zinc-200 dark:hover:bg-white/10 text-zinc-500 hover:text-zinc-900 dark:hover:text-white transition-colors ml-1 cursor-pointer"
               title="Copy $BATON CA"
               aria-label="Copy $BATON CA"
             >
@@ -111,12 +111,12 @@ export const Footer: React.FC = () => {
           </div>
           <div className="flex items-center gap-4">
             <a
-              href="https://x.com/buybaton"
+              href="https://x.com/batonoutbid"
               target="_blank"
               rel="noopener noreferrer"
-              className="hover:text-zinc-900 dark:hover:text-white transition-colors"
+              className="hover:text-zinc-900 dark:hover:text-white transition-colors font-bold"
             >
-              Twitter / X
+              X
             </a>
             <span>•</span>
             <a

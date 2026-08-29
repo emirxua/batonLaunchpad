@@ -8,8 +8,13 @@ import {
   Menu,
   X,
   Wallet,
+  ExternalLink,
+  Copy,
+  Check,
 } from "lucide-react";
 import { ThemeToggle } from "@/components/ThemeToggle";
+
+const BATON_CA = "2vdc4owf1MPz54jJCN61y3QSKqjcPpr32wJ9qKkpump";
 
 // Dynamic import for WalletMultiButton to prevent SSR hydration mismatches
 const WalletMultiButton = dynamic(
@@ -33,6 +38,7 @@ const WalletMultiButton = dynamic(
 export const Navbar: React.FC = () => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
+  const [copied, setCopied] = useState(false);
   const pathname = usePathname();
 
   useEffect(() => {
@@ -43,6 +49,14 @@ export const Navbar: React.FC = () => {
   useEffect(() => {
     setMobileMenuOpen(false);
   }, [pathname]);
+
+  const handleCopyCA = () => {
+    if (typeof navigator !== "undefined") {
+      navigator.clipboard.writeText(BATON_CA);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    }
+  };
 
   // Navigation links — text only, no emojis
   const navLinks = [
@@ -73,7 +87,7 @@ export const Navbar: React.FC = () => {
     <>
       <header className="w-full bg-white/95 dark:bg-[#090A0D]/95 backdrop-blur-md border-b border-zinc-200 dark:border-white/10 sticky top-0 z-40 transition-colors">
         <div className="max-w-7xl mx-auto px-4 w-full flex items-center justify-between gap-4 py-2.5 sm:py-3">
-          {/* ── Left: Logo + 4 Essential Links ─────────────────────────── */}
+          {/* ── Left: Logo + Navigation Links ─────────────────────────── */}
           <div className="flex items-center gap-4 lg:gap-8 min-w-0">
             {/* Brand Logo */}
             <Link
@@ -95,7 +109,7 @@ export const Navbar: React.FC = () => {
               </span>
             </Link>
 
-            {/* Desktop Navigation Links: 4 Links Only */}
+            {/* Desktop Navigation Links */}
             <nav className="hidden md:flex items-center gap-1.5 lg:gap-2 font-mono text-xs font-bold">
               {navLinks.map((link) => {
                 const isActive =
@@ -125,12 +139,39 @@ export const Navbar: React.FC = () => {
             </nav>
           </div>
 
-          {/* ── Right: Theme Toggle & Select Wallet Button ───────────── */}
+          {/* ── Right: $BATON CA Badge, Theme Toggle & Select Wallet Button ─ */}
           <div className="flex items-center gap-2 sm:gap-3 flex-shrink-0">
+            {/* $BATON CA Solscan Link Badge */}
+            <div className="hidden lg:flex items-center gap-1.5 bg-zinc-100 dark:bg-zinc-900/80 border border-zinc-200 dark:border-white/10 rounded-lg px-2.5 py-1 font-mono text-[11px]">
+              <span className="font-bold text-amber-500">$BATON:</span>
+              <span className="text-zinc-400">{BATON_CA.slice(0, 4)}…{BATON_CA.slice(-4)}</span>
+              <button
+                type="button"
+                onClick={handleCopyCA}
+                className="p-0.5 hover:text-white text-zinc-500 transition-colors cursor-pointer"
+                title="Copy $BATON CA"
+              >
+                {copied ? (
+                  <Check className="w-3 h-3 text-emerald-400" />
+                ) : (
+                  <Copy className="w-3 h-3" />
+                )}
+              </button>
+              <a
+                href={`https://solscan.io/token/${BATON_CA}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="p-0.5 hover:text-amber-400 text-zinc-500 transition-colors"
+                title="View on Solscan Explorer"
+              >
+                <ExternalLink className="w-3 h-3" />
+              </a>
+            </div>
+
             {/* Theme Toggle */}
             <ThemeToggle />
 
-            {/* Select Wallet Button - Cleanly positioned inside layout */}
+            {/* Select Wallet Button */}
             <div className="flex-shrink-0">
               <WalletMultiButton />
             </div>
@@ -180,6 +221,23 @@ export const Navbar: React.FC = () => {
                 </Link>
               );
             })}
+
+            {/* Mobile CA Link */}
+            <div className="pt-2 border-t border-white/5 flex items-center justify-between text-xs text-zinc-400">
+              <span className="font-bold text-amber-500">$BATON CA:</span>
+              <div className="flex items-center gap-2">
+                <span>{BATON_CA.slice(0, 4)}…{BATON_CA.slice(-4)}</span>
+                <a
+                  href={`https://solscan.io/token/${BATON_CA}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-amber-400 hover:underline flex items-center gap-0.5"
+                >
+                  <span>Solscan</span>
+                  <ExternalLink className="w-3 h-3" />
+                </a>
+              </div>
+            </div>
           </div>
         )}
       </header>
