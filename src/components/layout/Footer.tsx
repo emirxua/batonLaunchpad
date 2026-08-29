@@ -26,13 +26,13 @@ export const Footer: React.FC = () => {
           <div className="flex flex-col gap-1.5">
             <Link href="/" className="flex items-center gap-2 group select-none">
               <div className="flex flex-col gap-1 w-5 h-3.5 justify-center">
-                <span className="w-full h-0.5 bg-zinc-900 dark:bg-white rounded-full transition-transform group-hover:scale-x-110 origin-left" />
+                <span className="w-full h-0.5 bg-zinc-50 dark:bg-zinc-900 dark:bg-white rounded-full transition-transform group-hover:scale-x-110 origin-left" />
                 <span className="w-4/5 h-0.5 bg-amber-500 rounded-full transition-transform group-hover:scale-x-125 origin-left" />
-                <span className="w-3/5 h-0.5 bg-zinc-900 dark:bg-white rounded-full transition-transform group-hover:scale-x-110 origin-left" />
+                <span className="w-3/5 h-0.5 bg-zinc-50 dark:bg-zinc-900 dark:bg-white rounded-full transition-transform group-hover:scale-x-110 origin-left" />
               </div>
               <span className="font-archivo text-lg tracking-tight flex items-center select-none">
                 <span className="text-amber-500 font-bold tracking-tight">OUTBID</span>
-                <span className="text-zinc-300 font-medium tracking-tight">.BOND</span>
+                <span className="text-zinc-700 dark:text-zinc-300 font-medium tracking-tight">.BOND</span>
               </span>
             </Link>
             <p className="text-[11px] text-zinc-500 dark:text-zinc-500 max-w-sm">

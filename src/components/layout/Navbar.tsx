@@ -90,15 +90,15 @@ export const Navbar: React.FC = () => {
               className="flex items-center gap-2 group select-none flex-shrink-0"
             >
               <div className="flex flex-col gap-1 w-5 h-3.5 justify-center">
-                <span className="w-full h-0.5 bg-zinc-900 dark:bg-white rounded-full transition-transform group-hover:scale-x-110 origin-left" />
+                <span className="w-full h-0.5 bg-zinc-50 dark:bg-zinc-900 dark:bg-white rounded-full transition-transform group-hover:scale-x-110 origin-left" />
                 <span className="w-4/5 h-0.5 bg-amber-500 rounded-full transition-transform group-hover:scale-x-125 origin-left" />
-                <span className="w-3/5 h-0.5 bg-zinc-900 dark:bg-white rounded-full transition-transform group-hover:scale-x-110 origin-left" />
+                <span className="w-3/5 h-0.5 bg-zinc-50 dark:bg-zinc-900 dark:bg-white rounded-full transition-transform group-hover:scale-x-110 origin-left" />
               </div>
               <span className="font-archivo text-lg sm:text-xl tracking-tight flex items-center select-none">
                 <span className="text-amber-500 font-bold tracking-tight">
                   OUTBID
                 </span>
-                <span className="text-zinc-300 font-medium">
+                <span className="text-zinc-700 dark:text-zinc-300 font-medium">
                   .BOND
                 </span>
               </span>
@@ -134,7 +134,7 @@ export const Navbar: React.FC = () => {
             {/* $BATON CA Solscan Link Badge */}
             <div className="hidden lg:flex items-center gap-1.5 bg-zinc-100 dark:bg-zinc-900/80 border border-zinc-200 dark:border-white/10 rounded-lg px-2.5 py-1 font-mono text-[11px]">
               <span className="font-bold text-amber-500">$BATON:</span>
-              <span className="text-zinc-400">{BATON_CA.slice(0, 4)}…{BATON_CA.slice(-4)}</span>
+              <span className="text-zinc-500 dark:text-zinc-400">{BATON_CA.slice(0, 4)}…{BATON_CA.slice(-4)}</span>
               <button
                 type="button"
                 onClick={handleCopyCA}
@@ -198,7 +198,7 @@ export const Navbar: React.FC = () => {
                   onClick={() => setMobileMenuOpen(false)}
                   className={`px-3.5 py-2.5 rounded-xl text-xs font-bold flex items-center justify-between transition-colors ${
                     isActive
-                      ? "bg-orange-500 text-white shadow-md shadow-orange-500/30"
+                      ? "bg-orange-500 text-zinc-950 dark:text-white shadow-md shadow-orange-500/30"
                       : "text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-white/5"
                   }`}
                 >
@@ -208,7 +208,7 @@ export const Navbar: React.FC = () => {
             })}
 
             {/* Mobile CA Link */}
-            <div className="pt-2 border-t border-white/5 flex items-center justify-between text-xs text-zinc-400">
+            <div className="pt-2 border-t border-zinc-100 dark:border-white/5 flex items-center justify-between text-xs text-zinc-500 dark:text-zinc-400">
               <span className="font-bold text-amber-500">$BATON CA:</span>
               <div className="flex items-center gap-2">
                 <span>{BATON_CA.slice(0, 4)}…{BATON_CA.slice(-4)}</span>

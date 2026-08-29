@@ -108,7 +108,7 @@ export const TopCallersLeaderboard: React.FC<TopCallersLeaderboardProps> = ({
             <button
               type="button"
               onClick={onClearFilter}
-              className="px-3 py-1 rounded-lg bg-orange-500 text-white text-xs font-bold hover:bg-orange-600 transition-colors"
+              className="px-3 py-1 rounded-lg bg-orange-500 text-zinc-950 dark:text-white text-xs font-bold hover:bg-orange-600 transition-colors"
             >
               Show All
             </button>
@@ -143,7 +143,7 @@ export const TopCallersLeaderboard: React.FC<TopCallersLeaderboardProps> = ({
                           ? "bg-amber-500 text-black shadow-amber-500/30"
                           : isRank2
                           ? "bg-zinc-300 dark:bg-zinc-700 text-black dark:text-white"
-                          : "bg-amber-700 text-white"
+                          : "bg-amber-700 text-zinc-950 dark:text-white"
                       }`}
                     >
                       #{caller.rank}
@@ -154,7 +154,7 @@ export const TopCallersLeaderboard: React.FC<TopCallersLeaderboardProps> = ({
                         <span>{caller.username || `Caller ${caller.wallet.slice(0, 4)}...${caller.wallet.slice(-4)}`}</span>
                         {isRank1 && <Star className="w-4 h-4 text-amber-500 fill-current" />}
                       </div>
-                      <div className="font-mono text-xs text-zinc-400 flex items-center gap-1">
+                      <div className="font-mono text-xs text-zinc-500 dark:text-zinc-400 flex items-center gap-1">
                         <span>{caller.wallet.slice(0, 4)}...{caller.wallet.slice(-4)}</span>
                         <button
                           type="button"
@@ -178,25 +178,25 @@ export const TopCallersLeaderboard: React.FC<TopCallersLeaderboardProps> = ({
                 {/* Metrics */}
                 <div className="grid grid-cols-2 gap-2 p-3 rounded-xl bg-zinc-50 dark:bg-[#1c1f26] border border-zinc-200/60 dark:border-white/5 font-mono text-xs">
                   <div>
-                    <div className="text-[10px] text-zinc-400 uppercase font-bold">Win Rate</div>
+                    <div className="text-[10px] text-zinc-500 dark:text-zinc-400 uppercase font-bold">Win Rate</div>
                     <div className="font-black text-emerald-500 text-sm font-mono-num">
                       {caller.winRate}%
                     </div>
                   </div>
                   <div>
-                    <div className="text-[10px] text-zinc-400 uppercase font-bold">Avg. ROI</div>
+                    <div className="text-[10px] text-zinc-500 dark:text-zinc-400 uppercase font-bold">Avg. ROI</div>
                     <div className="font-black text-orange-500 text-sm font-mono-num">
                       +{caller.avgRoi}%
                     </div>
                   </div>
                   <div>
-                    <div className="text-[10px] text-zinc-400 uppercase font-bold">Total Calls</div>
+                    <div className="text-[10px] text-zinc-500 dark:text-zinc-400 uppercase font-bold">Total Calls</div>
                     <div className="font-bold text-zinc-800 dark:text-zinc-200">
                       {caller.totalCalls} Calls
                     </div>
                   </div>
                   <div>
-                    <div className="text-[10px] text-zinc-400 uppercase font-bold">Volume Called</div>
+                    <div className="text-[10px] text-zinc-500 dark:text-zinc-400 uppercase font-bold">Volume Called</div>
                     <div className="font-bold text-zinc-800 dark:text-zinc-200 font-mono-num truncate">
                       {formatCurrency(caller.totalMcapCalled)}
                     </div>
@@ -227,14 +227,14 @@ export const TopCallersLeaderboard: React.FC<TopCallersLeaderboardProps> = ({
               Full Caller Rankings &amp; Reward Multipliers
             </h3>
           </div>
-          <span className="text-xs font-mono text-zinc-400 font-bold">
+          <span className="text-xs font-mono text-zinc-500 dark:text-zinc-400 font-bold">
             {callers.length} Verified Accounts
           </span>
         </div>
 
         <div className="overflow-x-auto no-scrollbar">
           <table className="w-full text-left font-mono text-xs">
-            <thead className="bg-zinc-50 dark:bg-[#111318] text-zinc-400 uppercase text-[10px] tracking-wider border-b border-zinc-200 dark:border-white/10">
+            <thead className="bg-zinc-50 dark:bg-[#111318] text-zinc-500 dark:text-zinc-400 uppercase text-[10px] tracking-wider border-b border-zinc-200 dark:border-white/10">
               <tr>
                 <th className="py-3.5 px-4 font-bold">Rank</th>
                 <th className="py-3.5 px-4 font-bold">Caller Identity</th>
@@ -268,7 +268,7 @@ export const TopCallersLeaderboard: React.FC<TopCallersLeaderboardProps> = ({
                             ? "bg-zinc-300 dark:bg-zinc-700 text-zinc-800 dark:text-zinc-200"
                             : caller.rank === 3
                             ? "bg-amber-700/20 text-amber-700"
-                            : "text-zinc-400 font-mono"
+                            : "text-zinc-500 dark:text-zinc-400 font-mono"
                         }`}
                       >
                         #{caller.rank}
@@ -285,7 +285,7 @@ export const TopCallersLeaderboard: React.FC<TopCallersLeaderboardProps> = ({
                           <div className="font-archivo text-xs sm:text-sm font-bold text-zinc-900 dark:text-white">
                             {caller.username || `Caller ${caller.wallet.slice(0, 4)}...${caller.wallet.slice(-4)}`}
                           </div>
-                          <div className="font-mono text-[11px] text-zinc-400 flex items-center gap-1">
+                          <div className="font-mono text-[11px] text-zinc-500 dark:text-zinc-400 flex items-center gap-1">
                             <span>{caller.wallet.slice(0, 4)}...{caller.wallet.slice(-4)}</span>
                             <button
                               type="button"

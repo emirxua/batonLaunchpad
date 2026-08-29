@@ -65,7 +65,7 @@ export const RecentBurns: React.FC<RecentBurnsProps> = ({
       {/* Burns Table / List */}
       {burns.length === 0 ? (
         <div className="py-12 px-4 rounded-2xl border border-dashed border-zinc-300 dark:border-line text-center space-y-3">
-          <div className="w-12 h-12 rounded-2xl bg-zinc-100 dark:bg-bg-raised text-zinc-400 dark:text-text-faint flex items-center justify-center mx-auto">
+          <div className="w-12 h-12 rounded-2xl bg-zinc-100 dark:bg-bg-raised text-zinc-500 dark:text-zinc-400 dark:text-text-faint flex items-center justify-center mx-auto">
             <Clock className="w-6 h-6" />
           </div>
           <div className="space-y-1">
@@ -81,7 +81,7 @@ export const RecentBurns: React.FC<RecentBurnsProps> = ({
         <div className="overflow-x-auto no-scrollbar">
           <table className="w-full text-left text-xs">
             <thead>
-              <tr className="text-zinc-400 dark:text-text-faint uppercase text-[11px] border-b border-zinc-200/80 dark:border-line/60">
+              <tr className="text-zinc-500 dark:text-zinc-400 dark:text-text-faint uppercase text-[11px] border-b border-zinc-200/80 dark:border-line/60">
                 <th className="py-3 px-3">Burner Wallet</th>
                 <th className="py-3 px-3">Mascot / Project</th>
                 <th className="py-3 px-3 text-right">Burned Amount</th>
@@ -146,7 +146,7 @@ export const RecentBurns: React.FC<RecentBurnsProps> = ({
                         <button
                           type="button"
                           onClick={() => handleCopy(burn.txHash)}
-                          className="p-1 rounded text-zinc-400 hover:text-zinc-900 dark:hover:text-acid transition-colors"
+                          className="p-1 rounded text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-acid transition-colors"
                           title="Copy Full TX Hash"
                         >
                           {isCopied ? (
@@ -160,7 +160,7 @@ export const RecentBurns: React.FC<RecentBurnsProps> = ({
                           href={`https://solscan.io/tx/${burn.txHash}`}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-zinc-900 dark:bg-bg-raised text-white dark:text-acid border border-zinc-900 dark:border-acid/30 hover:bg-emerald-600 dark:hover:bg-acid dark:hover:text-bg text-[11px] font-bold transition-all shadow-sm"
+                          className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-zinc-50 dark:bg-zinc-900 dark:bg-bg-raised text-zinc-950 dark:text-white dark:text-acid border border-zinc-900 dark:border-acid/30 hover:bg-emerald-600 dark:hover:bg-acid dark:hover:text-bg text-[11px] font-bold transition-all shadow-sm"
                         >
                           <span>{shortTx}</span>
                           <ArrowUpRight className="w-3 h-3 stroke-[2.5]" />
@@ -176,7 +176,7 @@ export const RecentBurns: React.FC<RecentBurnsProps> = ({
       )}
 
       {/* Footer info */}
-      <div className="pt-2 flex items-center justify-between text-xs text-zinc-400 dark:text-text-faint border-t border-zinc-200/60 dark:border-line/50">
+      <div className="pt-2 flex items-center justify-between text-xs text-zinc-500 dark:text-zinc-400 dark:text-text-faint border-t border-zinc-200/60 dark:border-line/50">
         <div className="flex items-center gap-1.5">
           <ShieldCheck className="w-3.5 h-3.5 text-emerald-600 dark:text-acid" />
           <span>Every transaction burns real SPL tokens directly from user wallets.</span>

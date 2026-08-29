@@ -138,7 +138,7 @@ export const TrackedLeaderboard: React.FC<TrackedLeaderboardProps> = ({
     <div className="flex flex-col gap-4">
       {/* ── Header ── */}
       <div className="space-y-1">
-        <h2 className="text-sm font-bold text-white font-mono tracking-wide">
+        <h2 className="text-sm font-bold text-zinc-950 dark:text-white font-mono tracking-wide">
           Tracked callers <span className="text-zinc-500">(watchlist)</span>
         </h2>
         <p className="text-[11px] text-zinc-600 font-mono leading-snug">
@@ -147,7 +147,7 @@ export const TrackedLeaderboard: React.FC<TrackedLeaderboardProps> = ({
       </div>
 
       {/* ── Disclaimer chip ── */}
-      <div className="flex items-start gap-1.5 px-2.5 py-2 rounded-lg bg-zinc-800/50 border border-zinc-700/40 text-[10px] font-mono text-zinc-500 leading-snug">
+      <div className="flex items-start gap-1.5 px-2.5 py-2 rounded-lg bg-zinc-800/50 border border-zinc-300 dark:border-zinc-700/40 text-[10px] font-mono text-zinc-500 leading-snug">
         <Info className="w-3 h-3 text-zinc-600 shrink-0 mt-0.5" />
         Score = Σ ATH×10 + likes + views/100 + calls×2. No USDC. Watchlist only.
       </div>
@@ -180,10 +180,10 @@ export const TrackedLeaderboard: React.FC<TrackedLeaderboardProps> = ({
                   isSelected
                     ? "bg-orange-500/20 border-orange-500 text-orange-200 ring-1 ring-orange-500/50 shadow-sm"
                     : row.isWatching
-                    ? "bg-zinc-900/30 border-zinc-800/40 opacity-70 hover:opacity-100 hover:border-zinc-700"
+                    ? "bg-zinc-50 dark:bg-zinc-900/30 border-zinc-200 dark:border-zinc-800/40 opacity-70 hover:opacity-100 hover:border-zinc-700"
                     : rank === 1
                     ? "bg-amber-500/8 border-amber-500/25 hover:border-amber-500/50"
-                    : "bg-zinc-900/60 border-zinc-800/60 hover:border-zinc-700"
+                    : "bg-zinc-50 dark:bg-zinc-900/60 border-zinc-200 dark:border-zinc-800/60 hover:border-zinc-700"
                 }`}
               >
                 {/* Rank */}
@@ -200,7 +200,7 @@ export const TrackedLeaderboard: React.FC<TrackedLeaderboardProps> = ({
                           : rank === 1
                           ? "text-amber-400"
                           : rank === 2
-                          ? "text-zinc-300"
+                          ? "text-zinc-700 dark:text-zinc-300"
                           : rank === 3
                           ? "text-orange-600"
                           : "text-zinc-600"
@@ -216,7 +216,7 @@ export const TrackedLeaderboard: React.FC<TrackedLeaderboardProps> = ({
                   className={`w-6 h-6 rounded-full border flex items-center justify-center text-[9px] font-bold uppercase shrink-0 ${
                     isSelected
                       ? "bg-orange-500/30 border-orange-400 text-orange-300"
-                      : "bg-zinc-800 border-zinc-700 text-zinc-400"
+                      : "bg-zinc-800 border-zinc-300 dark:border-zinc-700 text-zinc-500 dark:text-zinc-400"
                   }`}
                 >
                   {row.label.slice(0, 2)}
@@ -227,7 +227,7 @@ export const TrackedLeaderboard: React.FC<TrackedLeaderboardProps> = ({
                   <div className="flex items-center gap-1.5">
                     <span
                       className={`font-bold truncate ${
-                        isSelected ? "text-orange-300" : "text-zinc-100"
+                        isSelected ? "text-orange-300" : "text-zinc-900 dark:text-zinc-100"
                       }`}
                     >
                       {row.label}
@@ -261,8 +261,8 @@ export const TrackedLeaderboard: React.FC<TrackedLeaderboardProps> = ({
                 <div className="flex flex-col items-end gap-0.5 shrink-0 text-right">
                   {/* callCount + best ATH */}
                   <div className="flex items-center gap-2">
-                    <span className="text-zinc-400">
-                      <span className="font-bold text-zinc-200">
+                    <span className="text-zinc-500 dark:text-zinc-400">
+                      <span className="font-bold text-zinc-800 dark:text-zinc-200">
                         {row.callCount}
                       </span>{" "}
                       calls

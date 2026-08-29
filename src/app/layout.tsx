@@ -73,8 +73,7 @@ export default function RootLayout({
     <html
       lang="en"
       suppressHydrationWarning
-      className={`dark ${archivoBlack.variable} ${spaceGrotesk.variable} ${jetbrainsMono.variable}`}
-      style={{ colorScheme: "dark" }}
+      className={`${archivoBlack.variable} ${spaceGrotesk.variable} ${jetbrainsMono.variable}`}
     >
       <head>
         <link rel="manifest" href="/manifest.json" />
@@ -83,7 +82,7 @@ export default function RootLayout({
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
         <meta name="apple-mobile-web-app-title" content="Outbid" />
       </head>
-      <body className="bg-zinc-950 text-zinc-100 antialiased min-h-screen overflow-x-hidden selection:bg-acid selection:text-zinc-950">
+      <body className="bg-zinc-50 dark:bg-zinc-950 text-zinc-900 dark:text-zinc-100 antialiased min-h-screen overflow-x-hidden selection:bg-acid selection:text-zinc-950 dark:text-white">
         <ThemeProvider attribute="class" defaultTheme="dark" enableSystem={false}>
           <WalletContextProvider>{children}</WalletContextProvider>
         </ThemeProvider>

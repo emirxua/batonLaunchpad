@@ -111,7 +111,7 @@ export function LiveCalloutsFeed({
   };
 
   return (
-    <section className="w-full bg-zinc-900/60 border border-amber-500/30 rounded-2xl p-5 sm:p-6 shadow-2xl relative overflow-hidden font-mono space-y-4">
+    <section className="w-full bg-zinc-50 dark:bg-zinc-900/60 border border-amber-500/30 rounded-2xl p-5 sm:p-6 shadow-2xl relative overflow-hidden font-mono space-y-4">
       {/* Ambient glow in corner */}
       <div
         className="pointer-events-none absolute -top-16 -right-16 w-64 h-64 rounded-full bg-amber-500/10 blur-3xl"
@@ -119,18 +119,18 @@ export function LiveCalloutsFeed({
       />
 
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-white/5 relative z-10">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-zinc-100 dark:border-white/5 relative z-10">
         <div className="space-y-1">
           <div className="flex items-center gap-2">
             <Radio className="w-4 h-4 text-rose-500 animate-pulse" />
             <h2 className="text-sm sm:text-base font-bold text-amber-400 uppercase tracking-wider">
               TRACKED CALLER SIGNALS
             </h2>
-            <span className="px-2 py-0.5 rounded bg-zinc-800 border border-white/5 text-[10px] text-zinc-400 font-medium">
+            <span className="px-2 py-0.5 rounded bg-zinc-800 border border-zinc-100 dark:border-white/5 text-[10px] text-zinc-500 dark:text-zinc-400 font-medium">
               LIVE STREAM
             </span>
           </div>
-          <p className="text-xs text-zinc-400 font-space">
+          <p className="text-xs text-zinc-500 dark:text-zinc-400 font-space">
             Real-time watchlist callouts from top-performing Pump.fun wallets.
           </p>
         </div>
@@ -151,7 +151,7 @@ export function LiveCalloutsFeed({
             {[1, 2, 3, 4].map((idx) => (
               <div
                 key={idx}
-                className="h-48 rounded-xl bg-zinc-950/80 border border-white/5 animate-pulse p-4 space-y-3"
+                className="h-48 rounded-xl bg-white dark:bg-zinc-950/80 border border-zinc-100 dark:border-white/5 animate-pulse p-4 space-y-3"
               >
                 <div className="flex justify-between">
                   <div className="h-4 w-24 bg-zinc-800 rounded" />
@@ -163,8 +163,8 @@ export function LiveCalloutsFeed({
             ))}
           </div>
         ) : callouts.length === 0 ? (
-          <div className="py-8 text-center rounded-xl border border-white/5 bg-zinc-950/40">
-            <p className="text-xs text-zinc-400">
+          <div className="py-8 text-center rounded-xl border border-zinc-100 dark:border-white/5 bg-white dark:bg-zinc-950/40">
+            <p className="text-xs text-zinc-500 dark:text-zinc-400">
               Waiting for next tracked wallet callout signal.
             </p>
             <p className="text-[11px] text-zinc-500 mt-1">
@@ -184,7 +184,7 @@ export function LiveCalloutsFeed({
                 <div
                   key={item.calloutId}
                   onClick={() => handleNavigateToTerminal(item.coinMint, meta?.symbol)}
-                  className="bg-zinc-950/90 border border-white/10 hover:border-amber-500/40 transition-all rounded-xl p-3.5 shadow-lg flex flex-col justify-between gap-2.5 group cursor-pointer"
+                  className="bg-white dark:bg-zinc-950/90 border border-zinc-200 dark:border-white/10 hover:border-amber-500/40 transition-all rounded-xl p-3.5 shadow-lg flex flex-col justify-between gap-2.5 group cursor-pointer"
                 >
                   {/* Top: Caller Handle + Time Ago */}
                   <div className="flex items-center justify-between gap-2">
@@ -207,7 +207,7 @@ export function LiveCalloutsFeed({
 
                   {/* Thesis / Caption */}
                   {item.thesis ? (
-                    <p className="text-[11px] text-zinc-300 italic line-clamp-2 leading-relaxed min-h-[32px]">
+                    <p className="text-[11px] text-zinc-700 dark:text-zinc-300 italic line-clamp-2 leading-relaxed min-h-[32px]">
                       &ldquo;{item.thesis}&rdquo;
                     </p>
                   ) : (
@@ -217,10 +217,10 @@ export function LiveCalloutsFeed({
                   )}
 
                   {/* Token Info Banner */}
-                  <div className="flex items-center justify-between gap-1.5 text-[10px] px-2 py-1.5 rounded bg-black/50 border border-white/5">
+                  <div className="flex items-center justify-between gap-1.5 text-[10px] px-2 py-1.5 rounded bg-white dark:bg-black/50 border border-zinc-100 dark:border-white/5">
                     <div className="flex items-center gap-1.5 min-w-0">
                       {meta?.imageUrl ? (
-                        <div className="w-4 h-4 rounded-full overflow-hidden border border-white/10 shrink-0 bg-zinc-900">
+                        <div className="w-4 h-4 rounded-full overflow-hidden border border-zinc-200 dark:border-white/10 shrink-0 bg-zinc-50 dark:bg-zinc-900">
                           <Image
                             src={meta.imageUrl}
                             alt={meta.symbol || "token"}
@@ -232,11 +232,11 @@ export function LiveCalloutsFeed({
                         </div>
                       ) : null}
                       {meta?.symbol ? (
-                        <span className="font-bold text-white text-xs truncate">
+                        <span className="font-bold text-zinc-950 dark:text-white text-xs truncate">
                           ${meta.symbol.toUpperCase()}
                         </span>
                       ) : null}
-                      <span className="text-zinc-400 truncate">{shortMint}</span>
+                      <span className="text-zinc-500 dark:text-zinc-400 truncate">{shortMint}</span>
                     </div>
 
                     <button
@@ -254,10 +254,10 @@ export function LiveCalloutsFeed({
                   </div>
 
                   {/* Stats Grid: Entry Mcap + ATH */}
-                  <div className="grid grid-cols-2 gap-1.5 p-2 rounded bg-black/40 border border-white/5 text-[10px]">
+                  <div className="grid grid-cols-2 gap-1.5 p-2 rounded bg-white dark:bg-black/40 border border-zinc-100 dark:border-white/5 text-[10px]">
                     <div>
                       <div className="text-zinc-500 uppercase">Entry Mcap</div>
-                      <div className="font-bold text-zinc-200 text-xs truncate">
+                      <div className="font-bold text-zinc-800 dark:text-zinc-200 text-xs truncate">
                         {item.marketCap > 0 ? formatCurrency(item.marketCap) : "—"}
                       </div>
                     </div>
@@ -270,7 +270,7 @@ export function LiveCalloutsFeed({
                   </div>
 
                   {/* Actions: Boost + Pump.fun + DEX */}
-                  <div className="flex items-center gap-1.5 pt-1 border-t border-white/5">
+                  <div className="flex items-center gap-1.5 pt-1 border-t border-zinc-100 dark:border-white/5">
                     <button
                       type="button"
                       onClick={(e) => handleBoost(item, e)}
@@ -284,7 +284,7 @@ export function LiveCalloutsFeed({
                       target="_blank"
                       rel="noopener noreferrer"
                       onClick={(e) => e.stopPropagation()}
-                      className="p-1 rounded bg-white/5 hover:bg-white/10 border border-white/10 text-zinc-300 hover:text-white transition-colors"
+                      className="p-1 rounded bg-white/5 hover:bg-white/10 border border-zinc-200 dark:border-white/10 text-zinc-700 dark:text-zinc-300 hover:text-white transition-colors"
                       title="View on Pump.fun"
                     >
                       <ExternalLink className="w-3 h-3" />
@@ -294,7 +294,7 @@ export function LiveCalloutsFeed({
                       target="_blank"
                       rel="noopener noreferrer"
                       onClick={(e) => e.stopPropagation()}
-                      className="p-1 rounded bg-white/5 hover:bg-white/10 border border-white/10 text-zinc-300 hover:text-white transition-colors"
+                      className="p-1 rounded bg-white/5 hover:bg-white/10 border border-zinc-200 dark:border-white/10 text-zinc-700 dark:text-zinc-300 hover:text-white transition-colors"
                       title="View on DexScreener"
                     >
                       <ArrowUpRight className="w-3 h-3" />

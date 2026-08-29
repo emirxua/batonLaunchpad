@@ -59,14 +59,14 @@ export function LiveSignalsCompact({
   };
 
   return (
-    <div className="w-full bg-zinc-900/40 border border-white/10 rounded-xl p-4 flex flex-col gap-3 font-mono shadow-lg select-none">
+    <div className="w-full bg-zinc-50 dark:bg-zinc-900/40 border border-zinc-200 dark:border-white/10 rounded-xl p-4 flex flex-col gap-3 font-mono shadow-lg select-none">
       {/* Header */}
-      <div className="flex items-center justify-between border-b border-white/5 pb-2.5">
-        <div className="flex items-center gap-1.5 text-xs font-bold text-zinc-300 uppercase tracking-wider">
+      <div className="flex items-center justify-between border-b border-zinc-100 dark:border-white/5 pb-2.5">
+        <div className="flex items-center gap-1.5 text-xs font-bold text-zinc-700 dark:text-zinc-300 uppercase tracking-wider">
           <Radio className="w-3.5 h-3.5 text-rose-500 animate-pulse" />
           <span>LIVE CALLER PULSE</span>
         </div>
-        <span className="text-[10px] text-zinc-500 bg-zinc-800/80 px-2 py-0.5 rounded border border-white/5 font-medium">
+        <span className="text-[10px] text-zinc-500 bg-zinc-800/80 px-2 py-0.5 rounded border border-zinc-100 dark:border-white/5 font-medium">
           6H COOLDOWN
         </span>
       </div>
@@ -77,7 +77,7 @@ export function LiveSignalsCompact({
           [1, 2, 3].map((i) => (
             <div
               key={i}
-              className="p-2.5 rounded-lg bg-zinc-950/60 border border-white/5 animate-pulse space-y-1.5"
+              className="p-2.5 rounded-lg bg-white dark:bg-zinc-950/60 border border-zinc-100 dark:border-white/5 animate-pulse space-y-1.5"
             >
               <div className="flex justify-between">
                 <div className="h-3 w-20 bg-zinc-800 rounded" />
@@ -87,7 +87,7 @@ export function LiveSignalsCompact({
             </div>
           ))
         ) : callouts.length === 0 ? (
-          <div className="p-3 rounded-lg bg-zinc-950/40 border border-white/5 text-center text-zinc-500 text-xs py-5">
+          <div className="p-3 rounded-lg bg-white dark:bg-zinc-950/40 border border-zinc-100 dark:border-white/5 text-center text-zinc-500 text-xs py-5">
             Waiting for next caller signal.
           </div>
         ) : (
@@ -97,7 +97,7 @@ export function LiveSignalsCompact({
             return (
               <div
                 key={item.calloutId}
-                className="p-2.5 rounded-lg bg-zinc-950/80 hover:bg-zinc-950 border border-white/5 hover:border-amber-500/30 transition-all flex flex-col gap-1.5 group"
+                className="p-2.5 rounded-lg bg-white dark:bg-zinc-950/80 hover:bg-zinc-950 border border-zinc-100 dark:border-white/5 hover:border-amber-500/30 transition-all flex flex-col gap-1.5 group"
               >
                 {/* Top: Caller + Time */}
                 <div className="flex items-center justify-between text-xs">
@@ -110,10 +110,10 @@ export function LiveSignalsCompact({
                 </div>
 
                 {/* Bottom: CA Copy + Entry MC */}
-                <div className="flex items-center justify-between text-[11px] text-zinc-400">
+                <div className="flex items-center justify-between text-[11px] text-zinc-500 dark:text-zinc-400">
                   <div className="flex items-center gap-1">
                     <span className="text-zinc-500">CA:</span>
-                    <span className="text-zinc-300">{shortMint}</span>
+                    <span className="text-zinc-700 dark:text-zinc-300">{shortMint}</span>
                     <button
                       type="button"
                       onClick={(e) => handleCopy(item.coinMint, e)}
@@ -128,7 +128,7 @@ export function LiveSignalsCompact({
                     </button>
                   </div>
 
-                  <div className="text-[10px] font-bold text-zinc-200">
+                  <div className="text-[10px] font-bold text-zinc-800 dark:text-zinc-200">
                     {item.marketCap > 0 ? formatCurrency(item.marketCap) : "—"}
                   </div>
                 </div>

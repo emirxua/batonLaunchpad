@@ -153,23 +153,23 @@ export function OutbidModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-in fade-in duration-150 select-none">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-white dark:bg-black/80 backdrop-blur-md animate-in fade-in duration-150 select-none">
       <div
-        className="w-full max-w-lg bg-zinc-950 border border-white/10 rounded-xl p-6 text-zinc-200 font-mono shadow-2xl flex flex-col space-y-4"
+        className="w-full max-w-lg bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-white/10 rounded-xl p-6 text-zinc-800 dark:text-zinc-200 font-mono shadow-2xl flex flex-col space-y-4"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
-        <div className="flex items-center justify-between pb-3 border-b border-white/10">
+        <div className="flex items-center justify-between pb-3 border-b border-zinc-200 dark:border-white/10">
           <div className="flex items-center gap-2">
             <Flame className="w-4 h-4 text-amber-400 fill-current" />
-            <span className="font-bold text-sm text-white uppercase tracking-wider">
+            <span className="font-bold text-sm text-zinc-950 dark:text-white uppercase tracking-wider">
               {targetCoin ? `OUTBID SPOT: $${targetCoin.ticker}` : "CLAIM ATTENTION SPOT"}
             </span>
           </div>
           <button
             type="button"
             onClick={onClose}
-            className="p-1 rounded-lg hover:bg-white/10 text-zinc-400 hover:text-white transition-colors cursor-pointer"
+            className="p-1 rounded-lg hover:bg-white/10 text-zinc-500 dark:text-zinc-400 hover:text-white transition-colors cursor-pointer"
           >
             <X className="w-4 h-4" />
           </button>
@@ -177,10 +177,10 @@ export function OutbidModal({
 
         {/* Target Info Banner */}
         {targetCoin && (
-          <div className="p-3 rounded-lg bg-zinc-900/80 border border-amber-500/20 flex items-center justify-between text-[11px]">
+          <div className="p-3 rounded-lg bg-zinc-50 dark:bg-zinc-900/80 border border-amber-500/20 flex items-center justify-between text-[11px]">
             <div>
               <div className="text-zinc-500 uppercase">Target Current Burn:</div>
-              <div className="font-bold text-white">
+              <div className="font-bold text-zinc-950 dark:text-white">
                 {formatNumber(currentBurn)} $BATON
               </div>
             </div>
@@ -195,7 +195,7 @@ export function OutbidModal({
 
         {/* Target Token Address Input */}
         <div className="space-y-1.5">
-          <label className="text-[11px] text-zinc-400 uppercase tracking-wider block">
+          <label className="text-[11px] text-zinc-500 dark:text-zinc-400 uppercase tracking-wider block">
             Target Token Address (CA)
           </label>
           <input
@@ -203,20 +203,20 @@ export function OutbidModal({
             value={tokenAddress}
             onChange={(e) => setTokenAddress(e.target.value)}
             placeholder="Enter Solana token mint address..."
-            className="w-full bg-zinc-900/80 border border-white/10 rounded-lg px-3 py-2 text-white font-mono text-xs focus:outline-none focus:border-amber-500/50 transition-colors"
+            className="w-full bg-zinc-50 dark:bg-zinc-900/80 border border-zinc-200 dark:border-white/10 rounded-lg px-3 py-2 text-zinc-950 dark:text-white font-mono text-xs focus:outline-none focus:border-amber-500/50 transition-colors"
             disabled={step === "awaiting_approval" || step === "confirming"}
           />
         </div>
 
         {/* Category Selection */}
         <div className="space-y-1.5">
-          <label className="text-[11px] text-zinc-400 uppercase tracking-wider block">
+          <label className="text-[11px] text-zinc-500 dark:text-zinc-400 uppercase tracking-wider block">
             Category
           </label>
           <select
             value={category}
             onChange={(e) => setCategory(e.target.value)}
-            className="w-full bg-zinc-900/80 border border-white/10 rounded-lg px-3 py-2 text-white font-mono text-xs focus:outline-none focus:border-amber-500/50 cursor-pointer"
+            className="w-full bg-zinc-50 dark:bg-zinc-900/80 border border-zinc-200 dark:border-white/10 rounded-lg px-3 py-2 text-zinc-950 dark:text-white font-mono text-xs focus:outline-none focus:border-amber-500/50 cursor-pointer"
             disabled={step === "awaiting_approval" || step === "confirming"}
           >
             {CATEGORIES.map((cat) => (
@@ -229,7 +229,7 @@ export function OutbidModal({
 
         {/* Burn Amount Input & Presets */}
         <div className="space-y-1.5">
-          <div className="flex items-center justify-between text-[11px] text-zinc-400">
+          <div className="flex items-center justify-between text-[11px] text-zinc-500 dark:text-zinc-400">
             <label className="uppercase tracking-wider">Burn Amount ($BATON)</label>
             <span>
               Wallet Balance:{" "}
@@ -245,7 +245,7 @@ export function OutbidModal({
             step="1000"
             value={amount}
             onChange={(e) => setAmount(Math.max(0, parseInt(e.target.value) || 0))}
-            className="w-full bg-zinc-900/80 border border-white/10 rounded-lg px-3 py-2 text-white font-bold text-sm focus:outline-none focus:border-amber-500/50 font-mono transition-colors"
+            className="w-full bg-zinc-50 dark:bg-zinc-900/80 border border-zinc-200 dark:border-white/10 rounded-lg px-3 py-2 text-zinc-950 dark:text-white font-bold text-sm focus:outline-none focus:border-amber-500/50 font-mono transition-colors"
             disabled={step === "awaiting_approval" || step === "confirming"}
           />
 
@@ -257,7 +257,7 @@ export function OutbidModal({
                   key={idx}
                   type="button"
                   onClick={() => setAmount(preset)}
-                  className="py-1 rounded bg-zinc-900 hover:bg-zinc-800 border border-white/5 text-zinc-400 hover:text-white text-[10px] font-bold transition-colors cursor-pointer"
+                  className="py-1 rounded bg-zinc-50 dark:bg-zinc-900 hover:bg-zinc-800 border border-zinc-100 dark:border-white/5 text-zinc-500 dark:text-zinc-400 hover:text-white text-[10px] font-bold transition-colors cursor-pointer"
                 >
                   +{formatNumber(preset - minRequired || preset)}
                 </button>
@@ -309,11 +309,11 @@ export function OutbidModal({
         )}
 
         {/* Footer Actions */}
-        <div className="pt-3 border-t border-white/10 flex items-center justify-end gap-3">
+        <div className="pt-3 border-t border-zinc-200 dark:border-white/10 flex items-center justify-end gap-3">
           <button
             type="button"
             onClick={onClose}
-            className="px-4 py-2 rounded-lg bg-zinc-900 hover:bg-zinc-800 border border-white/10 text-zinc-400 hover:text-white transition-colors cursor-pointer"
+            className="px-4 py-2 rounded-lg bg-zinc-50 dark:bg-zinc-900 hover:bg-zinc-800 border border-zinc-200 dark:border-white/10 text-zinc-500 dark:text-zinc-400 hover:text-white transition-colors cursor-pointer"
           >
             Cancel
           </button>

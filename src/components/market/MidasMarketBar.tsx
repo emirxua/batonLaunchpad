@@ -31,9 +31,9 @@ export function MidasMarketBar() {
   const tokens: MarketToken[] = data?.data || [];
 
   return (
-    <div className="w-full bg-zinc-950 rounded-xl border border-white/10 p-4 font-mono select-none shadow-xl">
+    <div className="w-full bg-white dark:bg-zinc-950 rounded-xl border border-zinc-200 dark:border-white/10 p-4 font-mono select-none shadow-xl">
       <div className="flex items-center justify-between mb-4">
-        <div className="flex items-center gap-2 text-xs text-zinc-400">
+        <div className="flex items-center gap-2 text-xs text-zinc-500 dark:text-zinc-400">
           <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
           <span>GLOBAL MARKETS 24H</span>
         </div>
@@ -45,7 +45,7 @@ export function MidasMarketBar() {
           [1, 2, 3, 4].map((i) => (
             <div
               key={i}
-              className="bg-zinc-900/40 border border-white/5 rounded-lg p-3.5 h-24 animate-pulse flex flex-col justify-between"
+              className="bg-zinc-50 dark:bg-zinc-900/40 border border-zinc-100 dark:border-white/5 rounded-lg p-3.5 h-24 animate-pulse flex flex-col justify-between"
             >
               <div className="flex justify-between">
                 <div className="h-4 w-16 bg-zinc-800 rounded" />
@@ -63,11 +63,11 @@ export function MidasMarketBar() {
             return (
               <div
                 key={token.symbol}
-                className="bg-zinc-900/40 border border-white/5 rounded-lg p-3.5 flex flex-col justify-between"
+                className="bg-zinc-50 dark:bg-zinc-900/40 border border-zinc-100 dark:border-white/5 rounded-lg p-3.5 flex flex-col justify-between"
               >
                 <div className="flex items-center justify-between">
                   <div className="flex items-baseline gap-1.5">
-                    <span className="text-sm font-bold text-zinc-100">${token.symbol}</span>
+                    <span className="text-sm font-bold text-zinc-900 dark:text-zinc-100">${token.symbol}</span>
                     <span className="text-[11px] text-zinc-500">{token.name}</span>
                   </div>
                   <span
@@ -82,7 +82,7 @@ export function MidasMarketBar() {
 
                 <div className="mt-3 flex items-end justify-between">
                   <div>
-                    <div className="text-base font-bold text-zinc-100">
+                    <div className="text-base font-bold text-zinc-900 dark:text-zinc-100">
                       $
                       {token.price >= 1
                         ? token.price.toLocaleString("en-US", {

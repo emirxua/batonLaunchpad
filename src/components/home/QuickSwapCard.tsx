@@ -89,10 +89,10 @@ export function QuickSwapCard() {
   }, [solAmount, solPriceUsd, batonPriceUsd]);
 
   return (
-    <div className="w-full bg-zinc-900/40 border border-white/10 rounded-xl p-4 flex flex-col gap-3 font-mono shadow-lg select-none">
+    <div className="w-full bg-zinc-50 dark:bg-zinc-900/40 border border-zinc-200 dark:border-white/10 rounded-xl p-4 flex flex-col gap-3 font-mono shadow-lg select-none">
       {/* Top Header */}
-      <div className="flex items-center justify-between border-b border-white/5 pb-2.5">
-        <span className="text-xs font-bold text-zinc-300 uppercase tracking-wider flex items-center gap-1.5">
+      <div className="flex items-center justify-between border-b border-zinc-100 dark:border-white/5 pb-2.5">
+        <span className="text-xs font-bold text-zinc-700 dark:text-zinc-300 uppercase tracking-wider flex items-center gap-1.5">
           <Zap className="w-3.5 h-3.5 text-amber-400" />
           QUICK SWAP ROUTE
         </span>
@@ -100,7 +100,7 @@ export function QuickSwapCard() {
           {loadingRate && (
             <Loader2 className="w-3 h-3 text-amber-400 animate-spin" />
           )}
-          <span className="text-[10px] text-zinc-500 bg-zinc-800/80 px-2 py-0.5 rounded border border-white/5 font-medium">
+          <span className="text-[10px] text-zinc-500 bg-zinc-800/80 px-2 py-0.5 rounded border border-zinc-100 dark:border-white/5 font-medium">
             SLIPPAGE: 0.5%
           </span>
         </div>
@@ -108,21 +108,21 @@ export function QuickSwapCard() {
 
       {/* Input: Pay SOL */}
       <div className="space-y-1.5">
-        <div className="flex items-center justify-between text-[11px] text-zinc-400">
+        <div className="flex items-center justify-between text-[11px] text-zinc-500 dark:text-zinc-400">
           <span>YOU PAY</span>
           <span className="text-[10px] text-zinc-500">
             1 SOL ≈ ${solPriceUsd.toFixed(2)}
           </span>
         </div>
 
-        <div className="flex items-center justify-between bg-zinc-950/80 border border-white/10 rounded-lg px-3 py-2 focus-within:border-amber-500/50 transition-colors">
+        <div className="flex items-center justify-between bg-white dark:bg-zinc-950/80 border border-zinc-200 dark:border-white/10 rounded-lg px-3 py-2 focus-within:border-amber-500/50 transition-colors">
           <input
             type="number"
             step="0.05"
             min="0.01"
             value={solAmount}
             onChange={(e) => setSolAmount(e.target.value)}
-            className="w-full bg-transparent text-sm font-bold text-white focus:outline-none font-mono"
+            className="w-full bg-transparent text-sm font-bold text-zinc-950 dark:text-white focus:outline-none font-mono"
             placeholder="0.0"
           />
           <span className="text-xs font-bold text-amber-400 pl-2">SOL</span>
@@ -138,7 +138,7 @@ export function QuickSwapCard() {
               className={`py-1 rounded text-[10px] font-bold transition-colors cursor-pointer border ${
                 solAmount === preset.toString()
                   ? "bg-amber-500/20 text-amber-400 border-amber-500/40"
-                  : "bg-zinc-800/60 hover:bg-zinc-800 text-zinc-400 hover:text-white border-white/5"
+                  : "bg-zinc-800/60 hover:bg-zinc-800 text-zinc-500 dark:text-zinc-400 hover:text-white border-zinc-100 dark:border-white/5"
               }`}
             >
               {preset} SOL
@@ -149,20 +149,20 @@ export function QuickSwapCard() {
 
       {/* Route Arrow */}
       <div className="flex justify-center -my-1">
-        <div className="w-6 h-6 rounded-full bg-zinc-800 border border-white/10 flex items-center justify-center text-zinc-400">
+        <div className="w-6 h-6 rounded-full bg-zinc-800 border border-zinc-200 dark:border-white/10 flex items-center justify-center text-zinc-500 dark:text-zinc-400">
           <ArrowDown className="w-3 h-3" />
         </div>
       </div>
 
       {/* Output: Receive $BATON */}
       <div className="space-y-1.5">
-        <div className="flex items-center justify-between text-[11px] text-zinc-400">
+        <div className="flex items-center justify-between text-[11px] text-zinc-500 dark:text-zinc-400">
           <span>YOU RECEIVE (EST.)</span>
           <span>ATTENTION ASSET</span>
         </div>
 
-        <div className="flex items-center justify-between bg-zinc-950/80 border border-white/10 rounded-lg px-3 py-2">
-          <span className="text-sm font-bold text-white">
+        <div className="flex items-center justify-between bg-white dark:bg-zinc-950/80 border border-zinc-200 dark:border-white/10 rounded-lg px-3 py-2">
+          <span className="text-sm font-bold text-zinc-950 dark:text-white">
             {formatNumber(estimatedBaton)}
           </span>
           <span className="text-xs font-bold text-amber-400 pl-2">$BATON</span>

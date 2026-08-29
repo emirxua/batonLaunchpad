@@ -118,7 +118,7 @@ export default function LeaderboardPage() {
                   onClick={() => setTimeRange(tab.key as TimeRange)}
                   className={`px-4 py-2 rounded-xl transition-all duration-150 font-bold uppercase tracking-wider ${
                     timeRange === tab.key
-                      ? "bg-zinc-900 dark:bg-acid text-white dark:text-bg shadow-sm"
+                      ? "bg-zinc-50 dark:bg-zinc-900 dark:bg-acid text-zinc-950 dark:text-white dark:text-bg shadow-sm"
                       : "text-zinc-500 dark:text-text-dim hover:text-zinc-900 dark:hover:text-text"
                   }`}
                 >
@@ -194,7 +194,7 @@ export default function LeaderboardPage() {
                   <button
                     type="button"
                     onClick={() => setSelectedCoin(top3Coins[1])}
-                    className="mt-4 w-full py-2.5 rounded-xl bg-zinc-900 dark:bg-bg-raised text-white dark:text-acid border border-zinc-900 dark:border-acid/30 font-mono text-xs font-bold hover:bg-emerald-600 dark:hover:bg-acid dark:hover:text-bg transition-all flex items-center justify-center gap-1.5 shadow-sm"
+                    className="mt-4 w-full py-2.5 rounded-xl bg-zinc-50 dark:bg-zinc-900 dark:bg-bg-raised text-zinc-950 dark:text-white dark:text-acid border border-zinc-900 dark:border-acid/30 font-mono text-xs font-bold hover:bg-emerald-600 dark:hover:bg-acid dark:hover:text-bg transition-all flex items-center justify-center gap-1.5 shadow-sm"
                   >
                     <Flame className="w-3.5 h-3.5 fill-current text-rose-400 dark:text-acid" />
                     <span>Burn &amp; Boost</span>
@@ -250,7 +250,7 @@ export default function LeaderboardPage() {
                   <button
                     type="button"
                     onClick={() => setSelectedCoin(top3Coins[0])}
-                    className="mt-4 w-full py-3 rounded-xl bg-zinc-900 dark:bg-acid text-white dark:text-bg font-mono text-xs font-black uppercase tracking-wider shadow-md hover:bg-emerald-600 dark:hover:bg-acid-dim transition-all flex items-center justify-center gap-2"
+                    className="mt-4 w-full py-3 rounded-xl bg-zinc-50 dark:bg-zinc-900 dark:bg-acid text-zinc-950 dark:text-white dark:text-bg font-mono text-xs font-black uppercase tracking-wider shadow-md hover:bg-emerald-600 dark:hover:bg-acid-dim transition-all flex items-center justify-center gap-2"
                   >
                     <Flame className="w-4 h-4 fill-current text-rose-400 dark:text-bg" />
                     <span>Burn $BATON for Leader 🔥</span>
@@ -261,7 +261,7 @@ export default function LeaderboardPage() {
               {/* #3 Bronze */}
               {top3Coins[2] && (
                 <div className="order-3 rounded-2xl border border-zinc-200/80 dark:border-[#cd7f32]/40 bg-white/85 dark:bg-bg-card p-6 flex flex-col justify-between relative shadow-lg shadow-zinc-200/40 dark:shadow-[0_0_25px_rgba(205,127,50,0.1)] hover:-translate-y-1 transition-all">
-                  <div className="absolute -top-3.5 left-6 px-3 py-1 rounded-full bg-[#cd7f32] text-white font-mono text-xs font-black uppercase tracking-wider shadow-md flex items-center gap-1">
+                  <div className="absolute -top-3.5 left-6 px-3 py-1 rounded-full bg-[#cd7f32] text-zinc-950 dark:text-white font-mono text-xs font-black uppercase tracking-wider shadow-md flex items-center gap-1">
                     <Medal className="w-3.5 h-3.5" />
                     <span>#03 BRONZE</span>
                   </div>
@@ -305,7 +305,7 @@ export default function LeaderboardPage() {
                   <button
                     type="button"
                     onClick={() => setSelectedCoin(top3Coins[2])}
-                    className="mt-4 w-full py-2.5 rounded-xl bg-zinc-900 dark:bg-bg-raised text-white dark:text-acid border border-zinc-900 dark:border-acid/30 font-mono text-xs font-bold hover:bg-emerald-600 dark:hover:bg-acid dark:hover:text-bg transition-all flex items-center justify-center gap-1.5 shadow-sm"
+                    className="mt-4 w-full py-2.5 rounded-xl bg-zinc-50 dark:bg-zinc-900 dark:bg-bg-raised text-zinc-950 dark:text-white dark:text-acid border border-zinc-900 dark:border-acid/30 font-mono text-xs font-bold hover:bg-emerald-600 dark:hover:bg-acid dark:hover:text-bg transition-all flex items-center justify-center gap-1.5 shadow-sm"
                   >
                     <Flame className="w-3.5 h-3.5 fill-current text-rose-400 dark:text-acid" />
                     <span>Burn &amp; Boost</span>
@@ -335,7 +335,7 @@ export default function LeaderboardPage() {
           <div className="overflow-x-auto no-scrollbar">
             <table className="w-full text-left font-mono text-xs">
               <thead>
-                <tr className="text-zinc-400 dark:text-text-faint uppercase text-[11px] border-b border-zinc-200/80 dark:border-line/60">
+                <tr className="text-zinc-500 dark:text-zinc-400 dark:text-text-faint uppercase text-[11px] border-b border-zinc-200/80 dark:border-line/60">
                   <th className="py-3 px-3">Rank</th>
                   <th className="py-3 px-3">Coin</th>
                   <th className="py-3 px-3">Tier</th>
@@ -351,7 +351,7 @@ export default function LeaderboardPage() {
 
                   let rankBadgeColor = "text-zinc-500 dark:text-text-dim";
                   if (rank === 1) rankBadgeColor = "text-amber-500 dark:text-[#ffd700] font-black";
-                  if (rank === 2) rankBadgeColor = "text-zinc-400 dark:text-[#c0c0c0] font-black";
+                  if (rank === 2) rankBadgeColor = "text-zinc-500 dark:text-zinc-400 dark:text-[#c0c0c0] font-black";
                   if (rank === 3) rankBadgeColor = "text-amber-700 dark:text-[#cd7f32] font-black";
 
                   return (
@@ -405,7 +405,7 @@ export default function LeaderboardPage() {
                         <div className="text-base font-black text-emerald-600 dark:text-acid font-mono-num">
                           {formatNumber(coin.timeAdjustedBurn)}
                         </div>
-                        <div className="text-[10px] text-zinc-400 dark:text-text-faint uppercase font-bold">
+                        <div className="text-[10px] text-zinc-500 dark:text-zinc-400 dark:text-text-faint uppercase font-bold">
                           $BATON
                         </div>
                       </td>
@@ -415,7 +415,7 @@ export default function LeaderboardPage() {
                         <button
                           type="button"
                           onClick={() => setSelectedCoin(coin)}
-                          className="px-3.5 py-1.5 rounded-lg bg-zinc-900 dark:bg-bg-raised text-white dark:text-acid border border-zinc-900 dark:border-acid/30 hover:bg-emerald-600 dark:hover:bg-acid dark:hover:text-bg font-bold text-xs transition-all shadow-sm active:scale-95 inline-flex items-center gap-1"
+                          className="px-3.5 py-1.5 rounded-lg bg-zinc-50 dark:bg-zinc-900 dark:bg-bg-raised text-zinc-950 dark:text-white dark:text-acid border border-zinc-900 dark:border-acid/30 hover:bg-emerald-600 dark:hover:bg-acid dark:hover:text-bg font-bold text-xs transition-all shadow-sm active:scale-95 inline-flex items-center gap-1"
                         >
                           <Flame className="w-3 h-3 fill-current text-rose-400 dark:text-acid" />
                           <span>Burn</span>

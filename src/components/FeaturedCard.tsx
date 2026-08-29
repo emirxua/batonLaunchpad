@@ -207,7 +207,7 @@ export const FeaturedCard: React.FC<FeaturedCardProps> = React.memo(({
             <button
               type="button"
               onClick={onBurnClick}
-              className="flex-1 inline-flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-xl bg-zinc-900 dark:bg-bg-raised text-white dark:text-acid border border-zinc-900 dark:border-acid/40 hover:bg-emerald-600 dark:hover:bg-acid dark:hover:text-bg font-mono text-xs font-bold uppercase tracking-wider active:scale-95 transition-all duration-200 shadow-md shadow-zinc-900/10 dark:shadow-[0_0_12px_rgba(212,255,63,0.1)]"
+              className="flex-1 inline-flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-xl bg-zinc-50 dark:bg-zinc-900 dark:bg-bg-raised text-zinc-950 dark:text-white dark:text-acid border border-zinc-900 dark:border-acid/40 hover:bg-emerald-600 dark:hover:bg-acid dark:hover:text-bg font-mono text-xs font-bold uppercase tracking-wider active:scale-95 transition-all duration-200 shadow-md shadow-zinc-900/10 dark:shadow-[0_0_12px_rgba(212,255,63,0.1)]"
             >
               <Flame className="w-3.5 h-3.5 fill-current text-rose-400 dark:text-acid" />
               <span>BURN &amp; BOOST</span>
@@ -246,7 +246,7 @@ export const FeaturedCard: React.FC<FeaturedCardProps> = React.memo(({
         </div>
 
         {showLiveChart && (
-          <div className="mt-2 w-full h-80 sm:h-96 rounded-2xl overflow-hidden border border-line bg-black shadow-inner">
+          <div className="mt-2 w-full h-80 sm:h-96 rounded-2xl overflow-hidden border border-line bg-white dark:bg-black shadow-inner">
             <iframe
               src={`https://dexscreener.com/solana/${mintAddress}?embed=1&theme=dark&trades=0&info=0`}
               className="w-full h-full border-0"

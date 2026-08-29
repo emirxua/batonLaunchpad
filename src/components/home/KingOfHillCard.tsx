@@ -30,7 +30,7 @@ export function KingOfHillCard({
 
   if (isLoading || !coin) {
     return (
-      <div className="w-full bg-zinc-900/60 border border-amber-500/30 rounded-xl p-5 relative overflow-hidden animate-pulse">
+      <div className="w-full bg-zinc-50 dark:bg-zinc-900/60 border border-amber-500/30 rounded-xl p-5 relative overflow-hidden animate-pulse">
         <div className="h-4 w-48 bg-zinc-800 rounded mb-4" />
         <div className="flex items-center gap-4 mb-4">
           <div className="w-14 h-14 rounded-xl bg-zinc-800 shrink-0" />
@@ -56,7 +56,7 @@ export function KingOfHillCard({
   const shortMint = `${coin.mintAddress.slice(0, 4)}...${coin.mintAddress.slice(-4)}`;
 
   return (
-    <div className="w-full bg-zinc-900/60 border border-amber-500/30 rounded-xl p-5 relative overflow-hidden shadow-2xl group transition-all hover:border-amber-500/50">
+    <div className="w-full bg-zinc-50 dark:bg-zinc-900/60 border border-amber-500/30 rounded-xl p-5 relative overflow-hidden shadow-2xl group transition-all hover:border-amber-500/50">
       {/* Ambient glow in corner */}
       <div
         className="pointer-events-none absolute -top-12 -right-12 w-48 h-48 rounded-full bg-amber-500/10 blur-3xl"
@@ -64,7 +64,7 @@ export function KingOfHillCard({
       />
 
       {/* Top Header Badge */}
-      <div className="flex items-center justify-between gap-2 pb-3 mb-4 border-b border-white/5 relative z-10">
+      <div className="flex items-center justify-between gap-2 pb-3 mb-4 border-b border-zinc-100 dark:border-white/5 relative z-10">
         <div className="flex items-center gap-2">
           <span className="w-2 h-2 rounded-full bg-amber-400 animate-ping" />
           <span className="text-amber-400 font-mono text-xs font-bold tracking-wider uppercase">
@@ -72,7 +72,7 @@ export function KingOfHillCard({
           </span>
         </div>
         {coin.category && (
-          <span className="px-2 py-0.5 rounded bg-zinc-800/80 border border-white/5 text-zinc-400 font-mono text-[10px] uppercase">
+          <span className="px-2 py-0.5 rounded bg-zinc-800/80 border border-zinc-100 dark:border-white/5 text-zinc-500 dark:text-zinc-400 font-mono text-[10px] uppercase">
             {coin.category}
           </span>
         )}
@@ -102,7 +102,7 @@ export function KingOfHillCard({
           {/* Name, Symbol, Copy CA */}
           <div className="min-w-0 space-y-1">
             <div className="flex items-center gap-2 flex-wrap">
-              <h2 className="font-archivo text-xl font-black text-white tracking-tight truncate">
+              <h2 className="font-archivo text-xl font-black text-zinc-950 dark:text-white tracking-tight truncate">
                 {coin.name}
               </h2>
               <span className="font-mono text-xs font-bold text-amber-400 bg-amber-500/10 border border-amber-500/20 px-2 py-0.5 rounded">
@@ -110,13 +110,13 @@ export function KingOfHillCard({
               </span>
             </div>
 
-            <div className="flex items-center gap-1.5 font-mono text-xs text-zinc-400">
+            <div className="flex items-center gap-1.5 font-mono text-xs text-zinc-500 dark:text-zinc-400">
               <span className="text-zinc-500 font-normal">CA:</span>
-              <span className="text-zinc-300">{shortMint}</span>
+              <span className="text-zinc-700 dark:text-zinc-300">{shortMint}</span>
               <button
                 type="button"
                 onClick={handleCopy}
-                className="p-1 rounded hover:bg-white/10 text-zinc-400 hover:text-amber-400 transition-colors"
+                className="p-1 rounded hover:bg-white/10 text-zinc-500 dark:text-zinc-400 hover:text-amber-400 transition-colors"
                 title="Copy Contract Address"
               >
                 {copied ? (
@@ -129,7 +129,7 @@ export function KingOfHillCard({
                 href={`https://dexscreener.com/solana/${coin.mintAddress}`}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="p-1 rounded hover:bg-white/10 text-zinc-400 hover:text-white transition-colors"
+                className="p-1 rounded hover:bg-white/10 text-zinc-500 dark:text-zinc-400 hover:text-white transition-colors"
                 title="View on DexScreener"
               >
                 <ExternalLink className="w-3 h-3" />
@@ -139,22 +139,22 @@ export function KingOfHillCard({
         </div>
 
         {/* Total Burned Badge */}
-        <div className="sm:text-right bg-zinc-950/60 sm:bg-transparent border border-white/5 sm:border-0 rounded-lg p-2.5 sm:p-0">
+        <div className="sm:text-right bg-white dark:bg-zinc-950/60 sm:bg-transparent border border-zinc-100 dark:border-white/5 sm:border-0 rounded-lg p-2.5 sm:p-0">
           <div className="text-[10px] font-mono uppercase tracking-wider text-zinc-500">
             TOTAL BURN SCORE
           </div>
           <div className="font-mono text-lg sm:text-xl font-bold text-amber-400 tracking-tight">
             {formatNumber(coin.totalBurnedBaton || 0)}{" "}
-            <span className="text-xs font-normal text-zinc-400">$BATON</span>
+            <span className="text-xs font-normal text-zinc-500 dark:text-zinc-400">$BATON</span>
           </div>
         </div>
       </div>
 
       {/* Metrics Grid */}
-      <div className="grid grid-cols-3 gap-2.5 p-3 rounded-lg bg-zinc-950/70 border border-white/5 font-mono mb-5 relative z-10">
+      <div className="grid grid-cols-3 gap-2.5 p-3 rounded-lg bg-white dark:bg-zinc-950/70 border border-zinc-100 dark:border-white/5 font-mono mb-5 relative z-10">
         <div>
           <div className="text-[10px] uppercase text-zinc-500">Price</div>
-          <div className="text-xs sm:text-sm font-bold text-white">
+          <div className="text-xs sm:text-sm font-bold text-zinc-950 dark:text-white">
             ${coin.priceUsd ? (coin.priceUsd < 0.01 ? coin.priceUsd.toFixed(6) : coin.priceUsd.toFixed(4)) : "0.00"}
           </div>
         </div>
@@ -180,7 +180,7 @@ export function KingOfHillCard({
 
         <div>
           <div className="text-[10px] uppercase text-zinc-500">Market Cap</div>
-          <div className="text-xs sm:text-sm font-bold text-zinc-200">
+          <div className="text-xs sm:text-sm font-bold text-zinc-800 dark:text-zinc-200">
             {formatCurrency(coin.marketCap || 0)}
           </div>
         </div>
@@ -190,7 +190,7 @@ export function KingOfHillCard({
       <div className="flex flex-col sm:flex-row items-center gap-3 relative z-10 font-mono text-xs font-bold">
         <Link
           href={`/terminal?outputMint=${coin.mintAddress}&outputSymbol=${coin.ticker}`}
-          className="w-full sm:flex-1 py-2.5 px-4 rounded-lg bg-zinc-800 hover:bg-zinc-700 border border-white/10 hover:border-white/20 text-zinc-200 hover:text-white flex items-center justify-center gap-1.5 transition-all text-center tracking-wider"
+          className="w-full sm:flex-1 py-2.5 px-4 rounded-lg bg-zinc-800 hover:bg-zinc-700 border border-zinc-200 dark:border-white/10 hover:border-white/20 text-zinc-800 dark:text-zinc-200 hover:text-white flex items-center justify-center gap-1.5 transition-all text-center tracking-wider"
         >
           <span>[ TRADE ON TERMINAL ]</span>
         </Link>

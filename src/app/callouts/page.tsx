@@ -98,14 +98,14 @@ function CalloutsPageContent() {
   };
 
   return (
-    <div className="min-h-screen bg-zinc-950 text-zinc-100 flex flex-col">
+    <div className="min-h-screen bg-white dark:bg-zinc-950 text-zinc-900 dark:text-zinc-100 flex flex-col">
       <Navbar />
       <Ticker />
 
       <main className="flex-1 w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {/* ── Page title ────────────────────────────────────────────── */}
         <div className="mb-6 space-y-1">
-          <h1 className="text-2xl font-extrabold tracking-tight text-white font-mono">
+          <h1 className="text-2xl font-extrabold tracking-tight text-zinc-950 dark:text-white font-mono">
             Tracked Pump.fun Callouts
           </h1>
           <p className="text-sm text-zinc-500 font-mono max-w-2xl">
@@ -160,7 +160,7 @@ function CalloutsPageContent() {
 
 export default function CalloutsPage() {
   return (
-    <Suspense fallback={<div className="min-h-screen bg-zinc-950" />}>
+    <Suspense fallback={<div className="min-h-screen bg-white dark:bg-zinc-950" />}>
       <CalloutsPageContent />
     </Suspense>
   );

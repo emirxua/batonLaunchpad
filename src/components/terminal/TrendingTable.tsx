@@ -99,18 +99,18 @@ export const TrendingTable: React.FC<TrendingTableProps> = ({
   }, [onSelectToken, onTradeToken]);
 
   return (
-    <div className="w-full bg-[#0D0E12] border border-white/10 rounded-2xl overflow-hidden shadow-2xl flex flex-col">
+    <div className="w-full bg-white dark:bg-[#0D0E12] border border-zinc-200 dark:border-white/10 rounded-2xl overflow-hidden shadow-2xl flex flex-col">
       {/* ── Table Top Bar & Tabs ───────────────────────────────────────── */}
-      <div className="p-4 border-b border-white/10 flex flex-wrap items-center justify-between gap-3 bg-zinc-950/60">
+      <div className="p-4 border-b border-zinc-200 dark:border-white/10 flex flex-wrap items-center justify-between gap-3 bg-white dark:bg-zinc-950/60">
         {/* Tab Filters */}
-        <div className="flex items-center gap-1.5 p-1 rounded-xl bg-zinc-900/80 border border-white/5 font-mono text-xs">
+        <div className="flex items-center gap-1.5 p-1 rounded-xl bg-zinc-50 dark:bg-zinc-900/80 border border-zinc-100 dark:border-white/5 font-mono text-xs">
           <button
             type="button"
             onClick={() => setActiveTab("all")}
             className={`px-3 py-1.5 rounded-lg font-bold flex items-center gap-1.5 transition-all cursor-pointer ${
               activeTab === "all"
-                ? "bg-orange-500 text-white shadow-[0_0_12px_rgba(249,115,22,0.4)]"
-                : "text-zinc-400 hover:text-white hover:bg-white/5"
+                ? "bg-orange-500 text-zinc-950 dark:text-white shadow-[0_0_12px_rgba(249,115,22,0.4)]"
+                : "text-zinc-500 dark:text-zinc-400 hover:text-white hover:bg-white/5"
             }`}
           >
             <Flame className="w-3.5 h-3.5" />
@@ -122,8 +122,8 @@ export const TrendingTable: React.FC<TrendingTableProps> = ({
             onClick={() => setActiveTab("gainers")}
             className={`px-3 py-1.5 rounded-lg font-bold flex items-center gap-1.5 transition-all cursor-pointer ${
               activeTab === "gainers"
-                ? "bg-orange-500 text-white shadow-[0_0_12px_rgba(249,115,22,0.4)]"
-                : "text-zinc-400 hover:text-white hover:bg-white/5"
+                ? "bg-orange-500 text-zinc-950 dark:text-white shadow-[0_0_12px_rgba(249,115,22,0.4)]"
+                : "text-zinc-500 dark:text-zinc-400 hover:text-white hover:bg-white/5"
             }`}
           >
             <Rocket className="w-3.5 h-3.5" />
@@ -135,8 +135,8 @@ export const TrendingTable: React.FC<TrendingTableProps> = ({
             onClick={() => setActiveTab("volume")}
             className={`px-3 py-1.5 rounded-lg font-bold flex items-center gap-1.5 transition-all cursor-pointer ${
               activeTab === "volume"
-                ? "bg-orange-500 text-white shadow-[0_0_12px_rgba(249,115,22,0.4)]"
-                : "text-zinc-400 hover:text-white hover:bg-white/5"
+                ? "bg-orange-500 text-zinc-950 dark:text-white shadow-[0_0_12px_rgba(249,115,22,0.4)]"
+                : "text-zinc-500 dark:text-zinc-400 hover:text-white hover:bg-white/5"
             }`}
           >
             <Droplets className="w-3.5 h-3.5" />
@@ -152,7 +152,7 @@ export const TrendingTable: React.FC<TrendingTableProps> = ({
               <span>Updating DexScreener…</span>
             </span>
           )}
-          <span className="px-2 py-0.5 rounded bg-zinc-900 border border-zinc-800 text-zinc-400">
+          <span className="px-2 py-0.5 rounded bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 text-zinc-500 dark:text-zinc-400">
             {tokens.length} Solana Tokens
           </span>
         </div>
@@ -162,7 +162,7 @@ export const TrendingTable: React.FC<TrendingTableProps> = ({
       <div className="overflow-x-auto no-scrollbar">
         <table className="w-full text-left font-mono text-xs border-collapse">
           <thead>
-            <tr className="border-b border-white/5 bg-zinc-950/90 text-zinc-500 text-[10px] uppercase tracking-wider select-none">
+            <tr className="border-b border-zinc-100 dark:border-white/5 bg-white dark:bg-zinc-950/90 text-zinc-500 text-[10px] uppercase tracking-wider select-none">
               <th className="py-3 px-4 w-16 text-center">#</th>
               <th className="py-3 px-4">Token</th>
               <th className="py-3 px-4 text-right">Price</th>
@@ -272,7 +272,7 @@ export const TrendingTable: React.FC<TrendingTableProps> = ({
                     <td className="py-3.5 px-4">
                       <div className="flex items-center gap-2.5 min-w-0">
                         {token.iconUrl ? (
-                          <div className="w-8 h-8 rounded-full overflow-hidden border border-white/10 shrink-0 bg-zinc-900">
+                          <div className="w-8 h-8 rounded-full overflow-hidden border border-zinc-200 dark:border-white/10 shrink-0 bg-zinc-50 dark:bg-zinc-900">
                             <Image
                               src={token.iconUrl}
                               alt={token.symbol}
@@ -290,10 +290,10 @@ export const TrendingTable: React.FC<TrendingTableProps> = ({
 
                         <div className="min-w-0">
                           <div className="flex items-center gap-1.5">
-                            <span className="font-bold text-white text-xs truncate">
+                            <span className="font-bold text-zinc-950 dark:text-white text-xs truncate">
                               ${token.symbol}
                             </span>
-                            <span className="text-[10px] text-zinc-400 truncate max-w-[110px]">
+                            <span className="text-[10px] text-zinc-500 dark:text-zinc-400 truncate max-w-[110px]">
                               {token.name}
                             </span>
                           </div>
@@ -321,7 +321,7 @@ export const TrendingTable: React.FC<TrendingTableProps> = ({
                     </td>
 
                     {/* Price */}
-                    <td className="py-3.5 px-4 text-right font-bold text-white">
+                    <td className="py-3.5 px-4 text-right font-bold text-zinc-950 dark:text-white">
                       {formatPrice(token.priceUsd)}
                     </td>
 
@@ -345,12 +345,12 @@ export const TrendingTable: React.FC<TrendingTableProps> = ({
                     </td>
 
                     {/* Market Cap */}
-                    <td className="py-3.5 px-4 text-right text-zinc-300 font-medium">
+                    <td className="py-3.5 px-4 text-right text-zinc-700 dark:text-zinc-300 font-medium">
                       {formatCurrency(token.marketCap)}
                     </td>
 
                     {/* 24h Volume */}
-                    <td className="py-3.5 px-4 text-right text-zinc-400">
+                    <td className="py-3.5 px-4 text-right text-zinc-500 dark:text-zinc-400">
                       {formatCurrency(token.volume24h)}
                     </td>
 
@@ -371,7 +371,7 @@ export const TrendingTable: React.FC<TrendingTableProps> = ({
                           target="_blank"
                           rel="noopener noreferrer"
                           onClick={(e) => e.stopPropagation()}
-                          className="p-1.5 rounded-lg bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 text-zinc-400 hover:text-white transition-colors"
+                          className="p-1.5 rounded-lg bg-zinc-50 dark:bg-zinc-900 hover:bg-zinc-800 border border-zinc-200 dark:border-zinc-800 text-zinc-500 dark:text-zinc-400 hover:text-white transition-colors"
                           title="Open DexScreener"
                         >
                           <ExternalLink className="w-3 h-3" />

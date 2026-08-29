@@ -179,9 +179,9 @@ export function JupiterSwapWidget({
   };
 
   return (
-    <div className="w-full bg-zinc-950 rounded-xl border border-white/10 flex flex-col font-mono shadow-2xl overflow-hidden select-none">
+    <div className="w-full bg-white dark:bg-zinc-950 rounded-xl border border-zinc-200 dark:border-white/10 flex flex-col font-mono shadow-2xl overflow-hidden select-none">
       {/* Header */}
-      <div className="px-4 py-3 border-b border-white/10 flex items-center justify-between bg-zinc-900/50">
+      <div className="px-4 py-3 border-b border-zinc-200 dark:border-white/10 flex items-center justify-between bg-zinc-50 dark:bg-zinc-900/50">
         <div className="flex items-center gap-2">
           <span className="w-2 h-2 rounded-full bg-amber-400 animate-pulse" />
           <span className="text-xs font-bold text-amber-400 tracking-wide">
@@ -189,11 +189,11 @@ export function JupiterSwapWidget({
           </span>
         </div>
         <div className="flex items-center gap-3">
-          <span className="text-[10px] text-zinc-400">Powered by Jupiter</span>
+          <span className="text-[10px] text-zinc-500 dark:text-zinc-400">Powered by Jupiter</span>
           <button
             type="button"
             onClick={() => fetchQuote(inputAmount)}
-            className="text-[10px] text-zinc-400 hover:text-amber-400 transition-colors cursor-pointer"
+            className="text-[10px] text-zinc-500 dark:text-zinc-400 hover:text-amber-400 transition-colors cursor-pointer"
           >
             {loadingQuote ? "UPDATING..." : "REFRESH"}
           </button>
@@ -202,8 +202,8 @@ export function JupiterSwapWidget({
 
       <div className="p-4 flex flex-col gap-3.5">
         {/* Pay Section */}
-        <div className="bg-zinc-900/60 border border-white/5 rounded-lg p-3">
-          <div className="flex justify-between items-center text-[11px] text-zinc-400 mb-1.5">
+        <div className="bg-zinc-50 dark:bg-zinc-900/60 border border-zinc-100 dark:border-white/5 rounded-lg p-3">
+          <div className="flex justify-between items-center text-[11px] text-zinc-500 dark:text-zinc-400 mb-1.5">
             <span>YOU PAY</span>
             <span className="text-[10px]">
               BAL: {userBalance !== null ? `${userBalance.toFixed(3)} SOL` : '-- SOL'}
@@ -223,7 +223,7 @@ export function JupiterSwapWidget({
               value={inputAmount}
               onChange={(e) => handleAmountChange(e.target.value)}
               placeholder="0.0"
-              className="bg-transparent text-lg font-bold text-zinc-100 outline-none w-full font-mono"
+              className="bg-transparent text-lg font-bold text-zinc-900 dark:text-zinc-100 outline-none w-full font-mono"
             />
             <span className="text-xs font-bold text-amber-400 bg-amber-500/10 border border-amber-500/20 px-2 py-1 rounded shrink-0">
               SOL
@@ -238,7 +238,7 @@ export function JupiterSwapWidget({
                 className={`text-[10px] px-2 py-1 rounded border transition-colors cursor-pointer ${
                   inputAmount === amt
                     ? "border-amber-500/40 bg-amber-500/20 text-amber-300 font-bold"
-                    : "border-white/5 bg-zinc-900 text-zinc-400 hover:text-zinc-200"
+                    : "border-zinc-100 dark:border-white/5 bg-zinc-50 dark:bg-zinc-900 text-zinc-500 dark:text-zinc-400 hover:text-zinc-200"
                 }`}
               >
                 {amt} SOL
@@ -248,26 +248,26 @@ export function JupiterSwapWidget({
         </div>
 
         {/* Receive Section */}
-        <div className="bg-zinc-900/60 border border-white/5 rounded-lg p-3">
-          <div className="flex justify-between items-center text-[11px] text-zinc-400 mb-1.5">
+        <div className="bg-zinc-50 dark:bg-zinc-900/60 border border-zinc-100 dark:border-white/5 rounded-lg p-3">
+          <div className="flex justify-between items-center text-[11px] text-zinc-500 dark:text-zinc-400 mb-1.5">
             <span>YOU RECEIVE (ESTIMATED)</span>
             <span className="text-emerald-400 text-[10px] font-bold">Best Route</span>
           </div>
           <div className="flex justify-between items-center">
-            <span className="text-lg font-bold text-zinc-100 truncate">
+            <span className="text-lg font-bold text-zinc-900 dark:text-zinc-100 truncate">
               {loadingQuote ? "Calculating..." : outputAmount}
             </span>
-            <span className="text-xs font-bold text-zinc-300 bg-zinc-800 border border-white/5 px-2 py-1 rounded shrink-0">
+            <span className="text-xs font-bold text-zinc-700 dark:text-zinc-300 bg-zinc-800 border border-zinc-100 dark:border-white/5 px-2 py-1 rounded shrink-0">
               ${outputSymbol}
             </span>
           </div>
         </div>
 
         {/* Route Info */}
-        <div className="bg-zinc-900/20 border border-white/5 rounded-lg p-2.5 flex flex-col gap-1.5 text-[10px] text-zinc-400">
+        <div className="bg-zinc-50 dark:bg-zinc-900/20 border border-zinc-100 dark:border-white/5 rounded-lg p-2.5 flex flex-col gap-1.5 text-[10px] text-zinc-500 dark:text-zinc-400">
           <div className="flex justify-between">
             <span>Routing Engine</span>
-            <span className="text-zinc-300 font-bold">Jupiter Ultra API</span>
+            <span className="text-zinc-700 dark:text-zinc-300 font-bold">Jupiter Ultra API</span>
           </div>
           <div className="flex justify-between">
             <span>Price Impact</span>

@@ -121,26 +121,26 @@ export default function TerminalPage() {
   };
 
   return (
-    <div className="min-h-screen flex flex-col bg-[#07080A] text-zinc-100 selection:bg-orange-500 selection:text-white font-space">
+    <div className="min-h-screen flex flex-col bg-[#07080A] text-zinc-900 dark:text-zinc-100 selection:bg-orange-500 selection:text-zinc-950 dark:text-white font-space">
       {/* 1. Global Navigation Bar */}
       <Navbar />
 
       <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 py-6 sm:py-8 space-y-6">
         {/* ── Page Title Header ────────────────────────────────────────── */}
-        <div className="flex flex-wrap items-center justify-between gap-4 pb-2 border-b border-white/5">
+        <div className="flex flex-wrap items-center justify-between gap-4 pb-2 border-b border-zinc-100 dark:border-white/5">
           <div className="space-y-1">
             <div className="flex items-center gap-2">
               <div className="w-8 h-8 rounded-xl bg-orange-500/15 border border-orange-500/30 flex items-center justify-center text-orange-400 shadow-[0_0_15px_rgba(249,115,22,0.25)]">
                 <Activity className="w-4 h-4" />
               </div>
-              <h1 className="font-archivo text-xl sm:text-2xl font-black text-white tracking-wide uppercase">
+              <h1 className="font-archivo text-xl sm:text-2xl font-black text-zinc-950 dark:text-white tracking-wide uppercase">
                 OUTBID TERMINAL
               </h1>
               <span className="px-2 py-0.5 rounded-full bg-orange-500/15 border border-orange-500/30 text-orange-400 text-[10px] font-mono font-bold">
                 LIVE
               </span>
             </div>
-            <p className="text-xs font-mono text-zinc-400">
+            <p className="text-xs font-mono text-zinc-500 dark:text-zinc-400">
               Spot Market Pulse, Trending Solana Movers, and Direct Jupiter DEX Routing.
             </p>
           </div>
@@ -148,7 +148,7 @@ export default function TerminalPage() {
           <div className="flex items-center gap-2">
             <Link
               href="/"
-              className="px-3 py-1.5 rounded-xl bg-zinc-900 hover:bg-zinc-800 border border-white/10 text-zinc-300 hover:text-white text-xs font-mono font-bold transition-colors"
+              className="px-3 py-1.5 rounded-xl bg-zinc-50 dark:bg-zinc-900 hover:bg-zinc-800 border border-zinc-200 dark:border-white/10 text-zinc-700 dark:text-zinc-300 hover:text-white text-xs font-mono font-bold transition-colors"
             >
               ← Directory
             </Link>
@@ -172,7 +172,7 @@ export default function TerminalPage() {
           {/* Left Column: Trending Tokens Table (8 cols on lg) */}
           <div className="lg:col-span-7 xl:col-span-8 space-y-4">
             <div className="flex items-center justify-between px-1">
-              <span className="font-mono text-xs text-zinc-400 font-bold tracking-wider uppercase">
+              <span className="font-mono text-xs text-zinc-500 dark:text-zinc-400 font-bold tracking-wider uppercase">
                 TRENDING SOLANA MOVERS
               </span>
               <span className="text-[11px] font-mono text-zinc-500">
@@ -196,11 +196,11 @@ export default function TerminalPage() {
           {/* Right Column: Swap Widget & Selected Token Künye (4 cols on lg) */}
           <div className="lg:col-span-5 xl:col-span-4 space-y-4">
             {/* Selected Token Mini Künyesi */}
-            <div className="p-4 rounded-2xl bg-[#0D0E12] border border-white/10 space-y-3 font-mono shadow-xl">
+            <div className="p-4 rounded-2xl bg-white dark:bg-[#0D0E12] border border-zinc-200 dark:border-white/10 space-y-3 font-mono shadow-xl">
               <div className="flex items-center justify-between gap-3">
                 <div className="flex items-center gap-2.5 min-w-0">
                   {displayToken.iconUrl ? (
-                    <div className="w-10 h-10 rounded-xl overflow-hidden border border-white/10 bg-zinc-900 shrink-0">
+                    <div className="w-10 h-10 rounded-xl overflow-hidden border border-zinc-200 dark:border-white/10 bg-zinc-50 dark:bg-zinc-900 shrink-0">
                       <Image
                         src={displayToken.iconUrl}
                         alt={displayToken.symbol}
@@ -218,7 +218,7 @@ export default function TerminalPage() {
 
                   <div className="min-w-0">
                     <div className="flex items-center gap-1.5">
-                      <span className="font-archivo font-black text-base text-white truncate">
+                      <span className="font-archivo font-black text-base text-zinc-950 dark:text-white truncate">
                         ${displayToken.symbol}
                       </span>
                       {displayToken.priceChange24h !== 0 && (
@@ -239,7 +239,7 @@ export default function TerminalPage() {
                         </span>
                       )}
                     </div>
-                    <p className="text-[11px] text-zinc-400 truncate">
+                    <p className="text-[11px] text-zinc-500 dark:text-zinc-400 truncate">
                       {displayToken.name}
                     </p>
                   </div>
@@ -257,9 +257,9 @@ export default function TerminalPage() {
 
               {/* Stats 2x2 Grid */}
               <div className="grid grid-cols-2 gap-2 pt-1 text-[11px]">
-                <div className="p-2 rounded-lg bg-zinc-950/80 border border-white/5 space-y-0.5">
+                <div className="p-2 rounded-lg bg-white dark:bg-zinc-950/80 border border-zinc-100 dark:border-white/5 space-y-0.5">
                   <div className="text-[9px] text-zinc-500 uppercase">Price</div>
-                  <div className="font-bold text-white truncate">
+                  <div className="font-bold text-zinc-950 dark:text-white truncate">
                     {displayToken.priceUsd > 0
                       ? displayToken.priceUsd >= 1
                         ? `$${displayToken.priceUsd.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 4 })}`
@@ -272,19 +272,19 @@ export default function TerminalPage() {
                   </div>
                 </div>
 
-                <div className="p-2 rounded-lg bg-zinc-950/80 border border-white/5 space-y-0.5">
+                <div className="p-2 rounded-lg bg-white dark:bg-zinc-950/80 border border-zinc-100 dark:border-white/5 space-y-0.5">
                   <div className="text-[9px] text-zinc-500 uppercase">Market Cap</div>
-                  <div className="font-bold text-zinc-200 truncate">
+                  <div className="font-bold text-zinc-800 dark:text-zinc-200 truncate">
                     {displayToken.marketCap > 0 ? formatCurrency(displayToken.marketCap) : "—"}
                   </div>
                 </div>
               </div>
 
               {/* CA Row with copy & explorer links */}
-              <div className="flex items-center justify-between gap-2 pt-2 border-t border-white/5 text-[10px] text-zinc-400">
+              <div className="flex items-center justify-between gap-2 pt-2 border-t border-zinc-100 dark:border-white/5 text-[10px] text-zinc-500 dark:text-zinc-400">
                 <div className="flex items-center gap-1.5 min-w-0">
                   <span className="text-zinc-600 uppercase">CA:</span>
-                  <span className="font-mono text-zinc-300 truncate">
+                  <span className="font-mono text-zinc-700 dark:text-zinc-300 truncate">
                     {displayToken.mint}
                   </span>
                   <button
@@ -306,7 +306,7 @@ export default function TerminalPage() {
                     href={`https://pump.fun/coin/${displayToken.mint}`}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="px-2 py-0.5 rounded bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 text-lime-400 text-[10px] font-bold transition-colors inline-flex items-center gap-0.5"
+                    className="px-2 py-0.5 rounded bg-zinc-50 dark:bg-zinc-900 hover:bg-zinc-800 border border-zinc-200 dark:border-zinc-800 text-lime-400 text-[10px] font-bold transition-colors inline-flex items-center gap-0.5"
                   >
                     <span>Pump</span>
                     <ExternalLink className="w-2.5 h-2.5" />
@@ -315,7 +315,7 @@ export default function TerminalPage() {
                     href={`https://dexscreener.com/solana/${displayToken.mint}`}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="px-2 py-0.5 rounded bg-zinc-900 hover:bg-zinc-800 border border-zinc-800 text-zinc-300 text-[10px] font-bold transition-colors inline-flex items-center gap-0.5"
+                    className="px-2 py-0.5 rounded bg-zinc-50 dark:bg-zinc-900 hover:bg-zinc-800 border border-zinc-200 dark:border-zinc-800 text-zinc-700 dark:text-zinc-300 text-[10px] font-bold transition-colors inline-flex items-center gap-0.5"
                   >
                     <span>DEX</span>
                     <ExternalLink className="w-2.5 h-2.5" />

@@ -55,10 +55,10 @@ export const HeroSpotlight: React.FC<HeroSpotlightProps> = ({
 
   if (isLoading || !top1Coin) {
     return (
-      <div className={`w-full p-6 sm:p-8 rounded-3xl bg-zinc-950/80 border border-white/10 animate-pulse ${className}`}>
+      <div className={`w-full p-6 sm:p-8 rounded-3xl bg-white dark:bg-zinc-950/80 border border-zinc-200 dark:border-white/10 animate-pulse ${className}`}>
         <div className="h-6 w-48 bg-zinc-800 rounded-full mb-4" />
         <div className="h-10 w-64 bg-zinc-800 rounded-xl mb-6" />
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 h-20 bg-zinc-900/50 rounded-2xl" />
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 h-20 bg-zinc-50 dark:bg-zinc-900/50 rounded-2xl" />
       </div>
     );
   }
@@ -97,7 +97,7 @@ export const HeroSpotlight: React.FC<HeroSpotlightProps> = ({
           {/* Token Title & Logo */}
           <div className="flex items-center gap-3.5">
             {displayIcon ? (
-              <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl overflow-hidden border-2 border-amber-400/40 bg-zinc-900 shrink-0 shadow-lg">
+              <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl overflow-hidden border-2 border-amber-400/40 bg-zinc-50 dark:bg-zinc-900 shrink-0 shadow-lg">
                 <Image
                   src={displayIcon}
                   alt={displaySymbol}
@@ -115,7 +115,7 @@ export const HeroSpotlight: React.FC<HeroSpotlightProps> = ({
 
             <div className="min-w-0">
               <div className="flex items-center gap-2 flex-wrap">
-                <h2 className="font-archivo text-2xl sm:text-3xl font-black text-white uppercase tracking-tight truncate">
+                <h2 className="font-archivo text-2xl sm:text-3xl font-black text-zinc-950 dark:text-white uppercase tracking-tight truncate">
                   ${displaySymbol}
                 </h2>
                 {displayChange24h !== 0 && (
@@ -138,16 +138,16 @@ export const HeroSpotlight: React.FC<HeroSpotlightProps> = ({
                   </span>
                 )}
               </div>
-              <p className="text-xs sm:text-sm text-zinc-400 font-mono line-clamp-1 mt-0.5">
+              <p className="text-xs sm:text-sm text-zinc-500 dark:text-zinc-400 font-mono line-clamp-1 mt-0.5">
                 {displayName}
               </p>
             </div>
           </div>
 
           {/* CA Row */}
-          <div className="flex items-center gap-2 text-[11px] font-mono text-zinc-400">
+          <div className="flex items-center gap-2 text-[11px] font-mono text-zinc-500 dark:text-zinc-400">
             <span className="text-zinc-500 uppercase">CA:</span>
-            <span className="text-zinc-300 truncate max-w-[200px] sm:max-w-xs">
+            <span className="text-zinc-700 dark:text-zinc-300 truncate max-w-[200px] sm:max-w-xs">
               {top1Coin.mintAddress}
             </span>
             <button
@@ -168,21 +168,21 @@ export const HeroSpotlight: React.FC<HeroSpotlightProps> = ({
         {/* Right: Stats & Action Buttons */}
         <div className="flex flex-col gap-4 lg:items-end w-full lg:w-auto">
           {/* Stats Bar */}
-          <div className="grid grid-cols-3 gap-2.5 sm:gap-3 p-3 rounded-2xl bg-black/50 border border-white/10 font-mono text-center w-full lg:w-[380px]">
-            <div className="p-2 rounded-xl bg-zinc-900/60 border border-white/5 space-y-0.5">
+          <div className="grid grid-cols-3 gap-2.5 sm:gap-3 p-3 rounded-2xl bg-white dark:bg-black/50 border border-zinc-200 dark:border-white/10 font-mono text-center w-full lg:w-[380px]">
+            <div className="p-2 rounded-xl bg-zinc-50 dark:bg-zinc-900/60 border border-zinc-100 dark:border-white/5 space-y-0.5">
               <div className="text-[9px] text-zinc-500 uppercase tracking-wider">
                 Price
               </div>
-              <div className="font-bold text-white text-xs sm:text-sm truncate">
+              <div className="font-bold text-zinc-950 dark:text-white text-xs sm:text-sm truncate">
                 ${displayPrice > 0 ? (displayPrice >= 1 ? displayPrice.toFixed(2) : displayPrice.toFixed(6)) : "—"}
               </div>
             </div>
 
-            <div className="p-2 rounded-xl bg-zinc-900/60 border border-white/5 space-y-0.5">
+            <div className="p-2 rounded-xl bg-zinc-50 dark:bg-zinc-900/60 border border-zinc-100 dark:border-white/5 space-y-0.5">
               <div className="text-[9px] text-zinc-500 uppercase tracking-wider">
                 Mcap
               </div>
-              <div className="font-bold text-zinc-200 text-xs sm:text-sm truncate">
+              <div className="font-bold text-zinc-800 dark:text-zinc-200 text-xs sm:text-sm truncate">
                 {displayMcap > 0 ? formatCurrency(displayMcap) : "—"}
               </div>
             </div>
@@ -211,7 +211,7 @@ export const HeroSpotlight: React.FC<HeroSpotlightProps> = ({
             <button
               type="button"
               onClick={() => onBoostCoin?.(top1Coin)}
-              className="px-4 py-3 rounded-xl bg-zinc-900 hover:bg-zinc-800 border border-white/15 text-white font-mono font-bold text-xs uppercase tracking-wider transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
+              className="px-4 py-3 rounded-xl bg-zinc-50 dark:bg-zinc-900 hover:bg-zinc-800 border border-white/15 text-zinc-950 dark:text-white font-mono font-bold text-xs uppercase tracking-wider transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
             >
               <Flame className="w-4 h-4 text-orange-400 fill-current" />
               <span>Boost / Outbid</span>

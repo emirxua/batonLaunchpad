@@ -40,7 +40,7 @@ export default function OutbidHomePage() {
   };
 
   return (
-    <div className="min-h-screen flex flex-col bg-[#08090C] text-zinc-200 selection:bg-amber-500 selection:text-black font-space">
+    <div className="min-h-screen flex flex-col bg-zinc-50 dark:bg-[#08090C] text-zinc-800 dark:text-zinc-200 selection:bg-amber-500 selection:text-black font-space">
       {/* 1. Navbar */}
       <Navbar />
 

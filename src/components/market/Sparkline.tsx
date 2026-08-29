@@ -65,7 +65,7 @@ export function Sparkline({
     return (
       <div
         style={{ width, height }}
-        className="opacity-10 border-b border-zinc-700"
+        className="opacity-10 border-b border-zinc-300 dark:border-zinc-700"
       />
     );
   }

@@ -45,14 +45,14 @@ export function RankedAttentionTable({
   }, [coins, selectedCategory]);
 
   return (
-    <div className="w-full bg-zinc-900/40 border border-white/10 rounded-xl overflow-hidden shadow-xl flex flex-col font-mono">
+    <div className="w-full bg-zinc-50 dark:bg-zinc-900/40 border border-zinc-200 dark:border-white/10 rounded-xl overflow-hidden shadow-xl flex flex-col font-mono">
       {/* Top Header + Category Filters */}
-      <div className="p-4 border-b border-white/5 bg-zinc-950/60 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+      <div className="p-4 border-b border-zinc-100 dark:border-white/5 bg-white dark:bg-zinc-950/60 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div className="flex items-center gap-2">
-          <span className="font-bold text-xs text-zinc-300 uppercase tracking-wider">
+          <span className="font-bold text-xs text-zinc-700 dark:text-zinc-300 uppercase tracking-wider">
             RANKED ATTENTION LADDER
           </span>
-          <span className="text-[10px] text-zinc-500 bg-zinc-800/80 px-2 py-0.5 rounded border border-white/5">
+          <span className="text-[10px] text-zinc-500 bg-zinc-800/80 px-2 py-0.5 rounded border border-zinc-100 dark:border-white/5">
             {filteredCoins.length} TRACKED
           </span>
         </div>
@@ -69,7 +69,7 @@ export function RankedAttentionTable({
                 className={`px-2.5 py-1 rounded text-[11px] font-bold uppercase tracking-wider transition-all whitespace-nowrap cursor-pointer ${
                   isActive
                     ? "bg-amber-500/20 text-amber-400 border border-amber-500/40 shadow-sm"
-                    : "text-zinc-400 hover:text-zinc-200 hover:bg-white/5 border border-transparent"
+                    : "text-zinc-500 dark:text-zinc-400 hover:text-zinc-200 hover:bg-white/5 border border-transparent"
                 }`}
               >
                 [ {cat.label} ]
@@ -83,7 +83,7 @@ export function RankedAttentionTable({
       <div className="overflow-x-auto no-scrollbar">
         <table className="w-full text-left text-xs border-collapse">
           <thead>
-            <tr className="border-b border-white/5 bg-zinc-950/80 text-zinc-500 text-[10px] uppercase tracking-wider select-none">
+            <tr className="border-b border-zinc-100 dark:border-white/5 bg-white dark:bg-zinc-950/80 text-zinc-500 text-[10px] uppercase tracking-wider select-none">
               <th className="py-2.5 px-4 w-12 text-center">#</th>
               <th className="py-2.5 px-4">Token</th>
               <th className="py-2.5 px-4 text-right">Market Cap</th>
@@ -149,7 +149,7 @@ export function RankedAttentionTable({
                     {/* Token Info */}
                     <td className="py-3 px-4">
                       <div className="flex items-center gap-2.5 min-w-0">
-                        <div className="w-7 h-7 rounded-lg overflow-hidden bg-zinc-800 border border-white/10 shrink-0 flex items-center justify-center">
+                        <div className="w-7 h-7 rounded-lg overflow-hidden bg-zinc-800 border border-zinc-200 dark:border-white/10 shrink-0 flex items-center justify-center">
                           {token.imageUrl ? (
                             <Image
                               src={token.imageUrl}
@@ -168,10 +168,10 @@ export function RankedAttentionTable({
 
                         <div className="min-w-0">
                           <div className="flex items-center gap-1.5">
-                            <span className="font-bold text-white text-xs truncate">
+                            <span className="font-bold text-zinc-950 dark:text-white text-xs truncate">
                               ${token.ticker}
                             </span>
-                            <span className="text-[10px] text-zinc-400 truncate max-w-[120px]">
+                            <span className="text-[10px] text-zinc-500 dark:text-zinc-400 truncate max-w-[120px]">
                               {token.name}
                             </span>
                           </div>
@@ -196,7 +196,7 @@ export function RankedAttentionTable({
                     </td>
 
                     {/* Market Cap */}
-                    <td className="py-3 px-4 text-right text-zinc-300 font-medium">
+                    <td className="py-3 px-4 text-right text-zinc-700 dark:text-zinc-300 font-medium">
                       {formatCurrency(token.marketCap || 0)}
                     </td>
 

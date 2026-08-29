@@ -23,7 +23,7 @@ export function HomeStatsBar({
   onOutbidClick,
 }: HomeStatsBarProps) {
   return (
-    <div className="w-full bg-zinc-900/40 border border-white/5 px-4 py-2 rounded-lg flex items-center justify-between gap-4 font-mono text-xs text-zinc-400 overflow-x-auto no-scrollbar select-none">
+    <div className="w-full bg-zinc-50 dark:bg-zinc-900/40 border border-zinc-100 dark:border-white/5 px-4 py-2 rounded-lg flex items-center justify-between gap-4 font-mono text-xs text-zinc-500 dark:text-zinc-400 overflow-x-auto no-scrollbar select-none">
       {/* Metrics Row */}
       <div className="flex items-center gap-3 sm:gap-5 flex-wrap min-w-0">
         {/* On-Chain Burned */}
@@ -50,9 +50,9 @@ export function HomeStatsBar({
           {isLoading ? (
             <span className="inline-block h-3.5 w-16 bg-zinc-800 rounded animate-pulse" />
           ) : (
-            <span className="font-bold text-zinc-200 text-xs">
+            <span className="font-bold text-zinc-800 dark:text-zinc-200 text-xs">
               <span className="text-amber-400">${leaderTicker}</span>{" "}
-              <span className="text-zinc-400 font-normal">
+              <span className="text-zinc-500 dark:text-zinc-400 font-normal">
                 ({formatCurrency(leaderMcap)})
               </span>
             </span>
@@ -69,7 +69,7 @@ export function HomeStatsBar({
           {isLoading ? (
             <span className="inline-block h-3.5 w-8 bg-zinc-800 rounded animate-pulse" />
           ) : (
-            <span className="font-bold text-zinc-200 text-xs">{activeRooms}</span>
+            <span className="font-bold text-zinc-800 dark:text-zinc-200 text-xs">{activeRooms}</span>
           )}
         </div>
 
@@ -83,7 +83,7 @@ export function HomeStatsBar({
           {isLoading ? (
             <span className="inline-block h-3.5 w-14 bg-zinc-800 rounded animate-pulse" />
           ) : (
-            <span className="font-bold text-zinc-200 text-xs">
+            <span className="font-bold text-zinc-800 dark:text-zinc-200 text-xs">
               {formatCurrency(totalVolume24h)}
             </span>
           )}

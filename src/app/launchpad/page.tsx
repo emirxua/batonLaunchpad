@@ -132,14 +132,14 @@ export default function LaunchpadPage() {
         />
 
         {/* Tier Multipliers Banner */}
-        <section className="bg-zinc-900/60 dark:bg-[#111318]/80 backdrop-blur-md border border-zinc-800 dark:border-white/10 rounded-2xl p-6 shadow-xl shadow-black/40 space-y-4">
+        <section className="bg-zinc-50 dark:bg-zinc-900/60 dark:bg-[#111318]/80 backdrop-blur-md border border-zinc-200 dark:border-zinc-800 dark:border-white/10 rounded-2xl p-6 shadow-xl shadow-black/40 space-y-4">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
             <div>
-              <h2 className="font-archivo text-lg text-white font-bold flex items-center gap-2">
+              <h2 className="font-archivo text-lg text-zinc-950 dark:text-white font-bold flex items-center gap-2">
                 <Zap className="w-4 h-4 text-lime-400" />
                 <span>$BATON Burn Tiers &amp; Visibility Multipliers</span>
               </h2>
-              <p className="text-sm text-zinc-400 font-space">
+              <p className="text-sm text-zinc-500 dark:text-zinc-400 font-space">
                 Every $BATON burned directly upgrades your token&apos;s directory ranking and community trust score.
               </p>
             </div>
@@ -149,36 +149,36 @@ export default function LaunchpadPage() {
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 pt-1 font-mono">
-            <div className="bg-zinc-950/60 border border-amber-700/40 rounded-xl p-4 transition-all duration-200 hover:scale-[1.02]">
+            <div className="bg-white dark:bg-zinc-950/60 border border-amber-700/40 rounded-xl p-4 transition-all duration-200 hover:scale-[1.02]">
               <div className="flex items-center justify-between">
                 <span className="text-xs font-bold text-amber-500">Bronze Tier</span>
-                <span className="text-[11px] text-zinc-400">10K $BATON</span>
+                <span className="text-[11px] text-zinc-500 dark:text-zinc-400">10K $BATON</span>
               </div>
-              <div className="text-zinc-400 text-xs mt-1 font-space">1.5x Directory Multiplier</div>
+              <div className="text-zinc-500 dark:text-zinc-400 text-xs mt-1 font-space">1.5x Directory Multiplier</div>
             </div>
 
-            <div className="bg-zinc-950/60 border border-slate-500/40 rounded-xl p-4 transition-all duration-200 hover:scale-[1.02]">
+            <div className="bg-white dark:bg-zinc-950/60 border border-slate-500/40 rounded-xl p-4 transition-all duration-200 hover:scale-[1.02]">
               <div className="flex items-center justify-between">
                 <span className="text-xs font-bold text-slate-300">Silver Tier</span>
-                <span className="text-[11px] text-zinc-400">50K $BATON</span>
+                <span className="text-[11px] text-zinc-500 dark:text-zinc-400">50K $BATON</span>
               </div>
-              <div className="text-zinc-400 text-xs mt-1 font-space">3x Visibility Boost</div>
+              <div className="text-zinc-500 dark:text-zinc-400 text-xs mt-1 font-space">3x Visibility Boost</div>
             </div>
 
-            <div className="bg-zinc-950/60 border border-yellow-500/40 rounded-xl p-4 transition-all duration-200 hover:scale-[1.02] shadow-[0_0_15px_rgba(234,179,8,0.08)]">
+            <div className="bg-white dark:bg-zinc-950/60 border border-yellow-500/40 rounded-xl p-4 transition-all duration-200 hover:scale-[1.02] shadow-[0_0_15px_rgba(234,179,8,0.08)]">
               <div className="flex items-center justify-between">
                 <span className="text-xs font-bold text-yellow-400">Gold Tier</span>
-                <span className="text-[11px] text-zinc-400">250K $BATON</span>
+                <span className="text-[11px] text-zinc-500 dark:text-zinc-400">250K $BATON</span>
               </div>
-              <div className="text-zinc-400 text-xs mt-1 font-space">6x Priority Placement</div>
+              <div className="text-zinc-500 dark:text-zinc-400 text-xs mt-1 font-space">6x Priority Placement</div>
             </div>
 
-            <div className="bg-zinc-950/60 border border-cyan-400/50 rounded-xl p-4 transition-all duration-200 hover:scale-[1.02] shadow-[0_0_20px_rgba(34,211,238,0.15)]">
+            <div className="bg-white dark:bg-zinc-950/60 border border-cyan-400/50 rounded-xl p-4 transition-all duration-200 hover:scale-[1.02] shadow-[0_0_20px_rgba(34,211,238,0.15)]">
               <div className="flex items-center justify-between">
                 <span className="text-xs font-bold text-cyan-300">Diamond Tier</span>
-                <span className="text-[11px] text-zinc-400">1M+ $BATON</span>
+                <span className="text-[11px] text-zinc-500 dark:text-zinc-400">1M+ $BATON</span>
               </div>
-              <div className="text-zinc-400 text-xs mt-1 font-space">10x Hero Spotlight &amp; Glow</div>
+              <div className="text-zinc-500 dark:text-zinc-400 text-xs mt-1 font-space">10x Hero Spotlight &amp; Glow</div>
             </div>
           </div>
         </section>
@@ -246,7 +246,7 @@ export default function LaunchpadPage() {
             </p>
             <Link
               href="/submit"
-              className="inline-block px-4 py-2 bg-zinc-900 dark:bg-acid text-white dark:text-bg font-mono text-xs font-bold rounded-lg hover:bg-emerald-600 dark:hover:bg-acid-dim transition-all shadow-sm"
+              className="inline-block px-4 py-2 bg-zinc-50 dark:bg-zinc-900 dark:bg-acid text-zinc-950 dark:text-white dark:text-bg font-mono text-xs font-bold rounded-lg hover:bg-emerald-600 dark:hover:bg-acid-dim transition-all shadow-sm"
             >
               Submit Mascot Coin 🚀
             </Link>
