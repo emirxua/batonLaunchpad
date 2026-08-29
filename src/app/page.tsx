@@ -174,7 +174,7 @@ export default function OutbidHomePage() {
 
       <main className="flex-1 max-w-5xl w-full mx-auto px-4 sm:px-6 py-8 sm:py-12 space-y-8 sm:space-y-10">
         {/* 2. Top Live Stats Pill */}
-        <div className="flex justify-center">
+        <div className="flex flex-col items-center gap-1.5">
           <Link
             href="/leaderboard"
             className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-white dark:bg-[#15171C] border border-zinc-200 dark:border-white/10 shadow-sm text-xs font-mono text-zinc-600 dark:text-zinc-300 hover:border-orange-500/40 transition-all group"
@@ -188,6 +188,9 @@ export default function OutbidHomePage() {
               see stats <ArrowRight className="w-3 h-3 inline" />
             </span>
           </Link>
+          <span className="text-[10px] font-mono text-zinc-400 dark:text-zinc-500">
+            On-chain burns only. No cached marketing number.
+          </span>
         </div>
 
         {/* 3. Hero Section: "Claim #1 for [X] BATON" */}

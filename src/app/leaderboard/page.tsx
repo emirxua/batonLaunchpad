@@ -100,6 +100,9 @@ export default function LeaderboardPage() {
           <p className="font-space text-sm sm:text-base text-zinc-600 dark:text-text-dim max-w-xl mx-auto leading-relaxed">
             The top Solana communities ranked by total <span className="text-emerald-600 dark:text-acid font-bold">$BATON</span> burned on-chain.
           </p>
+          <p className="font-mono text-[11px] text-zinc-500 dark:text-text-faint">
+            On-chain burns only. No cached marketing number.
+          </p>
 
           {/* Time Filter Tabs */}
           <div className="pt-4 flex items-center justify-center">

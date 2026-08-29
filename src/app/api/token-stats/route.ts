@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { Connection, PublicKey } from "@solana/web3.js";
-import { TOKEN_PROGRAM_ID, AccountLayout } from "@solana/spl-token";
+import { TOKEN_PROGRAM_ID, AccountLayout, getAssociatedTokenAddress } from "@solana/spl-token";
 
 export const dynamic = "force-dynamic";
 
@@ -23,6 +23,7 @@ export interface TokenStatsResponse {
   totalHoldersCount: number;
   topHolders: TopHolder[];
   lastUpdated: string;
+  note?: string;
 }
 
 let cachedStats: TokenStatsResponse | null = null;
@@ -37,6 +38,14 @@ const DEFAULT_MINT = rawMint || "2vdc4owf1MPz54jJCN61y3QSKqjcPpr32wJ9qKkmpump";
 const KNOWN_POOL_ADDRESSES = [
   "5Wg14qETNz2xo1rBCCDUd7PyQKbKo2Luj8nmrtpwimMx",
   "5F5A7EeGqDzhQtQyaGV3vTDxxtxJxwYAhoRFjhYintR5",
+];
+
+// Well-known Solana burn / dead addresses to verify true on-chain burns
+const BURN_ADDRESSES = [
+  "11111111111111111111111111111111",
+  "1nc1nerator11111111111111111111111111111111",
+  "dead111111111111111111111111111111111111111",
+  "deaddeaddeaddeaddeaddeaddeaddeaddeaddeaddead",
 ];
 
 export async function GET() {
@@ -56,12 +65,25 @@ export async function GET() {
 
     // 1. Fetch real on-chain token supply
     const supplyResponse = await connection.getTokenSupply(mintPubkey);
-    const currentSupply = supplyResponse.value.uiAmount ?? 1_000_000_000;
-    const initialSupply = 1_000_000_000;
-    const totalBurned = Math.max(0, initialSupply - currentSupply);
-    const burnPercentage = (totalBurned / initialSupply) * 100;
+    const currentSupply = supplyResponse.value.uiAmount ?? 0;
+    const initialSupply = currentSupply;
 
-    // 2. Fetch on-chain token accounts
+    // 2. Fetch actual on-chain burned tokens in dead addresses (no fake 1B - supply calculation)
+    let totalBurned = 0;
+    for (const burnAddr of BURN_ADDRESSES) {
+      try {
+        const owner = new PublicKey(burnAddr);
+        const ata = await getAssociatedTokenAddress(mintPubkey, owner, true);
+        const bal = await connection.getTokenAccountBalance(ata);
+        totalBurned += bal.value.uiAmount ?? 0;
+      } catch {
+        // ATA does not exist / 0 balance
+      }
+    }
+
+    const burnPercentage = currentSupply > 0 ? (totalBurned / currentSupply) * 100 : 0;
+
+    // 3. Fetch on-chain token accounts for top holders
     let topHolders: TopHolder[] = [];
     let totalHoldersCount = 0;
 
@@ -97,7 +119,7 @@ export async function GET() {
         address: holder.address,
         owner: holder.owner,
         amount: holder.amount,
-        percentage: (holder.amount / initialSupply) * 100,
+        percentage: currentSupply > 0 ? (holder.amount / currentSupply) * 100 : 0,
         isPool: holder.isPool,
         label: holder.isPool ? "Raydium / AMM Pool" : index === 1 ? "Top Whale #1" : undefined,
       }));
@@ -118,6 +140,7 @@ export async function GET() {
       totalHoldersCount,
       topHolders,
       lastUpdated: new Date().toISOString(),
+      note: "On-chain burns only. No cached marketing number.",
     };
 
     cachedStats = result;
@@ -138,13 +161,14 @@ export async function GET() {
     return NextResponse.json(
       {
         mintAddress: DEFAULT_MINT,
-        initialSupply: 1_000_000_000,
-        currentSupply: 1_000_000_000,
+        initialSupply: 0,
+        currentSupply: 0,
         totalBurned: 0,
         burnPercentage: 0,
         totalHoldersCount: 0,
         topHolders: [],
         lastUpdated: new Date().toISOString(),
+        note: "On-chain burns only. No cached marketing number.",
       },
       { status: 200 }
     );
