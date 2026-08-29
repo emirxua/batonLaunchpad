@@ -9,36 +9,18 @@ interface JupiterSwapWidgetProps {
   outputSymbol?: string;
 }
 
-const BATON_MINT = "2vdc4owf1MPz54jJCN61y3QSKqjcPpr32wJ9qKkpump";
-const JUP_SCRIPT_ID = "jupiter-terminal-script-v4";
-const JUP_SCRIPT_URL = "https://terminal.jup.ag/main-v4.js";
-
 export function JupiterSwapWidget({
-  outputMint = BATON_MINT,
+  outputMint = "2vdc4owf1MPz54jJCN61y3QSKqjcPpr32wJ9qKkpump",
   outputSymbol = "BATON",
 }: JupiterSwapWidgetProps) {
   const containerRef = useRef<HTMLDivElement>(null);
-  const [useIframeFallback, setUseIframeFallback] = useState(false);
   const walletContextState = useWallet();
-  const { wallet, connected, publicKey } = walletContextState;
-
-  // Cüzdan durumunu Jupiter ile senkronize et
-  useEffect(() => {
-    if (
-      typeof window !== "undefined" &&
-      (window as unknown as { Jupiter?: { syncProps?: (p: unknown) => void } })
-        .Jupiter?.syncProps
-    ) {
-      (
-        window as unknown as { Jupiter: { syncProps: (p: unknown) => void } }
-      ).Jupiter.syncProps({
-        passthroughWalletContextState: walletContextState,
-      });
-    }
-  }, [walletContextState, wallet, connected, publicKey]);
+  const { wallet } = walletContextState;
+  const [useIframeFallback, setUseIframeFallback] = useState(false);
 
   useEffect(() => {
     let isMounted = true;
+    const scriptId = "jupiter-terminal-script";
 
     const initJupiter = () => {
       if (
@@ -61,79 +43,82 @@ export function JupiterSwapWidget({
             formProps: {
               initialInputMint: "So11111111111111111111111111111111111111112", // Native SOL
               initialOutputMint: outputMint,
+              initialAmount: "0.1",
               fixedOutputMint: false,
+            },
+            palette: {
+              background: "#09090b",
+              primary: "#f59e0b",
             },
           });
         } catch (e) {
-          console.error("Jupiter init failed, switching to iframe fallback:", e);
+          console.error("Jupiter script init failed:", e);
           if (isMounted) setUseIframeFallback(true);
         }
       }
     };
 
-    let script = document.getElementById(JUP_SCRIPT_ID) as HTMLScriptElement | null;
-
+    let script = document.getElementById(scriptId) as HTMLScriptElement | null;
     if (!script) {
       script = document.createElement("script");
-      script.id = JUP_SCRIPT_ID;
-      script.src = JUP_SCRIPT_URL;
+      script.id = scriptId;
+      script.src = "https://terminal.jup.ag/main-v3.js";
       script.async = true;
-      script.crossOrigin = "anonymous";
-      script.onload = () => {
-        if (isMounted) setTimeout(initJupiter, 150);
-      };
+      script.onload = () => setTimeout(initJupiter, 100);
       script.onerror = () => {
         if (isMounted) setUseIframeFallback(true);
       };
       document.body.appendChild(script);
     } else {
-      setTimeout(initJupiter, 150);
+      setTimeout(initJupiter, 100);
     }
-
-    // 3 saniye içinde DOM render olmazsa iframe fallback'e geç
-    const timer = setTimeout(() => {
-      if (
-        containerRef.current &&
-        containerRef.current.children.length === 0 &&
-        isMounted
-      ) {
-        setUseIframeFallback(true);
-      }
-    }, 3000);
 
     return () => {
       isMounted = false;
-      clearTimeout(timer);
     };
   }, [outputMint, walletContextState]);
 
+  // Cüzdan bağlama context senkronizasyonu
+  useEffect(() => {
+    if (
+      typeof window !== "undefined" &&
+      (window as unknown as { Jupiter?: { syncProps?: (p: unknown) => void } })
+        .Jupiter?.syncProps
+    ) {
+      (
+        window as unknown as { Jupiter: { syncProps: (p: unknown) => void } }
+      ).Jupiter.syncProps({
+        passthroughWalletContextState: walletContextState,
+      });
+    }
+  }, [wallet, walletContextState]);
+
   return (
-    <div className="w-full bg-zinc-950 rounded-xl border border-white/10 flex flex-col overflow-hidden min-h-[480px] max-h-[520px]">
-      {/* Header */}
-      <div className="px-4 py-3 border-b border-white/10 flex items-center justify-between bg-zinc-900/40 font-mono text-xs text-amber-400 shrink-0">
-        <span className="font-bold flex items-center gap-1.5">
+    <div className="w-full bg-zinc-950 rounded-xl border border-white/10 flex flex-col h-auto overflow-hidden">
+      {/* Header Bar */}
+      <div className="px-4 py-3 border-b border-white/10 flex items-center justify-between bg-zinc-900/40">
+        <span className="font-mono text-xs font-bold text-amber-400 flex items-center gap-1.5">
           <Zap className="w-3.5 h-3.5 text-amber-400" />
           <span>JUPITER ROUTE: ${outputSymbol}</span>
         </span>
-        <span className="text-[10px] text-zinc-400 font-mono font-normal">
+        <span className="text-[10px] text-zinc-400 font-mono">
           Non-Custodial DEX · Powered by Jupiter
         </span>
       </div>
 
-      {/* Terminal Alanı */}
-      <div className="p-2 w-full flex-1 flex flex-col justify-start items-center relative overflow-hidden">
+      {/* Widget Container - Fazlalık alt boşluk sıfırlandı */}
+      <div className="w-full p-3 flex flex-col justify-start items-center">
         {useIframeFallback ? (
           <iframe
             src={`https://jup.ag/swap/SOL-${outputMint}?theme=dark`}
-            className="w-full h-full border-0 rounded-lg min-h-[440px]"
+            className="w-full h-[390px] border-0 rounded-lg"
             title="Jupiter Swap"
-            allow="clipboard-write"
           />
         ) : (
           <div
             id="integrated-terminal"
             ref={containerRef}
-            className="w-full h-full min-h-[440px] flex justify-center items-start"
+            className="w-full h-auto min-h-[360px] flex flex-col"
           />
         )}
       </div>
