@@ -1,180 +1,100 @@
 "use client";
 
-import React, { useMemo, useState } from "react";
-import useSWR from "swr";
-import { TokenStatsResponse } from "@/app/api/token-stats/route";
-import { Coin } from "@/types/coin";
+import React from "react";
 import { formatNumber, formatCurrency } from "@/lib/utils";
 
-// ── Fetchers ──────────────────────────────────────────────────────────────────
-const fetcher = <T>(url: string): Promise<T> =>
-  fetch(url).then((r) => {
-    if (!r.ok) throw new Error(`HTTP ${r.status}`);
-    return r.json();
-  });
-
-interface CoinsApiResponse {
-  success: boolean;
-  count: number;
-  data: Coin[];
-}
-
-// ── Skeleton helper ───────────────────────────────────────────────────────────
-function Pulse({ w = "w-16" }: { w?: string }) {
-  return (
-    <span
-      className={`inline-block h-3 ${w} rounded bg-zinc-700/60 animate-pulse`}
-    />
-  );
-}
-
-// ── Stat item ─────────────────────────────────────────────────────────────────
-function StatItem({
-  label,
-  value,
-  loading,
-  highlight = false,
-}: {
-  label: string;
-  value: React.ReactNode;
-  loading: boolean;
-  highlight?: boolean;
-}) {
-  return (
-    <div className="flex items-center gap-1.5 whitespace-nowrap">
-      <span className="text-zinc-500 uppercase tracking-wider text-[10px]">
-        {label}:
-      </span>
-      {loading ? (
-        <Pulse />
-      ) : (
-        <span
-          className={`font-bold text-[11px] ${
-            highlight ? "text-amber-400" : "text-zinc-200"
-          }`}
-        >
-          {value}
-        </span>
-      )}
-    </div>
-  );
-}
-
-// ── Divider ───────────────────────────────────────────────────────────────────
-function Divider() {
-  return <span className="text-zinc-700 select-none hidden sm:inline">|</span>;
-}
-
-// ── Main Component ────────────────────────────────────────────────────────────
 interface HomeStatsBarProps {
+  totalBurned?: number;
+  leaderTicker?: string;
+  leaderMcap?: number;
+  activeRooms?: number;
+  totalVolume24h?: number;
+  isLoading?: boolean;
   onOutbidClick?: () => void;
 }
 
-export function HomeStatsBar({ onOutbidClick }: HomeStatsBarProps) {
-  // On-chain $BATON burn stats
-  const { data: tokenStats, isLoading: burnLoading } =
-    useSWR<TokenStatsResponse>("/api/token-stats", fetcher, {
-      refreshInterval: 30_000,
-      dedupingInterval: 15_000,
-      revalidateOnFocus: false,
-      errorRetryCount: 2,
-    });
-
-  // Directory coins (attention leaders)
-  const { data: coinsRes, isLoading: coinsLoading } =
-    useSWR<CoinsApiResponse>("/api/coins", fetcher, {
-      refreshInterval: 60_000,
-      dedupingInterval: 30_000,
-      revalidateOnFocus: false,
-      errorRetryCount: 2,
-    });
-
-  // Derive attention leader (coin with highest market cap among listed)
-  const leader = useMemo(() => {
-    const coins = coinsRes?.data ?? [];
-    if (coins.length === 0) return null;
-    return coins.reduce((best, c) =>
-      (c.marketCap ?? 0) > (best.marketCap ?? 0) ? c : best
-    );
-  }, [coinsRes]);
-
-  // Active rooms = coins with volume in last 24h
-  const activeRooms = useMemo(() => {
-    return (coinsRes?.data ?? []).filter((c) => (c.volume24h ?? 0) > 0).length;
-  }, [coinsRes]);
-
-  // Total 24h volume across all listed coins
-  const totalVolume24h = useMemo(() => {
-    return (coinsRes?.data ?? []).reduce(
-      (sum, c) => sum + (c.volume24h ?? 0),
-      0
-    );
-  }, [coinsRes]);
-
-  const isCoinsLoading = coinsLoading && !coinsRes;
-  const isBurnLoading = burnLoading && !tokenStats;
-
+export function HomeStatsBar({
+  totalBurned = 0,
+  leaderTicker = "BATON",
+  leaderMcap = 0,
+  activeRooms = 0,
+  totalVolume24h = 0,
+  isLoading = false,
+  onOutbidClick,
+}: HomeStatsBarProps) {
   return (
-    <div className="w-full bg-zinc-900/40 border border-white/5 px-4 py-2 rounded-lg flex items-center justify-between gap-3 font-mono text-xs text-zinc-400 overflow-x-auto">
-      {/* ── Left: Metrics ────────────────────────────────────────────── */}
-      <div className="flex items-center gap-3 sm:gap-4 flex-wrap">
-        {/* On-chain burned $BATON */}
-        <StatItem
-          label="ON-CHAIN BURNED"
-          loading={isBurnLoading}
-          highlight
-          value={
-            <>
-              {formatNumber(tokenStats?.totalBurned ?? 0)}{" "}
-              <span className="text-zinc-500 font-normal">$BATON</span>
-            </>
-          }
-        />
+    <div className="w-full bg-zinc-900/40 border border-white/5 px-4 py-2 rounded-lg flex items-center justify-between gap-4 font-mono text-xs text-zinc-400 overflow-x-auto select-none">
+      {/* Metrics Row */}
+      <div className="flex items-center gap-3 sm:gap-5 flex-wrap min-w-0">
+        {/* On-Chain Burned */}
+        <div className="flex items-center gap-1.5 whitespace-nowrap">
+          <span className="text-zinc-500 uppercase tracking-wider text-[11px]">
+            ON-CHAIN BURNED:
+          </span>
+          {isLoading ? (
+            <span className="inline-block h-3.5 w-16 bg-zinc-800 rounded animate-pulse" />
+          ) : (
+            <span className="font-bold text-amber-400 text-xs">
+              {formatNumber(totalBurned)} $BATON
+            </span>
+          )}
+        </div>
 
-        <Divider />
+        <span className="text-zinc-700 hidden sm:inline select-none">|</span>
 
-        {/* Attention leader: highest-MC listed coin */}
-        <StatItem
-          label="ATTENTION LEADER"
-          loading={isCoinsLoading}
-          value={
-            leader ? (
-              <>
-                <span className="text-amber-400">${leader.ticker}</span>
-                <span className="text-zinc-400 font-normal ml-1">
-                  ({formatCurrency(leader.marketCap)})
-                </span>
-              </>
-            ) : (
-              "—"
-            )
-          }
-        />
+        {/* Attention Leader */}
+        <div className="flex items-center gap-1.5 whitespace-nowrap">
+          <span className="text-zinc-500 uppercase tracking-wider text-[11px]">
+            ATTENTION LEADER:
+          </span>
+          {isLoading ? (
+            <span className="inline-block h-3.5 w-16 bg-zinc-800 rounded animate-pulse" />
+          ) : (
+            <span className="font-bold text-zinc-200 text-xs">
+              <span className="text-amber-400">${leaderTicker}</span>{" "}
+              <span className="text-zinc-400 font-normal">
+                ({formatCurrency(leaderMcap)})
+              </span>
+            </span>
+          )}
+        </div>
 
-        <Divider />
+        <span className="text-zinc-700 hidden md:inline select-none">|</span>
 
-        {/* Active rooms */}
-        <StatItem
-          label="ACTIVE ROOMS"
-          loading={isCoinsLoading}
-          value={activeRooms}
-        />
+        {/* Active Rooms */}
+        <div className="flex items-center gap-1.5 whitespace-nowrap">
+          <span className="text-zinc-500 uppercase tracking-wider text-[11px]">
+            ACTIVE ROOMS:
+          </span>
+          {isLoading ? (
+            <span className="inline-block h-3.5 w-8 bg-zinc-800 rounded animate-pulse" />
+          ) : (
+            <span className="font-bold text-zinc-200 text-xs">{activeRooms}</span>
+          )}
+        </div>
 
-        <Divider />
+        <span className="text-zinc-700 hidden md:inline select-none">|</span>
 
-        {/* Total 24h volume */}
-        <StatItem
-          label="24H VOLUME"
-          loading={isCoinsLoading}
-          value={formatCurrency(totalVolume24h)}
-        />
+        {/* 24H Volume */}
+        <div className="flex items-center gap-1.5 whitespace-nowrap">
+          <span className="text-zinc-500 uppercase tracking-wider text-[11px]">
+            24H VOLUME:
+          </span>
+          {isLoading ? (
+            <span className="inline-block h-3.5 w-14 bg-zinc-800 rounded animate-pulse" />
+          ) : (
+            <span className="font-bold text-zinc-200 text-xs">
+              {formatCurrency(totalVolume24h)}
+            </span>
+          )}
+        </div>
       </div>
 
-      {/* ── Right: CTA Button ────────────────────────────────────────── */}
+      {/* Action Button */}
       <button
         type="button"
         onClick={onOutbidClick}
-        className="shrink-0 px-3 py-1.5 rounded border border-amber-500/40 bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 hover:text-amber-300 font-bold text-[11px] uppercase tracking-widest transition-all hover:border-amber-500/70 hover:shadow-[0_0_12px_rgba(245,158,11,0.15)] active:scale-95"
+        className="shrink-0 px-3.5 py-1.5 rounded-lg border border-amber-500/40 bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 hover:text-amber-300 font-mono text-[11px] font-bold tracking-wider transition-all hover:border-amber-500/70 hover:shadow-[0_0_12px_rgba(245,158,11,0.2)] active:scale-95 cursor-pointer uppercase"
       >
         [ OUTBID #1 SPOT ]
       </button>
