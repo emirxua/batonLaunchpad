@@ -118,15 +118,6 @@ export const Footer: React.FC = () => {
             >
               X
             </a>
-            <span>•</span>
-            <a
-              href={`https://solscan.io/token/${BATON_CA}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="hover:text-zinc-900 dark:hover:text-white transition-colors"
-            >
-              Solscan Explorer
-            </a>
           </div>
         </div>
       </div>
