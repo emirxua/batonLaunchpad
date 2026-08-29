@@ -10,112 +10,64 @@ import {
 import { getWatchlistWallets, getWatchlistMap } from "@/lib/callouts/watchlist";
 
 export const dynamic = "force-dynamic";
-export const revalidate = 0;
 
-// ── Headers that mimic a browser hitting pump.fun ─────────────────────────────
-// Do NOT add Authorization, Cookie, or any batonoutbid.icu/vercel.app Origin.
-const PUMP_HEADERS: Record<string, string> = {
-  Accept: "application/json",
-  "Accept-Language": "en-US,en;q=0.9",
-  Origin: "https://pump.fun",
-  Referer: "https://pump.fun/",
-  "User-Agent":
-    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36",
-  "sec-fetch-dest": "empty",
-  "sec-fetch-mode": "cors",
-  "sec-fetch-site": "same-site",
-};
+// ── Config ────────────────────────────────────────────────────────────────────
 
-// Fallback base-URLs tried in order when v3 returns non-2xx
-const BASE_URLS = [
-  "https://frontend-api-v3.pump.fun",
-  "https://frontend-api.pump.fun",
-  "https://frontend-api-v2.pump.fun",
-];
-
+const PROXY_BASE = process.env.CALLOUT_PROXY_BASE ?? "";
 const MAX_PAGES = 2;
-const FETCH_TIMEOUT_MS = 7000;
+const FETCH_TIMEOUT_MS = 8000;
 
-// ── Helpers ───────────────────────────────────────────────────────────────────
-
-function buildUrl(base: string, wallet: string, pageToken?: string): string {
-  const u = new URL(`${base}/callout/list/${wallet}`);
-  u.searchParams.set("sortBy", "TIMESTAMP");
-  u.searchParams.set("sortOrder", "DESC");
-  if (pageToken) u.searchParams.set("pageToken", pageToken);
-  return u.toString();
-}
-
-async function fetchWithTimeout(url: string): Promise<Response> {
-  const ctrl = new AbortController();
-  const timer = setTimeout(() => ctrl.abort(), FETCH_TIMEOUT_MS);
-  try {
-    return await fetch(url, {
-      method: "GET",
-      headers: PUMP_HEADERS,
-      cache: "no-store",
-      signal: ctrl.signal,
-    });
-  } finally {
-    clearTimeout(timer);
-  }
-}
-
-/** Try each BASE_URL in order; return first successful response or last failure */
-async function fetchWithFallback(
-  wallet: string,
-  pageToken?: string
-): Promise<{
-  res: Response | null;
-  text: string;
-  triedUrl: string;
-  cfRay: string | null;
-}> {
-  let lastText = "";
-  let lastCfRay: string | null = null;
-  let lastUrl = "";
-
-  for (const base of BASE_URLS) {
-    const url = buildUrl(base, wallet, pageToken);
-    lastUrl = url;
-    try {
-      const res = await fetchWithTimeout(url);
-      lastCfRay = res.headers.get("cf-ray");
-      const text = await res.text();
-      if (res.ok) return { res, text, triedUrl: url, cfRay: lastCfRay };
-      lastText = text;
-    } catch (err) {
-      lastText = err instanceof Error ? err.message : String(err);
-    }
-  }
-
-  return { res: null, text: lastText, triedUrl: lastUrl, cfRay: lastCfRay };
-}
-
-// ── Per-wallet fetcher ────────────────────────────────────────────────────────
+// ── Per-wallet fetch via CF Worker proxy ──────────────────────────────────────
 
 interface WalletResult {
   callouts: PumpCallout[];
   empty: boolean;
-  error?: { status?: number; message: string; bodySnippet?: string; cfRay?: string | null };
+  error?: { status?: number; message: string; bodySnippet?: string };
 }
 
 async function fetchWalletCallouts(wallet: string): Promise<WalletResult> {
+  if (!PROXY_BASE) {
+    return {
+      callouts: [],
+      empty: true,
+      error: { message: "CALLOUT_PROXY_BASE env not set" },
+    };
+  }
+
   const allCallouts: PumpCallout[] = [];
   let pageToken: string | undefined;
 
   for (let page = 0; page < MAX_PAGES; page++) {
-    const { res, text, cfRay } = await fetchWithFallback(wallet, pageToken);
+    const url = new URL(PROXY_BASE);
+    url.searchParams.set("wallet", wallet);
+    if (pageToken) url.searchParams.set("pageToken", pageToken);
 
-    if (!res) {
-      // All bases failed
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => ctrl.abort(), FETCH_TIMEOUT_MS);
+
+    let res: Response;
+    let text: string;
+    try {
+      res = await fetch(url.toString(), { cache: "no-store", signal: ctrl.signal });
+      text = await res.text();
+    } catch (err) {
+      clearTimeout(timer);
+      return {
+        callouts: allCallouts,
+        empty: allCallouts.length === 0,
+        error: { message: err instanceof Error ? err.message : "fetch failed" },
+      };
+    }
+    clearTimeout(timer);
+
+    if (!res.ok) {
       return {
         callouts: allCallouts,
         empty: allCallouts.length === 0,
         error: {
-          message: "All fallback URLs failed",
+          status: res.status,
+          message: `Proxy returned HTTP ${res.status}`,
           bodySnippet: text.slice(0, 200),
-          cfRay,
         },
       };
     }
@@ -129,9 +81,8 @@ async function fetchWalletCallouts(wallet: string): Promise<WalletResult> {
         empty: allCallouts.length === 0,
         error: {
           status: res.status,
-          message: "JSON parse error",
+          message: "JSON parse error from proxy",
           bodySnippet: text.slice(0, 200),
-          cfRay,
         },
       };
     }
@@ -147,27 +98,27 @@ async function fetchWalletCallouts(wallet: string): Promise<WalletResult> {
   return { callouts: allCallouts, empty: allCallouts.length === 0 };
 }
 
-// ── Batch helper: run in groups of N with delay between batches ───────────────
+// ── Batch runner: N items per batch, delayMs between batches ─────────────────
 
-async function runInBatches<T>(
+async function runInBatches<T, R>(
   items: T[],
   batchSize: number,
   delayMs: number,
-  fn: (item: T) => Promise<unknown>
-): Promise<PromiseSettledResult<unknown>[]> {
-  const results: PromiseSettledResult<unknown>[] = [];
+  fn: (item: T) => Promise<R>
+): Promise<PromiseSettledResult<R>[]> {
+  const results: PromiseSettledResult<R>[] = [];
   for (let i = 0; i < items.length; i += batchSize) {
     const batch = items.slice(i, i + batchSize);
     const batchResults = await Promise.allSettled(batch.map(fn));
     results.push(...batchResults);
     if (i + batchSize < items.length) {
-      await new Promise((r) => setTimeout(r, delayMs));
+      await new Promise<void>((r) => setTimeout(r, delayMs));
     }
   }
   return results;
 }
 
-// ── Route handler ─────────────────────────────────────────────────────────────
+// ── GET handler ───────────────────────────────────────────────────────────────
 
 export async function GET() {
   const wallets = getWatchlistWallets();
@@ -178,11 +129,11 @@ export async function GET() {
   const emptyWallets: string[] = [];
   const errors: CalloutError[] = [];
 
-  // Batch 3 wallets at a time, 250 ms between batches — avoids Cloudflare WAF
+  // 3-wallet batches, 200 ms gap — keeps Worker request rate sane
   const rawResults = await runInBatches(
     wallets,
     3,
-    250,
+    200,
     async (wallet) => ({
       wallet,
       label: labelMap[wallet] ?? wallet.slice(0, 8) + "…",
@@ -196,15 +147,7 @@ export async function GET() {
       continue;
     }
 
-    const val = result.value as {
-      wallet: string;
-      label: string;
-      callouts: PumpCallout[];
-      empty: boolean;
-      error?: { status?: number; message: string; bodySnippet?: string; cfRay?: string | null };
-    };
-
-    const { wallet, label, callouts, empty, error } = val;
+    const { wallet, label, callouts, empty, error } = result.value;
 
     if (error) {
       errors.push({
@@ -212,11 +155,11 @@ export async function GET() {
         status: error.status,
         message: error.message,
         ...(error.bodySnippet ? { bodySnippet: error.bodySnippet } : {}),
-        ...(error.cfRay ? { cfRay: error.cfRay } : {}),
       });
     }
 
-    if (empty) emptyWallets.push(wallet);
+    // 200 + empty array → emptyWallets (e.g. alonalon), NOT an error
+    if (empty && !error) emptyWallets.push(wallet);
 
     watched.push({ wallet, label, count: callouts.length });
 
@@ -237,6 +180,10 @@ export async function GET() {
 
   return NextResponse.json(response, {
     status: 200,
-    headers: { "Cache-Control": "no-store, no-cache, must-revalidate" },
+    headers: {
+      // 30 s shared cache → Vercel Edge caches between user requests,
+      // stale-while-revalidate keeps UI snappy while fresh fetch runs.
+      "Cache-Control": "public, s-maxage=30, stale-while-revalidate=59",
+    },
   });
 }
