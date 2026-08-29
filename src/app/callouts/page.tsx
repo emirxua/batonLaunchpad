@@ -1,6 +1,7 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect, useCallback, Suspense } from "react";
+import { useSearchParams } from "next/navigation";
 import useSWR from "swr";
 import { Navbar } from "@/components/Navbar";
 import { Ticker } from "@/components/Ticker";
@@ -14,16 +15,42 @@ import confetti from "canvas-confetti";
 const fetcher = (url: string): Promise<CalloutsApiResponse> =>
   fetch(url).then((r) => r.json());
 
-export default function CalloutsPage() {
+function CalloutsPageContent() {
+  const searchParams = useSearchParams();
+  const initialCaller = searchParams?.get("caller") ?? null;
+
+  const [selectedCaller, setSelectedCaller] = useState<string | null>(initialCaller);
   const [selectedCoin, setSelectedCoin] = useState<Coin | null>(null);
   const [copied, setCopied] = useState<string | null>(null);
 
-  // Single SWR subscription — shared between both columns
+  // Sync state when URL query parameter changes
+  useEffect(() => {
+    const callerParam = searchParams?.get("caller");
+    if (callerParam !== selectedCaller) {
+      setSelectedCaller(callerParam || null);
+    }
+  }, [searchParams]);
+
+  // Update caller filter and URL cleanly
+  const handleSelectCaller = useCallback((caller: string | null) => {
+    setSelectedCaller(caller);
+    if (typeof window !== "undefined") {
+      const url = new URL(window.location.href);
+      if (caller) {
+        url.searchParams.set("caller", caller);
+      } else {
+        url.searchParams.delete("caller");
+      }
+      window.history.replaceState({}, "", url.toString());
+    }
+  }, []);
+
+  // Single SWR subscription — 60s auto refresh, shared between feed and leaderboard
   const { data, isLoading, isValidating, mutate } = useSWR<CalloutsApiResponse>(
     "/api/callouts",
     fetcher,
     {
-      refreshInterval: 20_000,
+      refreshInterval: 60_000,
       keepPreviousData: true,
       revalidateOnFocus: false,
     }
@@ -78,7 +105,7 @@ export default function CalloutsPage() {
 
         {/* ── Two-column layout ─────────────────────────────────────── */}
         <div className="grid grid-cols-1 lg:grid-cols-[1fr_320px] gap-6 items-start">
-          {/* Left: callout card stream */}
+          {/* Left: callout card stream with caller filtering */}
           <LiveCallouts
             data={data}
             isLoading={isLoading}
@@ -87,6 +114,8 @@ export default function CalloutsPage() {
             copied={copied}
             onCopy={handleCopy}
             onBoostCoin={handleBoostCoin}
+            selectedCaller={selectedCaller}
+            onSelectCaller={handleSelectCaller}
           />
 
           {/* Right: watchlist leaderboard (sticky) */}
@@ -96,6 +125,8 @@ export default function CalloutsPage() {
               isLoading={isLoading}
               copied={copied}
               onCopy={handleCopy}
+              selectedCaller={selectedCaller}
+              onSelectCaller={handleSelectCaller}
             />
           </div>
         </div>
@@ -110,5 +141,13 @@ export default function CalloutsPage() {
         />
       )}
     </div>
+  );
+}
+
+export default function CalloutsPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-zinc-950" />}>
+      <CalloutsPageContent />
+    </Suspense>
   );
 }

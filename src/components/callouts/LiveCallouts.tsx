@@ -9,13 +9,12 @@
  * Can also be used standalone (e.g. homepage snippet) with its own SWR.
  */
 
-import React from "react";
+import React, { useMemo } from "react";
 import Image from "next/image";
 import useSWR from "swr";
 import { CalloutsApiResponse, CalloutCard } from "@/lib/types/callouts";
 import { formatCurrency } from "@/lib/utils";
 import {
-  RefreshCw,
   ExternalLink,
   Flame,
   Copy,
@@ -28,6 +27,7 @@ import {
   ArrowUpRight,
   AlertCircle,
   Radio,
+  X,
 } from "lucide-react";
 
 const BATON_MINT = process.env.NEXT_PUBLIC_BATON_MINT_ADDRESS ?? "";
@@ -63,6 +63,9 @@ interface LiveCalloutsProps {
   onCopy?: (text: string) => void;
   // Boost handler
   onBoostCoin?: (mint: string) => void;
+  // Caller filter
+  selectedCaller?: string | null;
+  onSelectCaller?: (caller: string | null) => void;
 }
 
 // ── Component ─────────────────────────────────────────────────────────────────
@@ -73,7 +76,7 @@ export const LiveCallouts: React.FC<LiveCalloutsProps> = (props) => {
     props.data === undefined ? "/api/callouts" : null,
     fetcher,
     {
-      refreshInterval: 20_000,
+      refreshInterval: 60_000,
       keepPreviousData: true,
       revalidateOnFocus: false,
     }
@@ -82,21 +85,43 @@ export const LiveCallouts: React.FC<LiveCalloutsProps> = (props) => {
   const data = props.data ?? standalone.data;
   const isLoading = props.isLoading ?? standalone.isLoading;
   const isValidating = props.isValidating ?? standalone.isValidating;
-  const mutate = props.mutate ?? standalone.mutate;
 
   // Local copy state (standalone mode fallback)
   const [_localCopied, _setLocalCopied] = React.useState<string | null>(null);
   const copied = props.copied !== undefined ? props.copied : _localCopied;
-  const onCopy = props.onCopy ?? ((text: string) => {
-    navigator.clipboard.writeText(text);
-    _setLocalCopied(text);
-    setTimeout(() => _setLocalCopied(null), 2000);
-  });
+  const onCopy =
+    props.onCopy ??
+    ((text: string) => {
+      navigator.clipboard.writeText(text);
+      _setLocalCopied(text);
+      setTimeout(() => _setLocalCopied(null), 2000);
+    });
 
-  const callouts = data?.callouts ?? [];
+  const rawCallouts = data?.callouts ?? [];
   const watched = data?.watched ?? [];
   const emptyWallets = data?.emptyWallets ?? [];
   const errors = data?.errors ?? [];
+
+  // Filter by selectedCaller if active
+  const filteredCallouts = useMemo(() => {
+    if (!props.selectedCaller) return rawCallouts;
+    const target = props.selectedCaller.toLowerCase();
+    return rawCallouts.filter(
+      (c) =>
+        c.callerLabel.toLowerCase() === target ||
+        c.callerWallet.toLowerCase() === target
+    );
+  }, [rawCallouts, props.selectedCaller]);
+
+  const handleChipClick = (label: string, wallet: string) => {
+    if (!props.onSelectCaller) return;
+    const current = props.selectedCaller?.toLowerCase();
+    if (current === label.toLowerCase() || current === wallet.toLowerCase()) {
+      props.onSelectCaller(null);
+    } else {
+      props.onSelectCaller(label);
+    }
+  };
 
   return (
     <div className="space-y-5">
@@ -108,75 +133,142 @@ export const LiveCallouts: React.FC<LiveCalloutsProps> = (props) => {
             <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500" />
           </span>
           <span className="text-xs font-mono text-zinc-400">
-            {callouts.length} callout{callouts.length !== 1 ? "s" : ""} from{" "}
+            {rawCallouts.length} callout{rawCallouts.length !== 1 ? "s" : ""} from{" "}
             {watched.filter((w) => w.count > 0).length}/{watched.length || 10} wallets
           </span>
+        </div>
+
+        {/* Auto 60s Clock badge */}
+        <div className="flex items-center gap-2">
           {data?.updatedAt && (
-            <span className="hidden sm:flex items-center gap-1 text-[10px] font-mono text-zinc-600">
-              <Clock className="w-3 h-3" />
-              {new Date(data.updatedAt).toLocaleTimeString()}
+            <span className="flex items-center gap-1.5 text-[10px] font-mono text-zinc-500 bg-zinc-900 border border-zinc-800 px-2.5 py-1 rounded-lg">
+              <Clock className="w-3 h-3 text-zinc-400" />
+              <span>{new Date(data.updatedAt).toLocaleTimeString()}</span>
+              <span className="text-zinc-600 border-l border-zinc-800 pl-1.5 ml-0.5">
+                auto 60s
+              </span>
             </span>
           )}
           {isValidating && (
-            <span className="text-[10px] font-mono text-zinc-600 italic">syncing…</span>
+            <span className="text-[10px] font-mono text-zinc-600 italic">
+              syncing…
+            </span>
           )}
         </div>
-
-        <button
-          onClick={() => mutate?.()}
-          disabled={isValidating}
-          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 text-xs font-mono text-zinc-300 transition-colors disabled:opacity-40 cursor-pointer"
-        >
-          <RefreshCw className={`w-3.5 h-3.5 ${isValidating ? "animate-spin text-lime-400" : ""}`} />
-          Refresh
-        </button>
       </div>
 
       {/* ── Wallet pills (chips) ─────────────────────────────────────── */}
       {watched.length > 0 && (
-        <div className="flex flex-wrap gap-1.5">
-          {watched.map(({ wallet, label, count }) => (
-            <span
-              key={wallet}
-              className={`text-[11px] font-mono px-2 py-0.5 rounded-full border ${
-                count > 0
-                  ? "bg-lime-500/10 border-lime-500/30 text-lime-400"
-                  : "bg-zinc-800/50 border-zinc-700 text-zinc-500"
-              }`}
+        <div className="flex flex-wrap items-center gap-1.5">
+          {watched.map(({ wallet, label, count }) => {
+            const isSelected =
+              Boolean(props.selectedCaller) &&
+              (props.selectedCaller?.toLowerCase() === label.toLowerCase() ||
+                props.selectedCaller === wallet);
+
+            return (
+              <button
+                key={wallet}
+                type="button"
+                onClick={() => handleChipClick(label, wallet)}
+                className={`text-[11px] font-mono px-2.5 py-1 rounded-full border transition-all cursor-pointer select-none ${
+                  isSelected
+                    ? "bg-orange-500/20 border-orange-500 text-orange-400 font-bold ring-1 ring-orange-500/40 shadow-sm"
+                    : count > 0
+                    ? "bg-lime-500/10 border-lime-500/30 text-lime-400 hover:border-lime-400/50 hover:bg-lime-500/15"
+                    : "bg-zinc-800/50 border-zinc-700 text-zinc-500 hover:border-zinc-600 hover:text-zinc-400"
+                }`}
+              >
+                {label}
+                <span className="ml-1.5 opacity-60">
+                  {count > 0 ? count : "empty"}
+                </span>
+              </button>
+            );
+          })}
+
+          {props.selectedCaller && (
+            <button
+              type="button"
+              onClick={() => props.onSelectCaller?.(null)}
+              className="text-[10px] font-mono px-2 py-1 rounded-full bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 text-zinc-400 hover:text-zinc-200 transition-colors flex items-center gap-1 cursor-pointer"
             >
-              {label}
-              <span className="ml-1 opacity-60">{count > 0 ? count : "empty"}</span>
+              <X className="w-3 h-3" />
+              <span>Reset filter</span>
+            </button>
+          )}
+        </div>
+      )}
+
+      {/* ── Active Filter Banner ─────────────────────────────────────── */}
+      {props.selectedCaller && (
+        <div className="flex items-center justify-between gap-2 px-3 py-2 rounded-xl bg-orange-500/10 border border-orange-500/30 text-xs font-mono text-orange-300">
+          <div className="flex items-center gap-2">
+            <span className="w-2 h-2 rounded-full bg-orange-500 animate-pulse" />
+            <span>
+              Filtering by: <strong>@{props.selectedCaller}</strong>
+              {" "}({filteredCallouts.length} callouts)
             </span>
-          ))}
+          </div>
+          <button
+            type="button"
+            onClick={() => props.onSelectCaller?.(null)}
+            className="text-[11px] hover:underline text-orange-400 font-bold flex items-center gap-1 cursor-pointer"
+          >
+            Show all
+          </button>
         </div>
       )}
 
       {/* ── Errors — thin banner; feed stays visible when callouts exist ── */}
       {errors.length > 0 && (
-        <div className={`px-3 py-2 rounded-lg border flex items-start gap-2 text-[10px] font-mono ${
-          callouts.length > 0
-            ? "bg-amber-950/20 border-amber-800/30 text-amber-500"
-            : "bg-red-950/30 border-red-800/40 text-red-400"
-        }`}>
+        <div
+          className={`px-3 py-2 rounded-lg border flex items-start gap-2 text-[10px] font-mono ${
+            rawCallouts.length > 0
+              ? "bg-amber-950/20 border-amber-800/30 text-amber-500"
+              : "bg-red-950/30 border-red-800/40 text-red-400"
+          }`}
+        >
           <AlertCircle className="w-3 h-3 shrink-0 mt-0.5" />
           <span>
-            {callouts.length > 0
+            {rawCallouts.length > 0
               ? "Some wallets rate-limited — showing last good data"
               : `Upstream error: ${errors[0]?.message || "Failed to load"}`}
           </span>
         </div>
       )}
 
-      {/* ── Cards ────────────────────────────────────────────────────── */}
-      {isLoading && callouts.length === 0 ? (
+      {/* ── Cards / Empty States ─────────────────────────────────────── */}
+      {isLoading && rawCallouts.length === 0 ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           {[1, 2, 3, 4].map((i) => (
-            <div key={i} className="p-4 rounded-2xl bg-zinc-900/60 border border-zinc-800 animate-pulse h-52" />
+            <div
+              key={i}
+              className="p-4 rounded-2xl bg-zinc-900/60 border border-zinc-800 animate-pulse h-52"
+            />
           ))}
         </div>
-      ) : callouts.length > 0 ? (
+      ) : props.selectedCaller && filteredCallouts.length === 0 ? (
+        /* Caller specific empty state (e.g. alonalon) */
+        <div className="py-14 flex flex-col items-center gap-3 text-center rounded-2xl border border-zinc-800 bg-zinc-900/30">
+          <Radio className="w-7 h-7 text-zinc-600" />
+          <p className="text-sm font-mono text-zinc-300 font-semibold">
+            No callouts for this caller
+          </p>
+          <p className="text-xs font-mono text-zinc-500 max-w-xs">
+            @{props.selectedCaller} has not pushed any callouts to followers recently.
+          </p>
+          <button
+            type="button"
+            onClick={() => props.onSelectCaller?.(null)}
+            className="mt-2 px-3.5 py-1.5 rounded-xl bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 text-xs font-mono text-zinc-200 transition-colors cursor-pointer"
+          >
+            Clear filter
+          </button>
+        </div>
+      ) : filteredCallouts.length > 0 ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          {callouts.map((card) => (
+          {filteredCallouts.map((card) => (
             <CalloutCardItem
               key={card.calloutId}
               card={card}
@@ -187,6 +279,7 @@ export const LiveCallouts: React.FC<LiveCalloutsProps> = (props) => {
           ))}
         </div>
       ) : (
+        /* General empty state */
         <div className="py-16 flex flex-col items-center gap-3 text-center rounded-2xl border border-zinc-800 bg-zinc-900/30">
           <Radio className="w-7 h-7 text-zinc-700" />
           <p className="text-sm font-mono text-zinc-400 font-semibold">
@@ -198,7 +291,8 @@ export const LiveCallouts: React.FC<LiveCalloutsProps> = (props) => {
           </p>
           {emptyWallets.length > 0 && (
             <p className="text-[10px] font-mono text-zinc-700 mt-1">
-              Still watching: {emptyWallets.length} wallet{emptyWallets.length > 1 ? "s" : ""}
+              Still watching: {emptyWallets.length} wallet
+              {emptyWallets.length > 1 ? "s" : ""}
             </p>
           )}
         </div>
@@ -216,12 +310,16 @@ interface CardProps {
   onBoostCoin?: (mint: string) => void;
 }
 
-const CalloutCardItem: React.FC<CardProps> = ({ card, copied, onCopy, onBoostCoin }) => {
+const CalloutCardItem: React.FC<CardProps> = ({
+  card,
+  copied,
+  onCopy,
+  onBoostCoin,
+}) => {
   const isUp = card.multiple >= 1;
 
   return (
     <div className="p-4 rounded-2xl bg-zinc-900/80 border border-zinc-800 hover:border-zinc-700 flex flex-col gap-3 transition-colors">
-
       {/* Caller row */}
       <div className="flex items-center justify-between gap-2">
         <div className="flex items-center gap-2 min-w-0">
@@ -236,9 +334,11 @@ const CalloutCardItem: React.FC<CardProps> = ({ card, copied, onCopy, onBoostCoi
             className="text-zinc-600 hover:text-zinc-300 transition-colors shrink-0"
             title="Copy wallet"
           >
-            {copied === card.callerWallet
-              ? <Check className="w-3 h-3 text-lime-400" />
-              : <Copy className="w-3 h-3" />}
+            {copied === card.callerWallet ? (
+              <Check className="w-3 h-3 text-lime-400" />
+            ) : (
+              <Copy className="w-3 h-3" />
+            )}
           </button>
         </div>
         <span className="text-[10px] font-mono text-zinc-500 shrink-0">
@@ -271,26 +371,34 @@ const CalloutCardItem: React.FC<CardProps> = ({ card, copied, onCopy, onBoostCoi
       <div className="flex items-center justify-between gap-2 px-2.5 py-1.5 rounded-lg bg-zinc-950/60 border border-zinc-800/60 text-[11px] font-mono">
         <div className="flex items-center gap-1.5 min-w-0 text-zinc-400">
           <span className="text-zinc-600">mint</span>
-          <span className="truncate">{card.coinMint.slice(0, 8)}…{card.coinMint.slice(-5)}</span>
+          <span className="truncate">
+            {card.coinMint.slice(0, 8)}…{card.coinMint.slice(-5)}
+          </span>
           <button
             onClick={() => onCopy(card.coinMint)}
             className="text-zinc-600 hover:text-zinc-300 shrink-0"
             title="Copy mint"
           >
-            {copied === card.coinMint
-              ? <Check className="w-2.5 h-2.5 text-lime-400" />
-              : <Copy className="w-2.5 h-2.5" />}
+            {copied === card.coinMint ? (
+              <Check className="w-2.5 h-2.5 text-lime-400" />
+            ) : (
+              <Copy className="w-2.5 h-2.5" />
+            )}
           </button>
         </div>
         <div className="flex items-center gap-1.5 shrink-0">
           <a
             href={`https://dexscreener.com/solana/${card.coinMint}`}
-            target="_blank" rel="noreferrer"
+            target="_blank"
+            rel="noreferrer"
             className="text-zinc-500 hover:text-zinc-200 font-bold transition-colors"
-          >DEX</a>
+          >
+            DEX
+          </a>
           <a
             href={`https://pump.fun/coin/${card.coinMint}`}
-            target="_blank" rel="noreferrer"
+            target="_blank"
+            rel="noreferrer"
             className="text-lime-500 hover:text-lime-300 transition-colors"
           >
             <ExternalLink className="w-3.5 h-3.5" />
@@ -301,20 +409,34 @@ const CalloutCardItem: React.FC<CardProps> = ({ card, copied, onCopy, onBoostCoi
       {/* Stats: mcap-at-call | current multiple | ATH multiple */}
       <div className="grid grid-cols-3 gap-2 text-[11px] font-mono">
         <div className="px-2 py-1.5 rounded-lg bg-zinc-950/50 border border-zinc-800/50 space-y-0.5">
-          <div className="text-[9px] text-zinc-600 uppercase tracking-wide">Mcap at call</div>
+          <div className="text-[9px] text-zinc-600 uppercase tracking-wide">
+            Mcap at call
+          </div>
           <div className="font-bold text-zinc-200">
             {card.marketCap > 0 ? formatCurrency(card.marketCap) : "—"}
           </div>
         </div>
         <div className="px-2 py-1.5 rounded-lg bg-zinc-950/50 border border-zinc-800/50 space-y-0.5">
-          <div className="text-[9px] text-zinc-600 uppercase tracking-wide">Now</div>
-          <div className={`font-bold flex items-center gap-0.5 ${isUp ? "text-emerald-400" : "text-rose-400"}`}>
-            {isUp ? <TrendingUp className="w-3 h-3" /> : <TrendingDown className="w-3 h-3" />}
+          <div className="text-[9px] text-zinc-600 uppercase tracking-wide">
+            Now
+          </div>
+          <div
+            className={`font-bold flex items-center gap-0.5 ${
+              isUp ? "text-emerald-400" : "text-rose-400"
+            }`}
+          >
+            {isUp ? (
+              <TrendingUp className="w-3 h-3" />
+            ) : (
+              <TrendingDown className="w-3 h-3" />
+            )}
             {card.multiple > 0 ? `${card.multiple.toFixed(2)}x` : "—"}
           </div>
         </div>
         <div className="px-2 py-1.5 rounded-lg bg-zinc-950/50 border border-zinc-800/50 space-y-0.5">
-          <div className="text-[9px] text-zinc-600 uppercase tracking-wide">ATH</div>
+          <div className="text-[9px] text-zinc-600 uppercase tracking-wide">
+            ATH
+          </div>
           <div className="font-bold text-amber-400">
             {card.maxMultiplier > 0 ? `${card.maxMultiplier.toFixed(2)}x` : "—"}
           </div>
@@ -323,9 +445,15 @@ const CalloutCardItem: React.FC<CardProps> = ({ card, copied, onCopy, onBoostCoi
 
       {/* Engagement */}
       <div className="flex items-center gap-3 text-[10px] font-mono text-zinc-600">
-        <span className="flex items-center gap-1"><Eye className="w-3 h-3" />{card.viewCount.toLocaleString()}</span>
+        <span className="flex items-center gap-1">
+          <Eye className="w-3 h-3" />
+          {card.viewCount.toLocaleString()}
+        </span>
         <span>❤️ {card.likes}</span>
-        <span className="flex items-center gap-1"><MessageSquare className="w-3 h-3" />{card.commentCount}</span>
+        <span className="flex items-center gap-1">
+          <MessageSquare className="w-3 h-3" />
+          {card.commentCount}
+        </span>
         {card.repostCount > 0 && <span>🔁 {card.repostCount}</span>}
       </div>
 
@@ -342,12 +470,16 @@ const CalloutCardItem: React.FC<CardProps> = ({ card, copied, onCopy, onBoostCoi
         )}
         <a
           href={`https://dexscreener.com/solana/${card.coinMint}`}
-          target="_blank" rel="noreferrer"
+          target="_blank"
+          rel="noreferrer"
           className="px-2.5 py-1.5 rounded-lg bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 text-zinc-400 hover:text-zinc-200 text-[10px] font-mono font-bold transition-colors"
-        >DEX</a>
+        >
+          DEX
+        </a>
         <a
           href={`https://pump.fun/coin/${card.coinMint}`}
-          target="_blank" rel="noreferrer"
+          target="_blank"
+          rel="noreferrer"
           className="p-1.5 rounded-lg bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 text-lime-500 hover:text-lime-300 transition-colors"
         >
           <ArrowUpRight className="w-3.5 h-3.5" />

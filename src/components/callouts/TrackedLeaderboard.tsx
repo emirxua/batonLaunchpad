@@ -12,8 +12,8 @@
  */
 
 import React, { useMemo } from "react";
-import { CalloutsApiResponse, CalloutCard, WatchedSummary } from "@/lib/types/callouts";
-import { Copy, Check, TrendingUp, Eye, Heart, Clock, Info } from "lucide-react";
+import { CalloutsApiResponse, CalloutCard } from "@/lib/types/callouts";
+import { Copy, Check, TrendingUp, Heart, Clock, Info } from "lucide-react";
 
 // ── Score function ────────────────────────────────────────────────────────────
 
@@ -34,12 +34,12 @@ interface LeaderboardRow {
   wallet: string;
   label: string;
   callCount: number;
-  bestMaxMultiplier: number;  // highest maxMultiplier across calls
+  bestMaxMultiplier: number; // highest maxMultiplier across calls
   totalLikes: number;
   totalViews: number;
-  lastCallAt: number;         // ms; 0 if no calls
+  lastCallAt: number; // ms; 0 if no calls
   score: number;
-  isWatching: boolean;        // true = in list but callCount === 0
+  isWatching: boolean; // true = in list but callCount === 0
 }
 
 // ── Derivation ────────────────────────────────────────────────────────────────
@@ -119,6 +119,9 @@ interface TrackedLeaderboardProps {
   /** callback from parent — share the same copied state */
   copied: string | null;
   onCopy: (text: string) => void;
+  /** Selected caller for filtering */
+  selectedCaller?: string | null;
+  onSelectCaller?: (caller: string) => void;
 }
 
 export const TrackedLeaderboard: React.FC<TrackedLeaderboardProps> = ({
@@ -126,6 +129,8 @@ export const TrackedLeaderboard: React.FC<TrackedLeaderboardProps> = ({
   isLoading,
   copied,
   onCopy,
+  selectedCaller,
+  onSelectCaller,
 }) => {
   const rows = useMemo(() => deriveLeaderboard(data), [data]);
 
@@ -162,26 +167,37 @@ export const TrackedLeaderboard: React.FC<TrackedLeaderboardProps> = ({
         <div className="space-y-1.5">
           {rows.map((row, idx) => {
             const rank = row.isWatching ? null : idx + 1;
+            const isSelected =
+              Boolean(selectedCaller) &&
+              (selectedCaller?.toLowerCase() === row.label.toLowerCase() ||
+                selectedCaller === row.wallet);
 
             return (
               <div
                 key={row.wallet}
-                className={`px-3 py-2.5 rounded-xl border flex items-center gap-3 text-[11px] font-mono transition-colors ${
-                  row.isWatching
-                    ? "bg-zinc-900/30 border-zinc-800/40 opacity-60"
+                onClick={() => onSelectCaller?.(row.label)}
+                className={`px-3 py-2.5 rounded-xl border flex items-center gap-3 text-[11px] font-mono transition-all cursor-pointer select-none ${
+                  isSelected
+                    ? "bg-orange-500/20 border-orange-500 text-orange-200 ring-1 ring-orange-500/50 shadow-sm"
+                    : row.isWatching
+                    ? "bg-zinc-900/30 border-zinc-800/40 opacity-70 hover:opacity-100 hover:border-zinc-700"
                     : rank === 1
-                    ? "bg-amber-500/8 border-amber-500/25"
+                    ? "bg-amber-500/8 border-amber-500/25 hover:border-amber-500/50"
                     : "bg-zinc-900/60 border-zinc-800/60 hover:border-zinc-700"
                 }`}
               >
                 {/* Rank */}
                 <div className="w-6 shrink-0 text-center">
                   {row.isWatching ? (
-                    <span className="text-zinc-600 text-[9px] uppercase tracking-wide">watch</span>
+                    <span className="text-zinc-600 text-[9px] uppercase tracking-wide">
+                      watch
+                    </span>
                   ) : (
                     <span
                       className={`font-black ${
-                        rank === 1
+                        isSelected
+                          ? "text-orange-400"
+                          : rank === 1
                           ? "text-amber-400"
                           : rank === 2
                           ? "text-zinc-300"
@@ -196,23 +212,40 @@ export const TrackedLeaderboard: React.FC<TrackedLeaderboardProps> = ({
                 </div>
 
                 {/* Avatar initials */}
-                <div className="w-6 h-6 rounded-full bg-zinc-800 border border-zinc-700 flex items-center justify-center text-[9px] font-bold text-zinc-400 uppercase shrink-0">
+                <div
+                  className={`w-6 h-6 rounded-full border flex items-center justify-center text-[9px] font-bold uppercase shrink-0 ${
+                    isSelected
+                      ? "bg-orange-500/30 border-orange-400 text-orange-300"
+                      : "bg-zinc-800 border-zinc-700 text-zinc-400"
+                  }`}
+                >
                   {row.label.slice(0, 2)}
                 </div>
 
                 {/* Label + wallet short */}
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-1.5">
-                    <span className="font-bold text-zinc-100 truncate">{row.label}</span>
+                    <span
+                      className={`font-bold truncate ${
+                        isSelected ? "text-orange-300" : "text-zinc-100"
+                      }`}
+                    >
+                      {row.label}
+                    </span>
                     {rank === 1 && !row.isWatching && (
                       <span className="text-amber-400 text-[10px]">👑</span>
                     )}
                   </div>
                   <div className="flex items-center gap-1 text-[9px] text-zinc-600 mt-0.5">
-                    <span>{row.wallet.slice(0, 4)}…{row.wallet.slice(-4)}</span>
+                    <span>
+                      {row.wallet.slice(0, 4)}…{row.wallet.slice(-4)}
+                    </span>
                     <button
-                      onClick={() => onCopy(row.wallet)}
-                      className="hover:text-zinc-300 transition-colors"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onCopy(row.wallet);
+                      }}
+                      className="hover:text-zinc-300 transition-colors p-0.5"
                       title="Copy wallet"
                     >
                       {copied === row.wallet ? (
@@ -229,8 +262,10 @@ export const TrackedLeaderboard: React.FC<TrackedLeaderboardProps> = ({
                   {/* callCount + best ATH */}
                   <div className="flex items-center gap-2">
                     <span className="text-zinc-400">
-                      <span className="font-bold text-zinc-200">{row.callCount}</span>
-                      {" "}calls
+                      <span className="font-bold text-zinc-200">
+                        {row.callCount}
+                      </span>{" "}
+                      calls
                     </span>
                     {row.bestMaxMultiplier > 0 && (
                       <span className="flex items-center gap-0.5 text-amber-400 font-semibold">
@@ -255,7 +290,9 @@ export const TrackedLeaderboard: React.FC<TrackedLeaderboardProps> = ({
                       </span>
                     )}
                     {row.isWatching && (
-                      <span className="text-zinc-700 italic">no callouts yet</span>
+                      <span className="text-zinc-700 italic">
+                        no callouts yet
+                      </span>
                     )}
                   </div>
                 </div>
