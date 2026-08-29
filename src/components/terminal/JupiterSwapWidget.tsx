@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useRef, useState } from "react";
+import { useWallet } from "@solana/wallet-adapter-react";
 import { Zap } from "lucide-react";
 
 interface JupiterSwapWidgetProps {
@@ -18,6 +19,23 @@ export function JupiterSwapWidget({
 }: JupiterSwapWidgetProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [useIframeFallback, setUseIframeFallback] = useState(false);
+  const walletContextState = useWallet();
+  const { wallet, connected, publicKey } = walletContextState;
+
+  // Cüzdan durumunu Jupiter ile senkronize et
+  useEffect(() => {
+    if (
+      typeof window !== "undefined" &&
+      (window as unknown as { Jupiter?: { syncProps?: (p: unknown) => void } })
+        .Jupiter?.syncProps
+    ) {
+      (
+        window as unknown as { Jupiter: { syncProps: (p: unknown) => void } }
+      ).Jupiter.syncProps({
+        passthroughWalletContextState: walletContextState,
+      });
+    }
+  }, [walletContextState, wallet, connected, publicKey]);
 
   useEffect(() => {
     let isMounted = true;
@@ -39,6 +57,7 @@ export function JupiterSwapWidget({
             strictTokenList: false,
             defaultExplorer: "Solscan",
             enableWalletPassthrough: true,
+            passthroughWalletContextState: walletContextState,
             formProps: {
               initialInputMint: "So11111111111111111111111111111111111111112", // Native SOL
               initialOutputMint: outputMint,
@@ -86,7 +105,7 @@ export function JupiterSwapWidget({
       isMounted = false;
       clearTimeout(timer);
     };
-  }, [outputMint]);
+  }, [outputMint, walletContextState]);
 
   return (
     <div className="w-full bg-zinc-950 rounded-xl border border-white/10 flex flex-col overflow-hidden min-h-[480px] max-h-[520px]">
