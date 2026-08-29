@@ -39,17 +39,16 @@ const fetcher = (url: string): Promise<TrendingApiResponse> =>
     return r.json();
   });
 
-function formatPrice(price: number): string {
-  if (!price || isNaN(price)) return "$0.00";
-  if (price >= 1) {
-    return `$${price.toLocaleString("en-US", {
+function formatPrice(val: number): string {
+  if (!val || isNaN(val)) return "$0.00";
+  if (val >= 1) {
+    return `$${val.toLocaleString("en-US", {
       minimumFractionDigits: 2,
       maximumFractionDigits: 4,
     })}`;
   }
-  if (price < 0.000001) return `$${price.toFixed(8)}`;
-  if (price < 0.001) return `$${price.toFixed(6)}`;
-  return `$${price.toFixed(4)}`;
+  if (val < 0.000001) return `$${val.toFixed(8)}`;
+  return `$${val.toFixed(6)}`;
 }
 
 export const TrendingTable: React.FC<TrendingTableProps> = ({
