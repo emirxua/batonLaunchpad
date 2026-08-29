@@ -135,14 +135,14 @@ export default function TerminalPage() {
                 <Activity className="w-4 h-4" />
               </div>
               <h1 className="font-archivo text-xl sm:text-2xl font-black text-white tracking-wide uppercase">
-                Solana Pro Terminal
+                OUTBID TERMINAL
               </h1>
               <span className="px-2 py-0.5 rounded-full bg-orange-500/15 border border-orange-500/30 text-orange-400 text-[10px] font-mono font-bold">
                 LIVE
               </span>
             </div>
             <p className="text-xs font-mono text-zinc-400">
-              Spot Market Pulse, DexScreener Trending Solana Movers (&gt;$70K MCAP), and Direct Jupiter DEX Routing.
+              Spot Market Pulse, Trending Solana Movers, and Direct Jupiter DEX Routing.
             </p>
           </div>
 
@@ -176,9 +176,8 @@ export default function TerminalPage() {
               <div className="flex items-center gap-2 text-xs font-mono text-zinc-400">
                 <Sparkles className="w-4 h-4 text-orange-400" />
                 <span className="font-bold text-white uppercase">
-                  DexScreener Trending Solana Movers
+                  Trending Solana Movers
                 </span>
-                <span className="text-zinc-600">(&gt;$70K MCAP)</span>
               </div>
               <span className="text-[11px] font-mono text-zinc-500">
                 Click any row to swap or inspect
