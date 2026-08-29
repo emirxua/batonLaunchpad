@@ -27,11 +27,21 @@ export function JupiterSwapWidget({
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [txSuccess, setTxSuccess] = useState<string | null>(null);
 
+  const handleAmountChange = (val: string) => {
+    const sanitized = val.replace(",", ".").replace(/[^0-9.]/g, "");
+    setInputAmount(sanitized);
+  };
+
   const fetchQuote = useCallback(
     async (rawAmount: string) => {
-      const sanitized = rawAmount.replace(",", ".").trim();
-      const val = parseFloat(sanitized);
+      if (!rawAmount || rawAmount === "." || rawAmount === "0") {
+        setOutputAmount("0");
+        setQuoteResponse(null);
+        setErrorMsg(null);
+        return;
+      }
 
+      const val = parseFloat(rawAmount);
       if (isNaN(val) || val <= 0) {
         setOutputAmount("0");
         setQuoteResponse(null);
@@ -161,7 +171,7 @@ export function JupiterSwapWidget({
             <input
               type="text"
               value={inputAmount}
-              onChange={(e) => setInputAmount(e.target.value)}
+              onChange={(e) => handleAmountChange(e.target.value)}
               placeholder="0.0"
               className="bg-transparent text-lg font-bold text-zinc-100 outline-none w-full font-mono"
             />
