@@ -4,6 +4,7 @@ import React, { useState, useEffect, useCallback } from "react";
 import { useConnection, useWallet } from "@solana/wallet-adapter-react";
 import { useWalletModal } from "@solana/wallet-adapter-react-ui";
 import { VersionedTransaction } from "@solana/web3.js";
+import { Buffer } from "buffer";
 
 interface JupiterSwapWidgetProps {
   outputMint?: string;
@@ -26,6 +27,29 @@ export function JupiterSwapWidget({
   const [priceImpact, setPriceImpact] = useState("< 0.1%");
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [txSuccess, setTxSuccess] = useState<string | null>(null);
+  const [userBalance, setUserBalance] = useState<number | null>(null);
+
+  useEffect(() => {
+    let isSubscribed = true;
+    const fetchBalance = async () => {
+      if (connected && publicKey && connection) {
+        try {
+          const bal = await connection.getBalance(publicKey);
+          if (isSubscribed) setUserBalance(bal / 1e9);
+        } catch (_) {
+          if (isSubscribed) setUserBalance(null);
+        }
+      } else {
+        if (isSubscribed) setUserBalance(null);
+      }
+    };
+    fetchBalance();
+    const interval = setInterval(fetchBalance, 10000);
+    return () => {
+      isSubscribed = false;
+      clearInterval(interval);
+    };
+  }, [connected, publicKey, connection]);
 
   const handleAmountChange = (val: string) => {
     const sanitized = val.replace(",", ".").replace(/[^0-9.]/g, "");
@@ -99,40 +123,59 @@ export function JupiterSwapWidget({
       setVisible(true);
       return;
     }
+    if (!quoteResponse) {
+      setErrorMsg("Quote expired, please refresh");
+      return;
+    }
 
-    if (!quoteResponse) return;
+    const { success, source, ...cleanQuote } = quoteResponse as any;
+    if (source === "dexscreener_fallback") {
+      setErrorMsg("Token is in bonding phase. Swap via Jupiter is not ready yet.");
+      return;
+    }
 
     try {
       setSwapping(true);
       setErrorMsg(null);
       setTxSuccess(null);
 
-      const swapRes = await fetch("/api/jupiter/swap", {
+      // Jupiter v6 swap API çağrısı
+      const res = await fetch("https://quote-api.jup.ag/v6/swap", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          quoteResponse,
+          quoteResponse: cleanQuote,
           userPublicKey: publicKey.toBase58(),
+          wrapAndUnwrapSol: true,
+          useSharedAccounts: true,
+          dynamicComputeUnitLimit: true,
+          prioritizationFeeLamports: "auto",
         }),
       });
 
-      const swapData = await swapRes.json();
-      if (!swapData.swapTransaction) throw new Error("Transaction build failed");
-
-      const binaryString = window.atob(swapData.swapTransaction);
-      const bytes = new Uint8Array(binaryString.length);
-      for (let i = 0; i < binaryString.length; i++) {
-        bytes[i] = binaryString.charCodeAt(i);
+      if (!res.ok) {
+        const errJson = await res.json();
+        throw new Error(errJson.error || "Transaction build failed");
       }
 
-      const transaction = VersionedTransaction.deserialize(bytes);
-      const txid = await sendTransaction(transaction, connection);
-      setTxSuccess(txid);
+      const { swapTransaction } = await res.json();
+      if (!swapTransaction) throw new Error("Transaction build failed");
+
+      // Buffer dönüşümü
+      const txBuf = Buffer.from(swapTransaction, "base64");
+      const tx = VersionedTransaction.deserialize(txBuf);
+
+      // Phantom / Solflare imza popup tetikleyici
+      const signature = await sendTransaction(tx, connection, {
+        skipPreflight: false,
+        maxRetries: 3,
+      });
+
+      setTxSuccess(signature);
       fetchQuote(inputAmount);
-    } catch (err: unknown) {
-      console.error(err);
-      const msg = err instanceof Error ? err.message : "Swap failed";
-      setErrorMsg(msg);
+    } catch (err: any) {
+      console.error("Swap error:", err);
+      setErrorMsg(err.message || "Transaction rejected");
     } finally {
       setSwapping(false);
     }
@@ -165,7 +208,17 @@ export function JupiterSwapWidget({
         <div className="bg-zinc-900/60 border border-white/5 rounded-lg p-3">
           <div className="flex justify-between items-center text-[11px] text-zinc-400 mb-1.5">
             <span>YOU PAY</span>
-            <span>SOL</span>
+            <span className="text-[10px]">
+              BAL: {userBalance !== null ? `${userBalance.toFixed(3)} SOL` : '-- SOL'}
+              {userBalance !== null && userBalance > 0.01 && (
+                <button
+                  onClick={() => setInputAmount((Math.max(0, userBalance - 0.005)).toFixed(3))}
+                  className="ml-1.5 text-amber-400 hover:underline font-bold"
+                >
+                  MAX
+                </button>
+              )}
+            </span>
           </div>
           <div className="flex justify-between items-center">
             <input
