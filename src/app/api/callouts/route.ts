@@ -1,162 +1,164 @@
 import { NextResponse } from "next/server";
-import {
-  PumpCallout,
-  CalloutCard,
-  WatchedSummary,
-  CalloutsApiResponse,
-} from "@/lib/types/callouts";
+import { CalloutCard, WatchedSummary } from "@/lib/types/callouts";
 import { getWatchlistMap, DEFAULT_WATCHLIST } from "@/lib/callouts/watchlist";
 
-export const revalidate = 45;
+export const dynamic = "force-dynamic";
+export const revalidate = 30;
+
+// Persistent Global Cache in Node.js runtime
+let GLOBAL_CALLOUT_CACHE: CalloutCard[] = [];
+let LAST_SUCCESSFUL_TS = 0;
 
 interface WorkerWalletResult {
   wallet: string;
   ok?: boolean;
   status?: number;
-  callouts?: PumpCallout[];
+  callouts?: Record<string, unknown>[];
   error?: string;
 }
 
 interface WorkerPackageResponse {
   updatedAt?: string | number;
   results?: WorkerWalletResult[];
-  error?: string;
+  callouts?: Record<string, unknown>[];
 }
-
-// In-Memory Stale-While-Revalidate Cache
-let lastGoodCalloutsCache: (CalloutsApiResponse & { results?: WorkerWalletResult[] }) | null = null;
-let lastFetchTime = 0;
 
 export async function GET() {
   const now = Date.now();
   const labelMap = getWatchlistMap();
 
-  // Son 20 saniye içindeki isteklerde doğrudan önbelleği dön
-  if (
-    lastGoodCalloutsCache &&
-    lastGoodCalloutsCache.callouts.length > 0 &&
-    now - lastFetchTime < 20000
-  ) {
-    return NextResponse.json(lastGoodCalloutsCache, {
-      status: 200,
-      headers: {
-        "Cache-Control": "public, s-maxage=45, stale-while-revalidate=90",
-      },
-    });
-  }
-
-  const proxyUrl =
+  const endpoints = [
     process.env.CALLOUT_PROXY_BASE ||
-    process.env.NEXT_PUBLIC_CALLOUT_PROXY_URL ||
-    "https://pump-callout-proxy.emir1903topuz106.workers.dev/";
+      process.env.NEXT_PUBLIC_CALLOUT_PROXY_URL ||
+      "https://callout-worker.batonoutbid.workers.dev/callouts",
+    "https://pump-callout-proxy.emir1903topuz106.workers.dev/",
+  ];
 
-  try {
-    const res = await fetch(proxyUrl, {
-      headers: {
-        Accept: "application/json",
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)",
-      },
-      next: { revalidate: 45 },
-    });
+  for (const url of endpoints) {
+    try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 6000);
 
-    if (res.ok) {
-      const data = (await res.json()) as WorkerPackageResponse;
-      const rawResults = Array.isArray(data.results) ? data.results : [];
+      const res = await fetch(url, {
+        headers: {
+          Accept: "application/json",
+          "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)",
+        },
+        signal: controller.signal,
+        cache: "no-store",
+      });
 
-      const allCallouts: CalloutCard[] = [];
-      const watched: WatchedSummary[] = [];
-      const emptyWallets: string[] = [];
+      clearTimeout(timeoutId);
 
-      for (const item of rawResults) {
-        const wallet = item.wallet;
-        const label =
-          labelMap[wallet] ??
-          DEFAULT_WATCHLIST[wallet] ??
-          `${wallet.slice(0, 4)}…${wallet.slice(-4)}`;
+      if (res.ok) {
+        const data = (await res.json()) as WorkerPackageResponse | Record<string, unknown>[];
+        const allCallouts: CalloutCard[] = [];
 
-        const isOk =
-          item.ok !== false && (!item.status || item.status === 200);
+        if (Array.isArray(data)) {
+          // Direct array response
+          for (const item of data) {
+            if (item && typeof item === "object" && item.coinMint) {
+              const wallet = String(item.callerWallet || item.wallet || "");
+              const label =
+                String(item.callerLabel || "") ||
+                labelMap[wallet] ||
+                DEFAULT_WATCHLIST[wallet] ||
+                (wallet ? `${wallet.slice(0, 4)}…${wallet.slice(-4)}` : "Verified Caller");
 
-        if (!isOk) {
-          // Worker rate-limited (429) for this wallet -> keep existing count or 0 silently
-          watched.push({ wallet, label, count: 0 });
-          continue;
-        }
+              allCallouts.push({
+                calloutId: String(item.calloutId || item.id || `${item.coinMint}-${item.createdAt}`),
+                callerWallet: wallet,
+                callerLabel: label,
+                coinMint: String(item.coinMint),
+                mediaUrl: item.mediaUrl ? String(item.mediaUrl) : null,
+                thesis: item.thesis ? String(item.thesis) : null,
+                marketCap: Number(item.marketCap || item.entryMcap || 0),
+                maxMultiplier: Number(item.maxMultiplier || item.athMultiplier || 1),
+                createdAt: Number(item.createdAt || now),
+              });
+            }
+          }
+        } else if (data && typeof data === "object") {
+          // Package with results array
+          if (Array.isArray(data.results)) {
+            for (const item of data.results) {
+              const wallet = item.wallet;
+              const label =
+                labelMap[wallet] ??
+                DEFAULT_WATCHLIST[wallet] ??
+                `${wallet.slice(0, 4)}…${wallet.slice(-4)}`;
 
-        const calloutsList = Array.isArray(item.callouts) ? item.callouts : [];
-        const count = calloutsList.length;
+              const calloutsList = Array.isArray(item.callouts) ? item.callouts : [];
+              for (const c of calloutsList) {
+                allCallouts.push({
+                  calloutId: String(c.calloutId || `${c.coinMint}-${c.createdAt}`),
+                  callerWallet: wallet,
+                  callerLabel: label,
+                  coinMint: String(c.coinMint),
+                  mediaUrl: c.mediaUrl ? String(c.mediaUrl) : null,
+                  thesis: c.thesis ? String(c.thesis) : null,
+                  marketCap: Number(c.marketCap || 0),
+                  maxMultiplier: Number(c.maxMultiplier || 1),
+                  createdAt: Number(c.createdAt || now),
+                });
+              }
+            }
+          } else if (Array.isArray(data.callouts)) {
+            for (const c of data.callouts) {
+              const wallet = String(c.callerWallet || c.wallet || "");
+              const label =
+                String(c.callerLabel || "") ||
+                labelMap[wallet] ||
+                DEFAULT_WATCHLIST[wallet] ||
+                `${wallet.slice(0, 4)}…${wallet.slice(-4)}`;
 
-        watched.push({ wallet, label, count });
-
-        if (count === 0) {
-          emptyWallets.push(wallet);
-        } else {
-          for (const c of calloutsList) {
-            allCallouts.push({
-              ...c,
-              callerWallet: wallet,
-              callerLabel: label,
-            });
+              allCallouts.push({
+                calloutId: String(c.calloutId || `${c.coinMint}-${c.createdAt}`),
+                callerWallet: wallet,
+                callerLabel: label,
+                coinMint: String(c.coinMint),
+                mediaUrl: c.mediaUrl ? String(c.mediaUrl) : null,
+                thesis: c.thesis ? String(c.thesis) : null,
+                marketCap: Number(c.marketCap || 0),
+                maxMultiplier: Number(c.maxMultiplier || 1),
+                createdAt: Number(c.createdAt || now),
+              });
+            }
           }
         }
+
+        if (allCallouts.length > 0) {
+          allCallouts.sort((a, b) => b.createdAt - a.createdAt);
+          GLOBAL_CALLOUT_CACHE = allCallouts;
+          LAST_SUCCESSFUL_TS = now;
+          break; // Successfully loaded and cached
+        }
       }
-
-      // Sort newest first
-      allCallouts.sort((a, b) => b.createdAt - a.createdAt);
-
-      const payload = {
-        updatedAt: typeof data.updatedAt === "number" ? data.updatedAt : now,
-        results: rawResults,
-        watched,
-        callouts:
-          allCallouts.length > 0
-            ? allCallouts
-            : lastGoodCalloutsCache?.callouts || [],
-        emptyWallets,
-        errors: [], // Asla frontend'e kırmızı 429 hata objesi basma
-      };
-
-      if (allCallouts.length > 0) {
-        lastGoodCalloutsCache = payload;
-        lastFetchTime = now;
-      }
-
-      return NextResponse.json(payload, {
-        status: 200,
-        headers: {
-          "Cache-Control": "public, s-maxage=45, stale-while-revalidate=90",
-        },
-      });
+    } catch {
+      // Try next endpoint or fallback to cache
     }
-
-    // Upstream 429 / 500 dönerse sessizce son başarılı önbelleği dön
-    if (lastGoodCalloutsCache) {
-      return NextResponse.json(lastGoodCalloutsCache, {
-        status: 200,
-        headers: {
-          "Cache-Control": "public, s-maxage=45, stale-while-revalidate=90",
-        },
-      });
-    }
-
-    return NextResponse.json(
-      { results: [], callouts: [], watched: [], emptyWallets: [], errors: [] },
-      { status: 200 }
-    );
-  } catch {
-    // Ağ kesintisinde sessiz fallback
-    if (lastGoodCalloutsCache) {
-      return NextResponse.json(lastGoodCalloutsCache, {
-        status: 200,
-        headers: {
-          "Cache-Control": "public, s-maxage=45, stale-while-revalidate=90",
-        },
-      });
-    }
-
-    return NextResponse.json(
-      { results: [], callouts: [], watched: [], emptyWallets: [], errors: [] },
-      { status: 200 }
-    );
   }
+
+  const watched: WatchedSummary[] = Object.entries(labelMap).map(([wallet, label]) => {
+    const count = GLOBAL_CALLOUT_CACHE.filter((c) => c.callerWallet === wallet).length;
+    return { wallet, label, count };
+  });
+
+  return NextResponse.json(
+    {
+      success: true,
+      callouts: GLOBAL_CALLOUT_CACHE,
+      count: GLOBAL_CALLOUT_CACHE.length,
+      watched,
+      emptyWallets: [],
+      errors: [],
+      lastUpdate: LAST_SUCCESSFUL_TS,
+    },
+    {
+      status: 200,
+      headers: {
+        "Cache-Control": "public, s-maxage=30, stale-while-revalidate=60",
+      },
+    }
+  );
 }
