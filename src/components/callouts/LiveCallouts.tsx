@@ -189,16 +189,18 @@ export const LiveCallouts: React.FC<LiveCalloutsProps> = (props) => {
                 onClick={() => handleChipClick(label, wallet)}
                 className={`text-[11px] font-mono px-2.5 py-1 rounded-full border transition-all cursor-pointer select-none ${
                   isSelected
-                    ? "bg-orange-500/20 border-orange-500 text-orange-400 font-bold ring-1 ring-orange-500/40 shadow-sm"
+                    ? "bg-amber-500/25 border-amber-500 text-amber-300 font-bold ring-1 ring-amber-500/40 shadow-sm"
                     : count > 0
-                    ? "bg-lime-500/10 border-lime-500/30 text-lime-400 hover:border-lime-400/50 hover:bg-lime-500/15"
-                    : "bg-zinc-800/50 border-zinc-700 text-zinc-500 hover:border-zinc-600 hover:text-zinc-400"
+                    ? "bg-amber-500/10 border-amber-500/30 text-amber-400 font-bold hover:border-amber-400/50 hover:bg-amber-500/20"
+                    : "bg-zinc-900/60 border-zinc-800 text-zinc-500 hover:border-zinc-700 hover:text-zinc-400"
                 }`}
               >
                 {label}
-                <span className="ml-1.5 opacity-60">
-                  {count > 0 ? count : "empty"}
-                </span>
+                {count > 0 && (
+                  <span className="ml-1.5 px-1.5 py-0.2 rounded-full bg-amber-500/20 text-amber-300 text-[10px]">
+                    {count}
+                  </span>
+                )}
               </button>
             );
           })}
@@ -218,9 +220,9 @@ export const LiveCallouts: React.FC<LiveCalloutsProps> = (props) => {
 
       {/* ── Active Filter Banner ─────────────────────────────────────── */}
       {props.selectedCaller && (
-        <div className="flex items-center justify-between gap-2 px-3 py-2 rounded-xl bg-orange-500/10 border border-orange-500/30 text-xs font-mono text-orange-300">
+        <div className="flex items-center justify-between gap-2 px-3 py-2 rounded-xl bg-amber-500/10 border border-amber-500/30 text-xs font-mono text-amber-300">
           <div className="flex items-center gap-2">
-            <span className="w-2 h-2 rounded-full bg-orange-500 animate-pulse" />
+            <span className="w-2 h-2 rounded-full bg-amber-400 animate-pulse" />
             <span>
               Filtering by: <strong>@{props.selectedCaller}</strong>
               {" "}({filteredCallouts.length} callouts)
@@ -229,16 +231,15 @@ export const LiveCallouts: React.FC<LiveCalloutsProps> = (props) => {
           <button
             type="button"
             onClick={() => props.onSelectCaller?.(null)}
-            className="text-[11px] hover:underline text-orange-400 font-bold flex items-center gap-1 cursor-pointer"
+            className="text-[11px] hover:underline text-amber-400 font-bold flex items-center gap-1 cursor-pointer"
           >
             Show all
           </button>
         </div>
       )}
 
-
-
       {/* ── Cards / Empty States ─────────────────────────────────────── */}
+      <div className={`transition-opacity duration-200 ${isValidating && rawCallouts.length > 0 ? "opacity-75" : "opacity-100"}`}>
       {isLoading && rawCallouts.length === 0 ? (
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           {[1, 2, 3, 4].map((i) => (
@@ -298,6 +299,7 @@ export const LiveCallouts: React.FC<LiveCalloutsProps> = (props) => {
           )}
         </div>
       )}
+      </div>
     </div>
   );
 };
