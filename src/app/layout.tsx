@@ -1,4 +1,4 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Archivo_Black, Space_Grotesk, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 import "@/styles/wallet-adapter-custom.css";
@@ -24,10 +24,28 @@ const jetbrainsMono = JetBrains_Mono({
   display: "swap",
 });
 
+export const viewport: Viewport = {
+  themeColor: "#09090b",
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 1,
+  userScalable: false,
+};
+
 export const metadata: Metadata = {
-  title: "$BATON Launchpad | Solana Memecoin Showcase & Burn Multiplier",
+  title: "Baton Terminal | Solana Memecoin Showcase & Pro Terminal",
   description:
-    "Showcase directory for Solana pump.fun mascot & community memecoins. Burn $BATON to boost visibility and reach Diamond tier.",
+    "Showcase directory for Solana pump.fun memecoins, real-time market terminal, and on-chain $BATON burn multiplier.",
+  manifest: "/manifest.json",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "black-translucent",
+    title: "Baton",
+  },
+  icons: {
+    icon: "/icons/icon-192x192.png",
+    apple: "/icons/icon-192x192.png",
+  },
 };
 
 export default function RootLayout({
@@ -41,10 +59,32 @@ export default function RootLayout({
       suppressHydrationWarning
       className={`${archivoBlack.variable} ${spaceGrotesk.variable} ${jetbrainsMono.variable}`}
     >
+      <head>
+        <link rel="manifest" href="/manifest.json" />
+        <meta name="mobile-web-app-capable" content="yes" />
+        <meta name="apple-mobile-web-app-capable" content="yes" />
+        <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+        <meta name="apple-mobile-web-app-title" content="Baton" />
+      </head>
       <body className="bg-bg text-text antialiased min-h-screen selection:bg-acid selection:text-bg">
         <ThemeProvider attribute="class" defaultTheme="dark" enableSystem={false}>
           <WalletContextProvider>{children}</WalletContextProvider>
         </ThemeProvider>
+
+        {/* PWA Service Worker Registration */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              if (typeof window !== 'undefined' && 'serviceWorker' in navigator) {
+                window.addEventListener('load', function() {
+                  navigator.serviceWorker.register('/sw.js').catch(function(err) {
+                    console.log('SW registration note:', err);
+                  });
+                });
+              }
+            `,
+          }}
+        />
       </body>
     </html>
   );
