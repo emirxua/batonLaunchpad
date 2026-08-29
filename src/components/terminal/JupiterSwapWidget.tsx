@@ -4,7 +4,6 @@ import React, { useState, useEffect, useCallback } from "react";
 import { useConnection, useWallet } from "@solana/wallet-adapter-react";
 import { useWalletModal } from "@solana/wallet-adapter-react-ui";
 import { VersionedTransaction } from "@solana/web3.js";
-import { Zap, Loader2, ExternalLink } from "lucide-react";
 
 interface JupiterSwapWidgetProps {
   outputMint?: string;
@@ -30,7 +29,6 @@ export function JupiterSwapWidget({
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [txSuccess, setTxSuccess] = useState<string | null>(null);
 
-  // Jupiter v6 Quote Fetcher
   const fetchQuote = useCallback(
     async (amountSol: string) => {
       const val = parseFloat(amountSol);
@@ -45,22 +43,13 @@ export function JupiterSwapWidget({
         setErrorMsg(null);
         const lamports = Math.floor(val * 1e9);
 
-        let res = await fetch(
-          `/api/jupiter/quote?inputMint=${SOL_MINT}&outputMint=${outputMint}&amount=${lamports}&slippageBps=50`
+        const res = await fetch(
+          `/api/jupiter/quote?inputMint=${SOL_MINT}&outputMint=${outputMint}&amount=${lamports}`
         );
-
-        if (!res.ok) {
-          res = await fetch(
-            `https://quote-api.jup.ag/v6/quote?inputMint=${SOL_MINT}&outputMint=${outputMint}&amount=${lamports}&slippageBps=50`
-          );
-        }
-
-        if (!res.ok) throw new Error("Failed to fetch route");
         const data = await res.json();
 
         if (data && data.outAmount) {
           setQuoteResponse(data);
-          // Varsayılan SPL token 6 decimal, standart tokenlar için format
           const decimals = outputMint.endsWith("pump") ? 6 : 9;
           const out = Number(data.outAmount) / Math.pow(10, decimals);
           setOutputAmount(
@@ -71,9 +60,11 @@ export function JupiterSwapWidget({
               ? `${(parseFloat(data.priceImpactPct) * 100).toFixed(2)}%`
               : "< 0.1%"
           );
+        } else {
+          throw new Error("No route");
         }
       } catch {
-        setErrorMsg("Route calculating or low liquidity");
+        setErrorMsg("Route not available");
         setOutputAmount("0");
       } finally {
         setLoadingQuote(false);
@@ -85,11 +76,10 @@ export function JupiterSwapWidget({
   useEffect(() => {
     const timer = setTimeout(() => {
       fetchQuote(inputAmount);
-    }, 300);
+    }, 400);
     return () => clearTimeout(timer);
   }, [inputAmount, fetchQuote]);
 
-  // On-Chain Swap Execution
   const handleSwap = async () => {
     if (!connected || !publicKey) {
       setVisible(true);
@@ -103,34 +93,26 @@ export function JupiterSwapWidget({
       setErrorMsg(null);
       setTxSuccess(null);
 
-      const payload = {
-        quoteResponse,
-        userPublicKey: publicKey.toBase58(),
-        wrapAndUnwrapSol: true,
-        dynamicComputeUnitLimit: true,
-        prioritizationFeeLamports: "auto",
-      };
-
-      let swapRes = await fetch("/api/jupiter/swap", {
+      const swapRes = await fetch("/api/jupiter/swap", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
+        body: JSON.stringify({
+          quoteResponse,
+          userPublicKey: publicKey.toBase58(),
+        }),
       });
 
-      if (!swapRes.ok) {
-        swapRes = await fetch("https://quote-api.jup.ag/v6/swap", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(payload),
-        });
+      const swapData = await swapRes.json();
+      if (!swapData.swapTransaction) throw new Error("Transaction build failed");
+
+      // Base64 transaction to binary
+      const binaryString = window.atob(swapData.swapTransaction);
+      const bytes = new Uint8Array(binaryString.length);
+      for (let i = 0; i < binaryString.length; i++) {
+        bytes[i] = binaryString.charCodeAt(i);
       }
 
-      const { swapTransaction } = await swapRes.json();
-      if (!swapTransaction) throw new Error("Transaction build failed");
-
-      const swapTransactionBuf = Buffer.from(swapTransaction, "base64");
-      const transaction = VersionedTransaction.deserialize(swapTransactionBuf);
-
+      const transaction = VersionedTransaction.deserialize(bytes);
       const txid = await sendTransaction(transaction, connection);
       setTxSuccess(txid);
       fetchQuote(inputAmount);
@@ -149,9 +131,8 @@ export function JupiterSwapWidget({
       <div className="px-4 py-3 border-b border-white/10 flex items-center justify-between bg-zinc-900/50">
         <div className="flex items-center gap-2">
           <span className="w-2 h-2 rounded-full bg-amber-400 animate-pulse" />
-          <span className="text-xs font-bold text-amber-400 tracking-wide flex items-center gap-1.5">
-            <Zap className="w-3.5 h-3.5 text-amber-400" />
-            <span>JUPITER ROUTE: ${outputSymbol}</span>
+          <span className="text-xs font-bold text-amber-400 tracking-wide">
+            JUPITER ROUTE: ${outputSymbol}
           </span>
         </div>
         <button
@@ -159,7 +140,7 @@ export function JupiterSwapWidget({
           onClick={() => fetchQuote(inputAmount)}
           className="text-[10px] text-zinc-400 hover:text-amber-400 transition-colors cursor-pointer"
         >
-          {loadingQuote ? "REFRESHING..." : "REFRESH"}
+          {loadingQuote ? "UPDATING..." : "REFRESH"}
         </button>
       </div>
 
@@ -204,7 +185,7 @@ export function JupiterSwapWidget({
         <div className="bg-zinc-900/60 border border-white/5 rounded-lg p-3">
           <div className="flex justify-between items-center text-[11px] text-zinc-400 mb-1.5">
             <span>YOU RECEIVE (ESTIMATED)</span>
-            <span className="text-emerald-400 text-[10px] font-bold">Best Route</span>
+            <span className="text-emerald-400 text-[10px] font-bold">Jupiter v6</span>
           </div>
           <div className="flex justify-between items-center">
             <span className="text-lg font-bold text-zinc-100 truncate">
@@ -216,15 +197,11 @@ export function JupiterSwapWidget({
           </div>
         </div>
 
-        {/* Route Details */}
+        {/* Route Info */}
         <div className="bg-zinc-900/20 border border-white/5 rounded-lg p-2.5 flex flex-col gap-1.5 text-[10px] text-zinc-400">
           <div className="flex justify-between">
             <span>Routing Engine</span>
-            <span className="text-zinc-300 font-bold">Jupiter Ultra v6</span>
-          </div>
-          <div className="flex justify-between">
-            <span>Max Slippage</span>
-            <span className="text-zinc-300 font-bold">0.5%</span>
+            <span className="text-zinc-300 font-bold">Jupiter Ultra API</span>
           </div>
           <div className="flex justify-between">
             <span>Price Impact</span>
@@ -232,26 +209,15 @@ export function JupiterSwapWidget({
           </div>
         </div>
 
-        {/* Status Messages */}
+        {/* Errors / Success */}
         {errorMsg && (
           <div className="text-[11px] text-rose-400 bg-rose-500/10 border border-rose-500/20 px-3 py-1.5 rounded">
             {errorMsg}
           </div>
         )}
         {txSuccess && (
-          <div className="text-[11px] text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-3 py-1.5 rounded flex items-center justify-between gap-1">
-            <span className="truncate">
-              Tx: {txSuccess.slice(0, 8)}...{txSuccess.slice(-6)}
-            </span>
-            <a
-              href={`https://solscan.io/tx/${txSuccess}`}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-emerald-300 underline flex items-center gap-0.5 shrink-0"
-            >
-              <span>Solscan</span>
-              <ExternalLink className="w-2.5 h-2.5" />
-            </a>
+          <div className="text-[11px] text-emerald-400 bg-emerald-500/10 border border-emerald-500/20 px-3 py-1.5 rounded truncate">
+            Confirmed: {txSuccess.slice(0, 10)}...{txSuccess.slice(-8)}
           </div>
         )}
 
@@ -260,11 +226,11 @@ export function JupiterSwapWidget({
           type="button"
           onClick={handleSwap}
           disabled={swapping || loadingQuote}
-          className="w-full py-3 rounded-lg font-bold text-xs bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-zinc-950 transition-all shadow-lg disabled:opacity-50 flex items-center justify-center gap-2 mt-1 cursor-pointer active:scale-98"
+          className="w-full py-3 rounded-lg font-bold text-xs bg-amber-500 hover:bg-amber-400 text-zinc-950 transition-colors shadow-lg disabled:opacity-50 flex items-center justify-center gap-2 mt-1 cursor-pointer"
         >
           {swapping ? (
             <>
-              <Loader2 className="w-3.5 h-3.5 animate-spin" />
+              <span className="w-3.5 h-3.5 border-2 border-zinc-950/20 border-t-zinc-950 rounded-full animate-spin" />
               <span>CONFIRMING ON SOLANA...</span>
             </>
           ) : !connected ? (
