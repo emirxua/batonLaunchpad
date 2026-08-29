@@ -1,74 +1,64 @@
 import { NextResponse } from "next/server";
-import { fetchAllBinanceMarkets } from "@/lib/api/binance";
-import { BinanceMarketData } from "@/lib/types/terminal";
 
-// Next.js ISR: Cache on server for 45 seconds
-export const revalidate = 45;
+export const revalidate = 10; // 10 seconds cache
 
-let lastGoodMarketStats: BinanceMarketData[] | null = null;
+const SYMBOLS = [
+  { symbol: "SOLUSDT", name: "Solana", display: "SOL" },
+  { symbol: "BTCUSDT", name: "Bitcoin", display: "BTC" },
+  { symbol: "ETHUSDT", name: "Ethereum", display: "ETH" },
+  { symbol: "BNBUSDT", name: "BNB Chain", display: "BNB" },
+];
 
 export async function GET() {
   try {
-    const data = await fetchAllBinanceMarkets();
+    const results = await Promise.all(
+      SYMBOLS.map(async (item) => {
+        try {
+          // 1. 24h Ticker Fiyatı & Yüzdesi
+          const tickerRes = await fetch(
+            `https://api.binance.com/api/v3/ticker/24hr?symbol=${item.symbol}`,
+            { next: { revalidate: 10 } }
+          );
+          const ticker = await tickerRes.json();
 
-    if (data && data.length > 0) {
-      lastGoodMarketStats = data;
+          // 2. 24 Saatlik 1h Mum Verileri (Klines)
+          const klineRes = await fetch(
+            `https://api.binance.com/api/v3/klines?symbol=${item.symbol}&interval=1h&limit=24`,
+            { next: { revalidate: 60 } }
+          );
+          const klines = await klineRes.json();
 
-      return NextResponse.json(
-        {
-          updatedAt: Date.now(),
-          data,
-        },
-        {
-          status: 200,
-          headers: {
-            "Cache-Control": "public, s-maxage=45, stale-while-revalidate=90",
-          },
+          // Kapanış fiyatlarını (4. index) number dizisine dök
+          const sparkline: number[] = Array.isArray(klines)
+            ? klines
+                .map((k: (string | number)[]) => parseFloat(String(k[4])))
+                .filter((n) => !isNaN(n))
+            : [];
+
+          return {
+            symbol: item.display,
+            name: item.name,
+            price: parseFloat(ticker.lastPrice || "0"),
+            priceChangePercent24h: parseFloat(ticker.priceChangePercent || "0"),
+            volume24h: parseFloat(ticker.quoteVolume || "0"),
+            sparkline: sparkline.length >= 2 ? sparkline : [],
+          };
+        } catch (e) {
+          console.warn(`Error fetching Binance stats for ${item.symbol}:`, e);
+          return null;
         }
-      );
-    }
-
-    // If fetch failed but we have last good data in memory, serve it
-    if (lastGoodMarketStats && lastGoodMarketStats.length > 0) {
-      return NextResponse.json(
-        {
-          updatedAt: Date.now(),
-          data: lastGoodMarketStats,
-          warning: "Serving cached market rates",
-        },
-        {
-          status: 200,
-          headers: {
-            "Cache-Control": "public, s-maxage=45, stale-while-revalidate=90",
-          },
-        }
-      );
-    }
-
-    return NextResponse.json(
-      {
-        error: "Failed to fetch market data from Binance / CoinGecko",
-      },
-      { status: 502 }
+      })
     );
+
+    const validData = results.filter(Boolean);
+    return NextResponse.json({
+      success: true,
+      updatedAt: Date.now(),
+      data: validData,
+    });
   } catch (err: unknown) {
-    if (lastGoodMarketStats && lastGoodMarketStats.length > 0) {
-      return NextResponse.json(
-        {
-          updatedAt: Date.now(),
-          data: lastGoodMarketStats,
-        },
-        { status: 200 }
-      );
-    }
-
     const message =
-      err instanceof Error ? err.message : "Unknown error fetching market stats";
-    return NextResponse.json(
-      {
-        error: message,
-      },
-      { status: 502 }
-    );
+      err instanceof Error ? err.message : "Unknown error fetching Binance stats";
+    return NextResponse.json({ success: false, error: message }, { status: 500 });
   }
 }

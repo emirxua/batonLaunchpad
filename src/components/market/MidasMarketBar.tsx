@@ -61,7 +61,11 @@ export const MidasMarketBar: React.FC = () => {
     }
   );
 
-  const marketList = data?.data || [];
+  const marketList = Array.isArray(data?.data)
+    ? data.data
+    : Array.isArray(data)
+    ? (data as unknown as BinanceMarketData[])
+    : [];
 
   return (
     <div className="w-full bg-[#0D0E12] border border-white/10 rounded-2xl p-3 sm:p-4 shadow-xl">
