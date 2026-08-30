@@ -5,14 +5,14 @@ import { TopHolder, TokenStatsResponse } from "@/app/api/token-stats/route";
 
 const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
-export function useTokenStats(interval: number = 15_000) {
+export function useTokenStats(interval: number = 10_000) {
   const { data, error, isLoading, isValidating, mutate } = useSWR<TokenStatsResponse>(
     "/api/token-stats",
     fetcher,
     {
       refreshInterval: interval,
-      revalidateOnFocus: false,
-      dedupingInterval: 10_000,
+      revalidateOnFocus: true,
+      dedupingInterval: 3_000,
     }
   );
 

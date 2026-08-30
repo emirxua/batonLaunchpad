@@ -28,7 +28,7 @@ export interface TokenStatsResponse {
 
 let cachedStats: TokenStatsResponse | null = null;
 let lastFetchTime = 0;
-const CACHE_DURATION_MS = 60_000;
+const CACHE_DURATION_MS = 10_000;
 
 const RPC_ENDPOINTS = [
   process.env.NEXT_PUBLIC_SOLANA_RPC_URL?.trim(),

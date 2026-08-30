@@ -12,9 +12,9 @@ export function useLeaderboard(_interval?: number) {
     "/api/leaderboard",
     fetcher,
     {
-      refreshInterval: 60_000,
-      revalidateOnFocus: false,
-      dedupingInterval: 30_000,
+      refreshInterval: 8_000,
+      revalidateOnFocus: true,
+      dedupingInterval: 2_000,
     }
   );
 
