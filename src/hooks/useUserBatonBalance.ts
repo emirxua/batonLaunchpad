@@ -3,10 +3,8 @@
 import { useEffect, useState, useCallback } from "react";
 import { useConnection, useWallet } from "@solana/wallet-adapter-react";
 import { PublicKey, LAMPORTS_PER_SOL } from "@solana/web3.js";
-
 import { OFFICIAL_BATON_MINT } from "@/lib/solana-burn";
 
-// Official mint address for $BATON (can be overridden via env)
 const BATON_TOKEN_MINT =
   process.env.NEXT_PUBLIC_BATON_MINT_ADDRESS || OFFICIAL_BATON_MINT;
 
@@ -35,40 +33,53 @@ export function useUserBatonBalance(tokenMintAddress: string = BATON_TOKEN_MINT)
       return;
     }
 
-    setIsLoading(true);
-    setError(null);
-
     try {
-      // 1. Fetch SOL Balance
-      const lamports = await connection.getBalance(publicKey);
-      const sol = lamports / LAMPORTS_PER_SOL;
-      setSolBalance(sol);
-
-      // 2. Fetch $BATON SPL Token Accounts by Owner
+      // 1. Primary: Server-side high-speed balance route
       try {
-        const tokenMintKey = new PublicKey(tokenMintAddress);
-        const tokenAccounts = await connection.getParsedTokenAccountsByOwner(
-          publicKey,
-          { mint: tokenMintKey }
+        const res = await fetch(
+          `/api/wallet-balance?wallet=${encodeURIComponent(publicKey.toBase58())}&mint=${encodeURIComponent(tokenMintAddress)}`,
+          { cache: "no-store" }
         );
+        if (res.ok) {
+          const data = await res.json();
+          if (typeof data.solBalance === "number") setSolBalance(data.solBalance);
+          if (typeof data.tokenBalance === "number") setBatonBalance(data.tokenBalance);
+          setError(null);
+          return;
+        }
+      } catch {
+        // Fallback to direct connection if internal API unavailable
+      }
 
-        if (tokenAccounts.value && tokenAccounts.value.length > 0) {
-          const totalTokenAmount = tokenAccounts.value.reduce((acc, account) => {
-            const amount =
-              account.account.data.parsed.info.tokenAmount.uiAmount || 0;
-            return acc + amount;
-          }, 0);
-          setBatonBalance(totalTokenAmount);
-        } else {
-          // If no token account exists for this mint yet
+      // 2. Fallback: Direct Solana connection
+      if (connection) {
+        const lamports = await connection.getBalance(publicKey, "confirmed");
+        setSolBalance(lamports / LAMPORTS_PER_SOL);
+
+        try {
+          const tokenMintKey = new PublicKey(tokenMintAddress);
+          const tokenAccounts = await connection.getParsedTokenAccountsByOwner(
+            publicKey,
+            { mint: tokenMintKey },
+            "confirmed"
+          );
+
+          if (tokenAccounts.value && tokenAccounts.value.length > 0) {
+            const totalTokenAmount = tokenAccounts.value.reduce((acc, account) => {
+              const amount =
+                account.account.data.parsed.info.tokenAmount.uiAmount || 0;
+              return acc + amount;
+            }, 0);
+            setBatonBalance(totalTokenAmount);
+          } else {
+            setBatonBalance(0);
+          }
+        } catch {
           setBatonBalance(0);
         }
-      } catch (tokenErr) {
-        console.warn("Could not fetch $BATON token balance:", tokenErr);
-        setBatonBalance(0);
       }
     } catch (err: unknown) {
-      console.error("Error fetching wallet balance:", err);
+      console.warn("Wallet balance fetch error:", err);
       setError(err instanceof Error ? err.message : "Failed to fetch balances");
     } finally {
       setIsLoading(false);
@@ -77,6 +88,8 @@ export function useUserBatonBalance(tokenMintAddress: string = BATON_TOKEN_MINT)
 
   useEffect(() => {
     fetchBalances();
+    const interval = setInterval(fetchBalances, 3000);
+    return () => clearInterval(interval);
   }, [fetchBalances]);
 
   return {

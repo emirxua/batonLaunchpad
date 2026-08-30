@@ -222,7 +222,7 @@ export function CalloutFeed({ onSelectToken, filterSymbol }: CalloutFeedProps) {
         <div className="bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-white/10 rounded-2xl p-3.5 space-y-3 shadow-md">
           <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
             {/* Filter Tabs */}
-            <div className="flex items-center gap-1 bg-zinc-100 dark:bg-zinc-900/80 p-1 rounded-xl border border-zinc-200 dark:border-white/5 text-xs overflow-x-auto">
+            <div className="flex items-center gap-1 bg-zinc-100 dark:bg-zinc-900/80 p-1 rounded-xl border border-zinc-200 dark:border-white/5 text-xs overflow-x-auto no-scrollbar">
               {[
                 { id: "all", label: "ALL SIGNALS", count: allCallouts.length },
                 {
@@ -245,7 +245,7 @@ export function CalloutFeed({ onSelectToken, filterSymbol }: CalloutFeedProps) {
                   key={tab.id}
                   type="button"
                   onClick={() => setFilterTab(tab.id as CalloutFilterTab)}
-                  className={`px-3 py-1.5 rounded-lg font-bold text-[11px] transition-all cursor-pointer whitespace-nowrap ${
+                  className={`px-3 py-1.5 rounded-lg font-bold text-[11px] transition-all cursor-pointer whitespace-nowrap shrink-0 ${
                     filterTab === tab.id
                       ? "bg-amber-500 text-zinc-950 shadow-sm"
                       : "text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-200 hover:bg-zinc-200 dark:hover:bg-zinc-800"
@@ -257,11 +257,11 @@ export function CalloutFeed({ onSelectToken, filterSymbol }: CalloutFeedProps) {
             </div>
 
             {/* Search Input */}
-            <div className="relative flex-1 max-w-xs">
+            <div className="relative flex-1 max-w-full sm:max-w-xs">
               <Search className="w-3.5 h-3.5 text-zinc-500 absolute left-3 top-1/2 -translate-y-1/2" />
               <input
                 type="text"
-                placeholder="Search token, symbol, caller or CA..."
+                placeholder="Search token, symbol, caller..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="w-full bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-white/10 focus:border-amber-500 rounded-xl pl-8 pr-3 py-1.5 text-xs text-zinc-900 dark:text-zinc-100 outline-none font-mono"
@@ -270,7 +270,7 @@ export function CalloutFeed({ onSelectToken, filterSymbol }: CalloutFeedProps) {
           </div>
 
           {/* Caller Pills Filter */}
-          <div className="flex items-center gap-1.5 overflow-x-auto pb-1 text-xs">
+          <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar pb-1 text-xs">
             <div className="flex items-center gap-1 text-[11px] font-bold text-zinc-500 shrink-0 mr-1">
               <Users className="w-3.5 h-3.5 text-amber-500" />
               <span>CALLERS:</span>

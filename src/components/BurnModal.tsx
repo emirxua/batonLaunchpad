@@ -5,6 +5,7 @@ import { mutate } from "swr";
 import { Coin } from "@/types/coin";
 import { useConnection, useWallet } from "@solana/wallet-adapter-react";
 import { useWalletModal } from "@solana/wallet-adapter-react-ui";
+import { useUserBatonBalance } from "@/hooks/useUserBatonBalance";
 import { formatNumber } from "@/lib/utils";
 import { prepareRealBurnTransaction } from "@/lib/burn";
 import {
@@ -35,13 +36,14 @@ const DEAD_WALLET = "1111111111111111111111111111111111111111";
 export const BurnModal: React.FC<BurnModalProps> = ({
   coin,
   isOpen,
-  initialAmount = 50000,
+  initialAmount = 10000,
   onClose,
   onSuccess,
 }) => {
   const { connection } = useConnection();
   const { publicKey, sendTransaction, connected } = useWallet();
   const { setVisible } = useWalletModal();
+  const { batonBalance, isLoading: isBalanceLoading, refetch: refetchBalance } = useUserBatonBalance();
 
   const [amount, setAmount] = useState<number>(initialAmount);
   const [burning, setBurning] = useState<boolean>(false);
@@ -51,6 +53,9 @@ export const BurnModal: React.FC<BurnModalProps> = ({
   const [copiedCA, setCopiedCA] = useState<boolean>(false);
 
   if (!isOpen || !coin) return null;
+
+  const currentWalletBaton = batonBalance !== null ? batonBalance : 0;
+  const isInsufficientBalance = connected && currentWalletBaton < amount;
 
   const handleCopyDeadWallet = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -98,6 +103,13 @@ export const BurnModal: React.FC<BurnModalProps> = ({
       return;
     }
 
+    if (currentWalletBaton < amount) {
+      setErrorMessage(
+        `Insufficient $BATON balance in your wallet. You have ${formatNumber(currentWalletBaton)} $BATON.`
+      );
+      return;
+    }
+
     try {
       setBurning(true);
 
@@ -138,7 +150,9 @@ export const BurnModal: React.FC<BurnModalProps> = ({
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             txHash: signature,
-            coinId: coin.id,
+            coinId: coin.mintAddress || coin.id,
+            coinName: coin.name,
+            coinTicker: coin.ticker,
             amount: amount,
             userAddress: publicKey.toBase58(),
           }),
@@ -152,6 +166,7 @@ export const BurnModal: React.FC<BurnModalProps> = ({
       mutate("/api/leaderboard");
       mutate("/api/token-stats");
       mutate("/api/directory");
+      refetchBalance();
 
       setTxSignature(signature);
 
@@ -240,43 +255,70 @@ export const BurnModal: React.FC<BurnModalProps> = ({
           </div>
         </div>
 
-        {/* ── Preset Amount Buttons ─────────────────────────────────────── */}
+        {/* ── Preset Amount Buttons & Live Wallet Balance ───────────────── */}
         <div className="space-y-2">
-          <label className="text-xs font-bold text-zinc-700 dark:text-zinc-300 uppercase tracking-wider flex items-center justify-between">
-            <span>$BATON Burn Amount</span>
-            <span className="text-[10px] text-zinc-500 font-normal">
-              100% permanently destroyed on-chain
+          <div className="flex items-center justify-between text-xs">
+            <span className="font-bold text-zinc-700 dark:text-zinc-300 uppercase tracking-wider">
+              $BATON Burn Amount
             </span>
-          </label>
+
+            {/* Live Connected Wallet Balance */}
+            <div className="flex items-center gap-1.5 font-mono text-[11px]">
+              <Wallet className="w-3 h-3 text-amber-400" />
+              <span className="text-zinc-500">Balance:</span>
+              <span className="font-bold text-zinc-950 dark:text-zinc-100">
+                {isBalanceLoading
+                  ? "Loading..."
+                  : `${formatNumber(currentWalletBaton)} $BATON`}
+              </span>
+            </div>
+          </div>
 
           <div className="relative">
             <input
               type="number"
               value={amount}
               onChange={(e) => setAmount(Math.max(0, parseInt(e.target.value) || 0))}
-              className="w-full bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-white/10 rounded-2xl px-4 py-3 text-lg font-black text-zinc-950 dark:text-white outline-none focus:border-amber-500 transition-colors placeholder:text-zinc-600"
-              placeholder="50000"
+              className={`w-full bg-zinc-50 dark:bg-zinc-900 border rounded-2xl px-4 py-3 text-lg font-black text-zinc-950 dark:text-white outline-none transition-colors placeholder:text-zinc-600 ${
+                isInsufficientBalance
+                  ? "border-rose-500/70 focus:border-rose-500"
+                  : "border-zinc-200 dark:border-white/10 focus:border-amber-500"
+              }`}
+              placeholder="10000"
             />
             <span className="absolute right-4 top-1/2 -translate-y-1/2 text-xs font-black text-amber-500">
               $BATON
             </span>
           </div>
 
-          <div className="grid grid-cols-4 gap-2 pt-1">
+          {/* Preset Additive Buttons + HALF & MAX */}
+          <div className="grid grid-cols-6 gap-1.5 pt-1">
             {[10000, 50000, 100000, 500000].map((val) => (
               <button
                 key={val}
                 type="button"
-                onClick={() => setAmount(val)}
-                className={`py-2 px-2 rounded-xl text-xs font-bold transition-all border cursor-pointer ${
-                  amount === val
-                    ? "bg-amber-500 text-zinc-950 border-amber-400 shadow-md font-black"
-                    : "bg-zinc-100 dark:bg-zinc-900 text-zinc-600 dark:text-zinc-400 border-zinc-200 dark:border-white/5 hover:border-amber-500/30"
-                }`}
+                onClick={() => setAmount((prev) => prev + val)}
+                className="py-2 px-1 rounded-xl text-xs font-bold transition-all border cursor-pointer bg-zinc-100 dark:bg-zinc-900 hover:bg-amber-500/20 text-zinc-700 dark:text-zinc-300 hover:text-amber-400 border-zinc-200 dark:border-white/5 hover:border-amber-500/30 active:scale-95"
               >
                 +{val >= 1000 ? `${val / 1000}K` : val}
               </button>
             ))}
+
+            <button
+              type="button"
+              onClick={() => setAmount(Math.floor(currentWalletBaton / 2))}
+              className="py-2 px-1 rounded-xl text-xs font-bold bg-zinc-100 dark:bg-zinc-900 hover:bg-amber-500/20 text-zinc-600 dark:text-zinc-400 hover:text-amber-400 border border-zinc-200 dark:border-white/5 hover:border-amber-500/30 cursor-pointer active:scale-95"
+            >
+              HALF
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setAmount(Math.floor(currentWalletBaton))}
+              className="py-2 px-1 rounded-xl text-xs font-bold bg-zinc-100 dark:bg-zinc-900 hover:bg-amber-500/20 text-amber-500 dark:text-amber-400 border border-zinc-200 dark:border-white/5 hover:border-amber-500/30 cursor-pointer font-black active:scale-95"
+            >
+              MAX
+            </button>
           </div>
         </div>
 
@@ -295,6 +337,16 @@ export const BurnModal: React.FC<BurnModalProps> = ({
             </span>
           </div>
         </div>
+
+        {/* ── Insufficient Balance Warning Banner ──────────────────────── */}
+        {isInsufficientBalance && (
+          <div className="p-3 rounded-2xl bg-rose-500/10 border border-rose-500/30 flex items-center gap-2 text-rose-400 text-xs animate-in shake">
+            <AlertCircle className="w-4 h-4 shrink-0" />
+            <span>
+              Insufficient $BATON balance in your wallet ({formatNumber(currentWalletBaton)} $BATON available).
+            </span>
+          </div>
+        )}
 
         {/* ── Success Banner ────────────────────────────────────────────── */}
         {txSignature && (
@@ -316,7 +368,7 @@ export const BurnModal: React.FC<BurnModalProps> = ({
         )}
 
         {/* ── Error Banner ──────────────────────────────────────────────── */}
-        {errorMessage && (
+        {errorMessage && !isInsufficientBalance && (
           <div className="p-3.5 rounded-2xl bg-rose-500/10 border border-rose-500/30 flex items-start gap-2 text-rose-400 text-xs animate-in shake">
             <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
             <span>{errorMessage}</span>
@@ -338,7 +390,7 @@ export const BurnModal: React.FC<BurnModalProps> = ({
           ) : (
             <>
               <Flame className="w-4 h-4 fill-current text-zinc-950" />
-              <span>Burn {amount.toLocaleString()} $BATON &amp; Boost</span>
+              <span>Burn {formatNumber(amount)} $BATON &amp; Boost</span>
             </>
           )}
         </button>

@@ -3,9 +3,10 @@ import {
   getUserByWallet,
   isUsernameAvailable,
   registerUsername,
-} from "@/lib/user-db";
+} from "@/lib/turso-db";
 
 export const dynamic = "force-dynamic";
+export const revalidate = 0;
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
@@ -14,7 +15,7 @@ export async function GET(request: Request) {
 
   // 1. Availability check endpoint
   if (checkUsername) {
-    const available = isUsernameAvailable(checkUsername, wallet || undefined);
+    const available = await isUsernameAvailable(checkUsername, wallet || undefined);
     return NextResponse.json({
       success: true,
       username: checkUsername,
@@ -30,7 +31,7 @@ export async function GET(request: Request) {
     );
   }
 
-  const user = getUserByWallet(wallet);
+  const user = await getUserByWallet(wallet);
   return NextResponse.json({
     success: true,
     wallet,
@@ -54,7 +55,7 @@ export async function POST(request: Request) {
       .trim()
       .toLowerCase();
 
-    const result = registerUsername(wallet, cleanUsername);
+    const result = await registerUsername(wallet, cleanUsername);
 
     if (!result.success) {
       return NextResponse.json(

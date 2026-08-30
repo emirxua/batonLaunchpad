@@ -34,7 +34,7 @@ export function MobileBottomNav({
       {/* ── Fixed Bottom Navigation Bar (Mobile Only: hidden on md+) ────── */}
       <nav
         aria-label="Mobile Navigation"
-        className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/95 dark:bg-[#090A0D]/95 backdrop-blur-xl border-t border-zinc-200 dark:border-white/10 px-2 py-2 select-none font-mono shadow-[0_-4px_20px_rgba(0,0,0,0.15)]"
+        className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/95 dark:bg-[#090A0D]/95 backdrop-blur-xl border-t border-zinc-200 dark:border-white/10 px-2 pt-2 pb-[max(env(safe-area-inset-bottom,8px),8px)] select-none font-mono shadow-[0_-4px_20px_rgba(0,0,0,0.15)]"
       >
         <div className="grid grid-cols-4 gap-1 items-center max-w-md mx-auto">
           {/* Tab 1: Trending */}
@@ -102,7 +102,7 @@ export function MobileBottomNav({
       {isSwapDrawerOpen && (
         <div className="md:hidden fixed inset-0 z-50 flex flex-col justify-end bg-black/80 backdrop-blur-sm animate-in fade-in duration-200">
           <div
-            className="w-full bg-white dark:bg-[#0D0E12] border-t border-amber-500/30 rounded-t-3xl p-4 sm:p-6 space-y-4 max-h-[85vh] overflow-y-auto animate-in slide-in-from-bottom duration-250 shadow-2xl"
+            className="w-full bg-white dark:bg-[#0D0E12] border-t border-amber-500/30 rounded-t-3xl p-4 sm:p-6 space-y-4 max-h-[90dvh] overflow-y-auto pb-[max(env(safe-area-inset-bottom,16px),16px)] animate-in slide-in-from-bottom duration-250 shadow-2xl"
           >
             {/* Drawer Handle & Header */}
             <div className="flex flex-col items-center gap-2 pb-2 border-b border-zinc-200 dark:border-white/10">

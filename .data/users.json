@@ -4,9 +4,15 @@
       "wallet": "7aj5WWWWWWWWWWWWWWWWWWWWWWWWWWWWWW16PU",
       "username": "sws",
       "registeredAt": 1788120708710
+    },
+    "7aj5KjYJuVGc8yUQztKwY566wCacQnK51dcbgh2N16PU": {
+      "wallet": "7aj5KjYJuVGc8yUQztKwY566wCacQnK51dcbgh2N16PU",
+      "username": "batonoutbid",
+      "registeredAt": 1788122623701
     }
   },
   "usernames": {
-    "sws": "7aj5WWWWWWWWWWWWWWWWWWWWWWWWWWWWWW16PU"
+    "sws": "7aj5WWWWWWWWWWWWWWWWWWWWWWWWWWWWWW16PU",
+    "batonoutbid": "7aj5KjYJuVGc8yUQztKwY566wCacQnK51dcbgh2N16PU"
   }
 }

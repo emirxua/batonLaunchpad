@@ -41,18 +41,18 @@ export function TerminalHero({
   const activeCalloutsCount = calloutData?.count ?? calloutData?.callouts?.length ?? 0;
 
   return (
-    <section className="relative w-full rounded-xl border border-amber-500/30 bg-gradient-to-r from-zinc-950 via-[#0d0e12] to-zinc-950 px-3.5 py-2.5 sm:px-4 sm:py-3 overflow-hidden shadow-lg font-mono select-none">
+    <section className="relative w-full rounded-xl border border-amber-500/30 bg-gradient-to-r from-zinc-950 via-[#0d0e12] to-zinc-950 px-3 py-2.5 sm:px-4 sm:py-3 overflow-hidden shadow-lg font-mono select-none">
       <div className="absolute inset-0 bg-[linear-gradient(to_right,#80808008_1px,transparent_1px),linear-gradient(to_bottom,#80808008_1px,transparent_1px)] bg-[size:16px_16px] pointer-events-none" />
 
-      <div className="relative z-10 flex flex-col md:flex-row items-center justify-between gap-3">
+      <div className="relative z-10 flex flex-col lg:flex-row items-center justify-between gap-3">
         {/* ── Left Side: Ultra-Minimal Title & Actions ─────────────────── */}
-        <div className="flex flex-wrap items-center justify-center md:justify-start gap-2.5">
+        <div className="flex flex-wrap items-center justify-center lg:justify-start gap-2 sm:gap-2.5 w-full lg:w-auto">
           <div className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md border border-amber-500/30 bg-amber-500/10 text-amber-400 text-[10px] font-bold uppercase tracking-wider shrink-0">
             <Terminal className="w-3 h-3 text-amber-400" />
             <span>TERMINAL</span>
           </div>
 
-          <h1 className="text-xs sm:text-sm font-black text-white uppercase tracking-tight whitespace-nowrap">
+          <h1 className="text-xs sm:text-sm font-black text-white uppercase tracking-tight text-center sm:text-left">
             ON-CHAIN ALPHA &amp;{" "}
             <span className="bg-gradient-to-r from-amber-400 via-orange-500 to-amber-400 bg-clip-text text-transparent">
               INSTANT DEX SWAP
@@ -90,13 +90,13 @@ export function TerminalHero({
           </div>
         </div>
 
-        {/* ── Right Side: Ultra-Compact Stat Pills ─────────────────────── */}
-        <div className="flex items-center gap-2 shrink-0">
+        {/* ── Right Side: Ultra-Compact Stat Pills (Responsive Wrap) ──── */}
+        <div className="flex flex-wrap items-center justify-center gap-1.5 sm:gap-2 shrink-0">
           <div className="px-2.5 py-1 rounded-lg bg-zinc-900/90 border border-white/10 flex items-center gap-1.5 text-[11px] shadow-sm">
             <Activity className="w-3 h-3 text-amber-400" />
             <span className="text-zinc-500 uppercase font-bold text-[9px]">24H VOL</span>
             <span className="font-extrabold text-white">
-              {totalVolume24h > 0 ? formatCurrency(totalVolume24h) : "$6.43M"}
+              {totalVolume24h > 0 ? formatCurrency(totalVolume24h) : "$0.00"}
             </span>
           </div>
 
@@ -104,7 +104,7 @@ export function TerminalHero({
             <Radio className="w-3 h-3 text-rose-500 animate-pulse" />
             <span className="text-zinc-500 uppercase font-bold text-[9px]">SIGNALS</span>
             <span className="font-extrabold text-white">
-              {activeCalloutsCount > 0 ? activeCalloutsCount : "58"}
+              {activeCalloutsCount}
             </span>
           </div>
 

@@ -150,58 +150,72 @@ export function QuickSwapCard({
     }
   }, [targetMint, targetSymbol, targetName, targetIconUrl, liveTokensList]);
 
-  // Live user SOL & SPL token balance
-  useEffect(() => {
-    let isMounted = true;
-    async function updateBal() {
-      if (connected && publicKey) {
-        // SOL Balance
-        try {
-          if (connection) {
-            const lamports = await connection.getBalance(publicKey, "confirmed");
-            if (isMounted && typeof lamports === "number") {
-              setUserBalance(lamports / 1e9);
-            }
-          }
-        } catch {
-          // Connection failed
-        }
-
-        // Token Balance
-        try {
-          if (connection && currentMint && currentMint !== "So11111111111111111111111111111111111111112") {
-            const { PublicKey } = await import("@solana/web3.js");
-            const resp = await connection.getParsedTokenAccountsByOwner(publicKey, {
-              mint: new PublicKey(currentMint),
-            });
-            if (isMounted) {
-              const accounts = resp.value || [];
-              if (accounts.length > 0) {
-                const amt = accounts[0]?.account?.data?.parsed?.info?.tokenAmount?.uiAmount ?? 0;
-                setTokenBalance(amt);
-              } else {
-                setTokenBalance(0);
-              }
-            }
-          }
-        } catch {
-          if (isMounted) setTokenBalance(0);
-        }
-      } else {
-        if (isMounted) {
-          setUserBalance(null);
-          setTokenBalance(null);
-        }
-      }
+  // Live user SOL & SPL token balance callback
+  const fetchLiveBalances = React.useCallback(async () => {
+    if (!connected || !publicKey) {
+      setUserBalance(null);
+      setTokenBalance(null);
+      return;
     }
 
-    updateBal();
-    const interval = setInterval(updateBal, 4000);
-    return () => {
-      isMounted = false;
-      clearInterval(interval);
-    };
+    try {
+      // 1. High-speed internal balance proxy (Solana RPC)
+      const res = await fetch(
+        `/api/wallet-balance?wallet=${encodeURIComponent(publicKey.toBase58())}&mint=${encodeURIComponent(currentMint || "")}`,
+        { cache: "no-store" }
+      );
+      if (res.ok) {
+        const data = await res.json();
+        if (typeof data.solBalance === "number") setUserBalance(data.solBalance);
+        if (typeof data.tokenBalance === "number") setTokenBalance(data.tokenBalance);
+        return;
+      }
+    } catch {
+      // Fallback to direct client RPC
+    }
+
+    if (connection) {
+      // 2. SOL Balance Fallback
+      try {
+        const lamports = await connection.getBalance(publicKey, "confirmed");
+        if (typeof lamports === "number") {
+          setUserBalance(lamports / 1e9);
+        }
+      } catch (solErr) {
+        console.warn("SOL balance fetch warning:", solErr);
+      }
+
+      // 3. Token Balance Fallback
+      try {
+        if (currentMint && currentMint !== "So11111111111111111111111111111111111111112") {
+          const { PublicKey } = await import("@solana/web3.js");
+          const resp = await connection.getParsedTokenAccountsByOwner(
+            publicKey,
+            { mint: new PublicKey(currentMint) },
+            "confirmed"
+          );
+          const accounts = resp.value || [];
+          if (accounts.length > 0) {
+            const totalTokenAmount = accounts.reduce((acc, a) => {
+              const amt = a?.account?.data?.parsed?.info?.tokenAmount?.uiAmount || 0;
+              return acc + amt;
+            }, 0);
+            setTokenBalance(totalTokenAmount);
+          } else {
+            setTokenBalance(0);
+          }
+        }
+      } catch (tokErr) {
+        console.warn("Token balance fetch warning:", tokErr);
+      }
+    }
   }, [connected, publicKey, currentMint, connection]);
+
+  useEffect(() => {
+    fetchLiveBalances();
+    const interval = setInterval(fetchLiveBalances, 3000);
+    return () => clearInterval(interval);
+  }, [fetchLiveBalances]);
 
   const solPrice = liveSolPrice || 106.5;
 
@@ -356,23 +370,29 @@ export function QuickSwapCard({
     setErrorMsg(null);
     setTxSuccess(null);
     if (!isReverse) {
-      if (type === "0.1") setSolAmount("0.1");
-      else if (type === "0.5") setSolAmount("0.5");
-      else if (type === "1") setSolAmount("1.0");
-      else if (type === "half") {
-        const halfBal = userBalance && userBalance > 0 ? (userBalance / 2).toFixed(3) : "0.5";
+      const curBal = userBalance !== null ? userBalance : 0;
+      if (type === "0.1") {
+        setSolAmount("0.1");
+      } else if (type === "0.5") {
+        setSolAmount("0.5");
+      } else if (type === "1") {
+        setSolAmount("1.0");
+      } else if (type === "half") {
+        const spendable = Math.max(0, curBal - 0.0025);
+        const halfBal = spendable > 0 ? (spendable / 2).toFixed(4) : "0.0";
         setSolAmount(halfBal);
       } else if (type === "max") {
-        const maxBal = userBalance && userBalance > 0 ? Math.max(0, userBalance - 0.005).toFixed(3) : "1.0";
+        // Reserve 0.0025 SOL for ATA account rent (0.00204 SOL) and priority/network fees
+        const maxBal = curBal > 0.003 ? (curBal - 0.0025).toFixed(4) : "0.0";
         setSolAmount(maxBal);
       }
     } else {
       const tb = tokenBalance || 0;
-      if (type === "25%") setSolAmount(tb > 0 ? (tb * 0.25).toFixed(2) : "250");
-      else if (type === "50%" || type === "half") setSolAmount(tb > 0 ? (tb * 0.5).toFixed(2) : "500");
-      else if (type === "75%") setSolAmount(tb > 0 ? (tb * 0.75).toFixed(2) : "750");
-      else if (type === "max" || type === "1") setSolAmount(tb > 0 ? tb.toFixed(2) : "1000");
-      else setSolAmount("1000");
+      if (type === "25%") setSolAmount(tb > 0 ? (tb * 0.25).toFixed(2) : "0");
+      else if (type === "50%" || type === "half") setSolAmount(tb > 0 ? (tb * 0.5).toFixed(2) : "0");
+      else if (type === "75%") setSolAmount(tb > 0 ? (tb * 0.75).toFixed(2) : "0");
+      else if (type === "max" || type === "1") setSolAmount(tb > 0 ? tb.toFixed(2) : "0");
+      else setSolAmount("0");
     }
   };
 
@@ -521,7 +541,7 @@ export function QuickSwapCard({
         throw new Error("Wallet does not support transaction signing.");
       }
 
-      // 4. Background transaction confirmation
+      // 4. Background transaction confirmation & instant balance refresh
       try {
         const latestBlockhash = await connection.getLatestBlockhash("confirmed");
         await connection.confirmTransaction(
@@ -537,6 +557,10 @@ export function QuickSwapCard({
       }
 
       setTxSuccess(signature);
+      fetchLiveBalances();
+      [500, 1500, 3000, 5000, 8000].forEach((delay) => {
+        setTimeout(fetchLiveBalances, delay);
+      });
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err);
       if (msg.includes("User rejected") || msg.includes("rejected") || msg.includes("cancelled")) {
@@ -565,7 +589,7 @@ export function QuickSwapCard({
 
   const isInsufficientBalance =
     connected &&
-    ((!isReverse && userBalance !== null && parsedPayAmount > userBalance) ||
+    ((!isReverse && userBalance !== null && (parsedPayAmount + (userBalance > 0.005 ? 0.002 : 0.0015)) > userBalance) ||
      (isReverse && tokenBalance !== null && parsedPayAmount > tokenBalance));
 
   return (
@@ -659,31 +683,38 @@ export function QuickSwapCard({
             <div className="flex gap-1.5 mt-2.5 flex-wrap">
               {(!isReverse
                 ? [
-                    { label: "0.1 SOL", act: "0.1" as const, val: "0.1" },
-                    { label: "0.5 SOL", act: "0.5" as const, val: "0.5" },
-                    { label: "1.0 SOL", act: "1" as const, val: "1.0" },
-                    { label: "HALF", act: "half" as const, val: "half" },
-                    { label: "MAX", act: "max" as const, val: "max" },
+                    { label: "0.1 SOL", act: "0.1" as const, val: "0.1", num: 0.1 },
+                    { label: "0.5 SOL", act: "0.5" as const, val: "0.5", num: 0.5 },
+                    { label: "1.0 SOL", act: "1" as const, val: "1.0", num: 1.0 },
+                    { label: "HALF", act: "half" as const, val: "half", num: 0 },
+                    { label: "MAX", act: "max" as const, val: "max", num: 0 },
                   ]
                 : [
-                    { label: "25%", act: "25%" as const, val: "25%" },
-                    { label: "50%", act: "50%" as const, val: "50%" },
-                    { label: "75%", act: "75%" as const, val: "75%" },
-                    { label: "MAX", act: "max" as const, val: "max" },
+                    { label: "25%", act: "25%" as const, val: "25%", num: 0 },
+                    { label: "50%", act: "50%" as const, val: "50%", num: 0 },
+                    { label: "75%", act: "75%" as const, val: "75%", num: 0 },
+                    { label: "MAX", act: "max" as const, val: "max", num: 0 },
                   ]
               ).map((btn) => {
+                const curBal = !isReverse ? (userBalance !== null ? userBalance : 0) : (tokenBalance || 0);
+                const isFixed = "num" in btn && btn.num > 0;
+                const isDisabled = connected && isFixed && curBal < btn.num;
                 const isActive = !isReverse
                   ? solAmount === btn.val || (btn.val === "1.0" && solAmount === "1")
                   : false;
+
                 return (
                   <button
                     key={btn.label}
                     type="button"
+                    disabled={isDisabled}
                     onClick={() => handleQuickAmount(btn.act)}
-                    className={`text-[10px] px-2.5 py-1 rounded-lg border transition-all cursor-pointer font-bold ${
-                      isActive
-                        ? "bg-amber-500/20 text-amber-400 border-amber-500/40 shadow-sm"
-                        : "border-zinc-200 dark:border-white/5 bg-white dark:bg-zinc-900 text-zinc-500 hover:text-zinc-200"
+                    className={`text-[10px] px-2.5 py-1 rounded-lg border transition-all font-bold ${
+                      isDisabled
+                        ? "opacity-30 cursor-not-allowed border-zinc-200 dark:border-white/5 text-zinc-600 bg-transparent"
+                        : isActive
+                        ? "bg-amber-500/20 text-amber-400 border-amber-500/40 shadow-sm cursor-pointer"
+                        : "border-zinc-200 dark:border-white/5 bg-white dark:bg-zinc-900 text-zinc-500 hover:text-zinc-200 cursor-pointer"
                     }`}
                   >
                     {btn.label}
@@ -718,7 +749,7 @@ export function QuickSwapCard({
                   {!isReverse
                     ? tokenBalance !== null
                       ? `${tokenBalance.toLocaleString("en-US", { maximumFractionDigits: 2 })} $${currentSymbol}`
-                      : "0.00"
+                      : `0 $${currentSymbol}`
                     : userBalance !== null
                     ? `${userBalance.toFixed(3)} SOL`
                     : "0.000 SOL"}

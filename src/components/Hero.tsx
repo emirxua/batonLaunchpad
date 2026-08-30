@@ -64,12 +64,12 @@ export const Hero: React.FC<HeroProps> = ({
           </div>
 
           <a
-            href="https://x.com/metoutbid"
+            href="https://x.com/batonoutbid"
             target="_blank"
             rel="noopener noreferrer"
             className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-zinc-200/80 dark:border-line bg-white/90 dark:bg-bg-raised/90 text-zinc-700 dark:text-text-dim hover:text-zinc-900 dark:hover:text-text font-mono text-[11px] font-bold shadow-sm transition-all"
           >
-            <span>@metoutbid on X</span>
+            <span>@batonoutbid on X</span>
             <ExternalLink className="w-3 h-3 text-amber-500 dark:text-acid" />
           </a>
         </div>

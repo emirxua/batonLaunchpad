@@ -93,8 +93,10 @@ export async function POST(req: NextRequest) {
       quoteResponse: jupQuote,
       userPublicKey,
       wrapAndUnwrapSol: true,
+      useSharedAccounts: true,
       dynamicComputeUnitLimit: true,
       prioritizationFeeLamports: "auto",
+      asLegacyTransaction: false,
     });
 
     let swapData: Record<string, unknown> | null = null;

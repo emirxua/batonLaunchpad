@@ -3,6 +3,8 @@ import { TRACKED_COINS } from "@/lib/tracked-coins";
 import { getBurnLevel } from "@/lib/burn-levels";
 import { Coin } from "@/types/coin";
 
+import { getAllBurns } from "@/lib/turso-db";
+
 export const dynamic = "force-dynamic";
 
 const DEX = "https://api.dexscreener.com";
@@ -42,12 +44,8 @@ interface DexPair {
 export async function GET() {
   const burnsMap: Record<string, { amount: number; coinName?: string; coinTicker?: string; userAddress?: string }> = {};
   try {
-    const baseUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
-    const burnData = await fetchJson<{
-      recentBurns?: { coinId: string; amount: number; coinName?: string; coinTicker?: string; userAddress?: string }[];
-    }>(`${baseUrl}/api/burns`, 2000);
-
-    for (const b of burnData?.recentBurns ?? []) {
+    const recentBurns = await getAllBurns();
+    for (const b of recentBurns) {
       const key = b.coinId?.toLowerCase();
       if (key) {
         if (!burnsMap[key]) {
@@ -56,8 +54,8 @@ export async function GET() {
         burnsMap[key].amount += b.amount || 0;
       }
     }
-  } catch {
-    /* not fatal */
+  } catch (err) {
+    console.warn("Leaderboard burns load notice:", err);
   }
 
   const boostedMints = Object.keys(burnsMap).filter((k) => burnsMap[k].amount > 0);

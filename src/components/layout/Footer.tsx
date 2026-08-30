@@ -85,7 +85,7 @@ export const Footer: React.FC = () => {
 
             {/* Official X (Twitter) Direct Link */}
             <a
-              href="https://x.com/metoutbid"
+              href="https://x.com/batonoutbid"
               target="_blank"
               rel="noopener noreferrer"
               className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-zinc-100 dark:bg-zinc-900 hover:bg-amber-500/10 text-zinc-900 dark:text-zinc-100 hover:text-amber-400 border border-zinc-200 dark:border-white/10 transition-all cursor-pointer"
@@ -93,7 +93,7 @@ export const Footer: React.FC = () => {
               <svg className="w-3.5 h-3.5 fill-current" viewBox="0 0 24 24">
                 <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
               </svg>
-              <span>@metoutbid</span>
+              <span>@batonoutbid</span>
               <ExternalLink className="w-3 h-3 text-zinc-500" />
             </a>
           </div>

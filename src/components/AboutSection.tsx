@@ -167,7 +167,7 @@ export function AboutSection() {
         </div>
 
         <a
-          href="https://x.com/metoutbid"
+          href="https://x.com/batonoutbid"
           target="_blank"
           rel="noopener noreferrer"
           className="px-3 py-1.5 rounded-lg bg-amber-500 hover:bg-amber-400 text-zinc-950 font-extrabold text-[11px] flex items-center gap-1.5 transition-all uppercase tracking-wider shadow-sm shrink-0 cursor-pointer active:scale-95"
@@ -175,7 +175,7 @@ export function AboutSection() {
           <svg className="w-3 h-3 fill-current" viewBox="0 0 24 24">
             <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
           </svg>
-          <span>Follow @metoutbid</span>
+          <span>Follow @batonoutbid</span>
           <ExternalLink className="w-3 h-3" />
         </a>
       </div>

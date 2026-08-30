@@ -145,7 +145,7 @@ export function BurnLeaderboard({ onBoostToken }: BurnLeaderboardProps) {
             </div>
           </div>
         ) : (
-          <div className="overflow-x-auto">
+          <div className="overflow-x-auto no-scrollbar">
             <table className="w-full text-left text-xs border-collapse">
               <thead>
                 <tr className="border-b border-zinc-200 dark:border-white/10 bg-zinc-50/50 dark:bg-zinc-900/20 text-zinc-500 text-[11px] uppercase tracking-wider">

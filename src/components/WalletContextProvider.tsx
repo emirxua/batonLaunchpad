@@ -6,8 +6,9 @@ import {
   WalletProvider,
 } from "@solana/wallet-adapter-react";
 import { WalletModalProvider } from "@solana/wallet-adapter-react-ui";
+import { clusterApiUrl } from "@solana/web3.js";
 
-export const DEFAULT_RPC = "https://solana-rpc.publicnode.com";
+export const DEFAULT_RPC = "https://api.mainnet-beta.solana.com";
 
 interface WalletContextProviderProps {
   children: ReactNode;
@@ -18,7 +19,7 @@ export const WalletContextProvider: FC<WalletContextProviderProps> = ({
 }) => {
   const endpoint = useMemo(() => {
     const raw = process.env.NEXT_PUBLIC_SOLANA_RPC_URL?.trim();
-    if (raw && (raw.startsWith("http://") || raw.startsWith("https://")) && !raw.includes("ankr.com") && !raw.includes("api.mainnet-beta.solana.com")) {
+    if (raw && (raw.startsWith("http://") || raw.startsWith("https://"))) {
       return raw;
     }
     return DEFAULT_RPC;
@@ -28,7 +29,14 @@ export const WalletContextProvider: FC<WalletContextProviderProps> = ({
   const wallets = useMemo(() => [], []);
 
   return (
-    <ConnectionProvider endpoint={endpoint}>
+    <ConnectionProvider
+      endpoint={endpoint}
+      config={{
+        commitment: "confirmed",
+        confirmTransactionInitialTimeout: 60000,
+        wsEndpoint: "wss://api.mainnet-beta.solana.com",
+      }}
+    >
       <WalletProvider wallets={wallets} autoConnect>
         <WalletModalProvider>{children}</WalletModalProvider>
       </WalletProvider>
