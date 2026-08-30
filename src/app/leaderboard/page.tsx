@@ -7,6 +7,7 @@ import { BurnLeaderboard } from "@/components/BurnLeaderboard";
 import { RecentBurns } from "@/components/RecentBurns";
 import { useRecentBurns } from "@/hooks/useRecentBurns";
 import { BurnModal } from "@/components/BurnModal";
+import { BoostAnyTokenModal } from "@/components/modals/BoostAnyTokenModal";
 import { LeaderboardItem } from "@/types/token";
 import { Coin } from "@/types/coin";
 import { Trophy, Flame, Zap, ShieldCheck, Info, ExternalLink } from "lucide-react";
@@ -14,6 +15,7 @@ import { Trophy, Flame, Zap, ShieldCheck, Info, ExternalLink } from "lucide-reac
 export default function LeaderboardPage() {
   const [selectedCoin, setSelectedCoin] = useState<Coin | null>(null);
   const [isBurnModalOpen, setIsBurnModalOpen] = useState(false);
+  const [isBoostAnyModalOpen, setIsBoostAnyModalOpen] = useState(false);
   const { recentBurns, isLoading: isLoadingBurns, refresh: refreshBurns } = useRecentBurns();
 
   const handleBoostToken = (item: LeaderboardItem) => {
@@ -61,6 +63,15 @@ export default function LeaderboardPage() {
             </div>
 
             <div className="flex flex-wrap items-center justify-center gap-2.5 shrink-0">
+              <button
+                type="button"
+                onClick={() => setIsBoostAnyModalOpen(true)}
+                className="px-4 py-2 rounded-xl bg-gradient-to-r from-amber-500 via-orange-500 to-amber-500 hover:from-amber-400 hover:to-orange-400 text-zinc-950 text-xs font-black flex items-center gap-1.5 transition-all shadow-md shadow-amber-500/20 active:scale-95 cursor-pointer uppercase tracking-wider"
+              >
+                <Flame className="w-4 h-4 fill-current text-zinc-950" />
+                <span>🔥 Boost Any Token</span>
+              </button>
+
               <a
                 href="https://solscan.io/token/2vdc4owf1MPz54jJCN61y3QSKqjcPpr32wJ9qKkmpump#txs"
                 target="_blank"
@@ -155,6 +166,12 @@ export default function LeaderboardPage() {
           }}
         />
       )}
+
+      {/* 5. Boost Any Token Modal */}
+      <BoostAnyTokenModal
+        isOpen={isBoostAnyModalOpen}
+        onClose={() => setIsBoostAnyModalOpen(false)}
+      />
     </div>
   );
 }

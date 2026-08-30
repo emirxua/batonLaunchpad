@@ -54,8 +54,10 @@ export function useLeaderboard(_interval?: number) {
       c.marketCap >= 1e9
         ? `$${(c.marketCap / 1e9).toFixed(2)}B`
         : c.marketCap >= 1e6
-        ? `$${(c.marketCap / 1e6).toFixed(1)}M`
-        : `$${c.marketCap.toLocaleString()}`,
+        ? `$${(c.marketCap / 1e6).toFixed(2)}M`
+        : c.marketCap >= 1e3
+        ? `$${(c.marketCap / 1e3).toFixed(1)}K`
+        : `$${Math.round(c.marketCap).toLocaleString("en-US")}`,
     volume24h: c.volume24h,
     iconUrl: c.imageUrl,
   }));
