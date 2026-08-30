@@ -182,21 +182,7 @@ export function BoostAnyTokenModal({
         maxRetries: 3,
       });
 
-      // 3. Confirm on Solana blockchain
-      try {
-        await connection.confirmTransaction(
-          {
-            signature,
-            blockhash,
-            lastValidBlockHeight,
-          },
-          "confirmed"
-        );
-      } catch (confirmErr) {
-        console.warn("Confirmation check warning:", confirmErr);
-      }
-
-      // 4. Record genuine verified burn to API
+      // 3. Immediately record genuine verified burn to Turso DB
       try {
         await fetch("/api/burns", {
           method: "POST",
@@ -212,6 +198,20 @@ export function BoostAnyTokenModal({
         });
       } catch (apiErr) {
         console.warn("Failed to record burn signature to API:", apiErr);
+      }
+
+      // 4. Background confirmation on Solana blockchain
+      try {
+        connection.confirmTransaction(
+          {
+            signature,
+            blockhash,
+            lastValidBlockHeight,
+          },
+          "confirmed"
+        ).catch((err) => console.warn("Background confirmation notice:", err));
+      } catch {
+        /* non-fatal */
       }
 
       // 5. Revalidate all caches so token immediately enters leaderboard

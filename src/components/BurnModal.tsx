@@ -129,21 +129,7 @@ export const BurnModal: React.FC<BurnModalProps> = ({
         maxRetries: 3,
       });
 
-      // 3. Confirm on Solana blockchain
-      try {
-        await connection.confirmTransaction(
-          {
-            signature,
-            blockhash,
-            lastValidBlockHeight,
-          },
-          "confirmed"
-        );
-      } catch (confirmErr) {
-        console.warn("Confirmation check warning:", confirmErr);
-      }
-
-      // 4. Record genuine verified on-chain burn in app backend
+      // 3. Immediately record genuine verified on-chain burn in Turso DB
       try {
         await fetch("/api/burns", {
           method: "POST",
@@ -159,6 +145,20 @@ export const BurnModal: React.FC<BurnModalProps> = ({
         });
       } catch (apiErr) {
         console.warn("Failed to record burn signature to API:", apiErr);
+      }
+
+      // 4. Background confirmation on Solana blockchain
+      try {
+        connection.confirmTransaction(
+          {
+            signature,
+            blockhash,
+            lastValidBlockHeight,
+          },
+          "confirmed"
+        ).catch((err) => console.warn("Background confirmation notice:", err));
+      } catch {
+        /* non-fatal */
       }
 
       // 5. Instantly revalidate all relevant app caches
