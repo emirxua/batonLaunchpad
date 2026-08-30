@@ -22,7 +22,7 @@ export function SetUsernameModal({
   const [isAvailable, setIsAvailable] = useState<boolean | null>(null);
   const [isChecking, setIsChecking] = useState(false);
 
-  // Real-time debounce check for username availability
+  // Real-time debounce check for username availability in persistent DB
   useEffect(() => {
     const clean = handleInput.trim().toLowerCase();
     if (!clean || clean.length < 3) {
@@ -41,7 +41,11 @@ export function SetUsernameModal({
     setIsChecking(true);
 
     const timer = setTimeout(() => {
-      fetch(`/api/user/username?check=${encodeURIComponent(clean)}`)
+      fetch(
+        `/api/user/username?check=${encodeURIComponent(clean)}&wallet=${encodeURIComponent(
+          walletAddress
+        )}`
+      )
         .then((res) => res.json())
         .then((data) => {
           if (active) {
@@ -54,13 +58,13 @@ export function SetUsernameModal({
         .finally(() => {
           if (active) setIsChecking(false);
         });
-    }, 300);
+    }, 250);
 
     return () => {
       active = false;
       clearTimeout(timer);
     };
-  }, [handleInput]);
+  }, [handleInput, walletAddress]);
 
   if (!isOpen) return null;
 
@@ -75,11 +79,17 @@ export function SetUsernameModal({
       return;
     }
 
+    if (isAvailable === false) {
+      setErrorMessage(`Username "@${clean}" is already taken by another user.`);
+      return;
+    }
+
     try {
       setIsSubmitting(true);
       const res = await onClaimUsername(clean);
       if (!res.success) {
         setErrorMessage(res.error || "Failed to claim handle.");
+        setIsAvailable(false);
       } else {
         onClose();
       }
@@ -90,6 +100,8 @@ export function SetUsernameModal({
       setIsSubmitting(false);
     }
   };
+
+  const isInvalidFormat = handleInput.length > 0 && !/^[a-z0-9]{1,15}$/.test(handleInput);
 
   return (
     <div
@@ -112,7 +124,7 @@ export function SetUsernameModal({
               <h3 className="font-bold text-sm sm:text-base text-zinc-950 dark:text-white uppercase tracking-wider">
                 Claim Your Handle
               </h3>
-              <span className="text-[10px] text-zinc-500 block">
+              <span className="text-[10px] text-zinc-500 block font-mono">
                 Connected Wallet: {walletAddress.slice(0, 4)}…{walletAddress.slice(-4)}
               </span>
             </div>
@@ -127,12 +139,12 @@ export function SetUsernameModal({
 
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
-            <label className="text-xs font-bold text-zinc-700 dark:text-zinc-300 uppercase tracking-wider flex items-center justify-between">
-              <span>Choose Username</span>
-              <span className="text-[10px] text-zinc-500 font-normal">
-                Lowercase letters only (3-15 chars)
+            <div className="flex items-center justify-between text-xs font-bold text-zinc-700 dark:text-zinc-300">
+              <span className="uppercase tracking-wider">CHOOSE USERNAME</span>
+              <span className="text-[10px] text-zinc-500 font-normal lowercase font-mono">
+                lowercase letters only (3-15 chars)
               </span>
-            </label>
+            </div>
 
             <div className="relative">
               <span className="absolute left-4 top-1/2 -translate-y-1/2 text-sm font-black text-amber-500">
@@ -143,39 +155,47 @@ export function SetUsernameModal({
                 autoFocus
                 value={handleInput}
                 onChange={(e) => {
-                  // Strict auto-sanitization: only lowercase letters and numbers
+                  // Strictly enforce lowercase english alphanumeric input only
                   const sanitized = e.target.value.toLowerCase().replace(/[^a-z0-9]/g, "");
                   setHandleInput(sanitized);
                   setErrorMessage(null);
                 }}
                 maxLength={15}
                 placeholder="degenking"
-                className="w-full bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-white/10 rounded-2xl pl-9 pr-4 py-3 text-sm font-black text-zinc-950 dark:text-white outline-none focus:border-amber-500 transition-colors placeholder:text-zinc-600 font-mono"
+                className={`w-full bg-zinc-50 dark:bg-zinc-900 border rounded-2xl pl-9 pr-4 py-3 text-sm font-black text-zinc-950 dark:text-white outline-none transition-colors placeholder:text-zinc-600 font-mono lowercase ${
+                  isAvailable === true
+                    ? "border-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.15)]"
+                    : isAvailable === false
+                    ? "border-rose-500 shadow-[0_0_10px_rgba(244,63,94,0.15)]"
+                    : "border-zinc-200 dark:border-white/10 focus:border-amber-500"
+                }`}
               />
             </div>
 
-            {/* Validation & Availability hints */}
+            {/* Validation & Live Database Availability Feedback */}
             <div className="flex items-center justify-between text-[11px] px-1 font-mono">
               <span className="text-zinc-500">
                 {handleInput.length}/15 chars (No dots &quot;.&quot; or dashes &quot;-&quot;)
               </span>
 
               {isChecking ? (
-                <span className="text-amber-500 animate-pulse">Checking...</span>
+                <span className="text-amber-500 animate-pulse font-bold">Checking DB...</span>
               ) : isAvailable === true ? (
                 <span className="text-emerald-400 font-bold flex items-center gap-1">
-                  <CheckCircle2 className="w-3 h-3" /> Available
+                  <CheckCircle2 className="w-3.5 h-3.5" /> Available
                 </span>
               ) : isAvailable === false && handleInput.length >= 3 ? (
                 <span className="text-rose-400 font-bold flex items-center gap-1">
-                  <AlertCircle className="w-3 h-3" /> Taken or invalid
+                  <AlertCircle className="w-3.5 h-3.5" /> Username already taken
                 </span>
+              ) : isInvalidFormat ? (
+                <span className="text-rose-400 font-bold">Invalid characters</span>
               ) : null}
             </div>
           </div>
 
           {errorMessage && (
-            <div className="p-3 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-400 text-xs flex items-center gap-2">
+            <div className="p-3 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-400 text-xs flex items-center gap-2 animate-in shake">
               <AlertCircle className="w-4 h-4 shrink-0" />
               <span>{errorMessage}</span>
             </div>
@@ -184,17 +204,19 @@ export function SetUsernameModal({
           <button
             type="submit"
             disabled={isSubmitting || handleInput.length < 3 || isAvailable === false}
-            className="w-full py-3 rounded-2xl bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-zinc-950 font-black text-xs uppercase tracking-wider shadow-lg shadow-amber-500/20 transition-all flex items-center justify-center gap-2 cursor-pointer active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="w-full py-3 rounded-2xl bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-zinc-950 font-black text-xs tracking-wider shadow-lg shadow-amber-500/20 transition-all flex items-center justify-center gap-2 cursor-pointer active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {isSubmitting ? (
               <>
                 <span className="w-3.5 h-3.5 border-2 border-zinc-950 border-t-transparent rounded-full animate-spin" />
-                <span>Claiming Handle...</span>
+                <span>Checking Database...</span>
               </>
             ) : (
               <>
                 <Sparkles className="w-3.5 h-3.5" />
-                <span>Claim @{handleInput || "handle"} &amp; Continue</span>
+                <span>
+                  CLAIM @{handleInput || "handle"} &amp; CONTINUE
+                </span>
               </>
             )}
           </button>
