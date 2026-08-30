@@ -1,10 +1,8 @@
 import { NextResponse } from "next/server";
-import { CommentItem } from "@/types/token";
+import { addComment, getCommentsByCallout, toggleCommentLike } from "@/lib/turso-db";
 
 export const dynamic = "force-dynamic";
-
-// In-memory comments storage grouped by calloutId
-const CALLOUT_COMMENTS_STORE: Record<string, CommentItem[]> = {};
+export const revalidate = 0;
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
@@ -17,7 +15,7 @@ export async function GET(request: Request) {
     );
   }
 
-  const comments = CALLOUT_COMMENTS_STORE[calloutId] || [];
+  const comments = await getCommentsByCallout(calloutId);
   return NextResponse.json({
     success: true,
     calloutId,
@@ -35,7 +33,20 @@ export async function POST(request: Request) {
       username,
       commentText,
       sentiment = "BULLISH",
+      action,
+      commentId,
+      delta,
     } = body;
+
+    // Optional like toggle action
+    if (action === "like" && commentId) {
+      const result = await toggleCommentLike(commentId, Number(delta) || 1);
+      return NextResponse.json({
+        success: true,
+        commentId,
+        likes: result.likes,
+      });
+    }
 
     if (!calloutId || !walletAddress || !commentText?.trim()) {
       return NextResponse.json(
@@ -48,36 +59,31 @@ export async function POST(request: Request) {
     }
 
     const cleanText = String(commentText).trim();
-    const cleanUsername = username ? String(username).trim().toLowerCase() : `${walletAddress.slice(0, 4)}…${walletAddress.slice(-4)}`;
+    const cleanUsername = username
+      ? String(username).trim().toLowerCase()
+      : `${walletAddress.slice(0, 4)}…${walletAddress.slice(-4)}`;
 
-    const newComment: CommentItem = {
-      id: `comm-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
-      calloutId,
-      authorName: `@${cleanUsername}`,
-      authorHandle: cleanUsername,
-      authorAvatar: cleanUsername.slice(0, 2).toUpperCase(),
+    const newComment = await addComment({
+      calloutId: String(calloutId),
+      walletAddress: String(walletAddress),
+      username: cleanUsername,
       authorBadge: "Verified Holder",
       sentiment: sentiment === "BEARISH" ? "BEARISH" : "BULLISH",
       commentText: cleanText,
-      timeAgo: "Just now",
-      upvotes: 1,
-    };
+    });
 
-    if (!CALLOUT_COMMENTS_STORE[calloutId]) {
-      CALLOUT_COMMENTS_STORE[calloutId] = [];
-    }
-
-    CALLOUT_COMMENTS_STORE[calloutId].unshift(newComment);
+    const allComments = await getCommentsByCallout(String(calloutId));
 
     return NextResponse.json({
       success: true,
       comment: newComment,
-      totalComments: CALLOUT_COMMENTS_STORE[calloutId].length,
+      totalComments: allComments.length,
+      comments: allComments,
     });
   } catch (error) {
     console.error("API /api/callouts/comments error:", error);
     return NextResponse.json(
-      { success: false, error: "Failed to post comment" },
+      { success: false, error: "Failed to post comment to Turso database" },
       { status: 500 }
     );
   }

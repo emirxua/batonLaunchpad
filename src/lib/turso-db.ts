@@ -1,6 +1,7 @@
 import { createClient, Client } from "@libsql/client";
 import fs from "fs";
 import path from "path";
+import { CommentItem } from "@/types/token";
 
 export interface UserRecord {
   wallet: string;
@@ -81,7 +82,25 @@ async function initDb(): Promise<void> {
     CREATE INDEX IF NOT EXISTS idx_burns_coin ON burns(coin_id);
   `);
 
-  // 3. Migrate legacy .data/users.json if present
+  // 3. Comments Table
+  await client.execute(`
+    CREATE TABLE IF NOT EXISTS comments (
+      id TEXT PRIMARY KEY,
+      callout_id TEXT NOT NULL,
+      wallet_address TEXT NOT NULL,
+      username TEXT NOT NULL,
+      author_badge TEXT,
+      sentiment TEXT NOT NULL,
+      comment_text TEXT NOT NULL,
+      likes INTEGER DEFAULT 1,
+      created_at INTEGER NOT NULL
+    );
+  `);
+  await client.execute(`
+    CREATE INDEX IF NOT EXISTS idx_comments_callout ON comments(callout_id);
+  `);
+
+  // 4. Migrate legacy .data/users.json if present
   try {
     const dataDir = path.join(process.cwd(), ".data");
     const jsonPath = path.join(dataDir, "users.json");
@@ -306,4 +325,120 @@ export async function getBurnTotalsByCoin(): Promise<Record<string, number>> {
     totals[String(row.coinId)] = Number(row.total);
   }
   return totals;
+}
+
+// ── COMMENTS CRUD ──────────────────────────────────────────────────────────
+
+function timeAgoFromTimestamp(timestamp: number): string {
+  const diff = Date.now() - timestamp;
+  const mins = Math.floor(diff / 60000);
+  if (mins < 1) return "Just now";
+  if (mins < 60) return `${mins}m ago`;
+  const hours = Math.floor(mins / 60);
+  if (hours < 24) return `${hours}h ago`;
+  const days = Math.floor(hours / 24);
+  return `${days}d ago`;
+}
+
+export async function addComment(data: {
+  calloutId: string;
+  walletAddress: string;
+  username: string;
+  authorBadge?: string;
+  sentiment: "BULLISH" | "BEARISH";
+  commentText: string;
+}): Promise<CommentItem> {
+  await ensureInit();
+  const client = getClient();
+  const id = `comm-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+  const cleanText = data.commentText.trim();
+  const cleanUsername = data.username.trim().toLowerCase();
+  const now = Date.now();
+  const badge = data.authorBadge || "Verified Holder";
+
+  await client.execute({
+    sql: `
+      INSERT INTO comments (id, callout_id, wallet_address, username, author_badge, sentiment, comment_text, likes, created_at)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?);
+    `,
+    args: [
+      id,
+      data.calloutId.trim(),
+      data.walletAddress.trim(),
+      cleanUsername,
+      badge,
+      data.sentiment,
+      cleanText,
+      1,
+      now,
+    ],
+  });
+
+  return {
+    id,
+    calloutId: data.calloutId,
+    authorName: `@${cleanUsername}`,
+    authorHandle: cleanUsername,
+    authorAvatar: cleanUsername.slice(0, 2).toUpperCase(),
+    authorBadge: badge,
+    sentiment: data.sentiment,
+    commentText: cleanText,
+    timeAgo: "Just now",
+    upvotes: 1,
+  };
+}
+
+export async function getCommentsByCallout(calloutId: string): Promise<CommentItem[]> {
+  await ensureInit();
+  const client = getClient();
+  const res = await client.execute({
+    sql: `
+      SELECT id, callout_id as calloutId, wallet_address as walletAddress, username, author_badge as authorBadge, sentiment, comment_text as commentText, likes, created_at as createdAt
+      FROM comments
+      WHERE callout_id = ?
+      ORDER BY created_at DESC
+      LIMIT 100;
+    `,
+    args: [calloutId.trim()],
+  });
+
+  return res.rows.map((row) => {
+    const handle = String(row.username || "anon");
+    const timestamp = Number(row.createdAt);
+    const sent = String(row.sentiment).toUpperCase() === "BEARISH" ? "BEARISH" : "BULLISH";
+
+    return {
+      id: String(row.id),
+      calloutId: String(row.calloutId),
+      authorName: `@${handle}`,
+      authorHandle: handle,
+      authorAvatar: handle.slice(0, 2).toUpperCase(),
+      authorBadge: String(row.authorBadge || "Verified Holder"),
+      sentiment: sent,
+      commentText: String(row.commentText),
+      timeAgo: timeAgoFromTimestamp(timestamp),
+      upvotes: Number(row.likes || 1),
+    };
+  });
+}
+
+export async function toggleCommentLike(commentId: string, delta: number): Promise<{ success: boolean; likes: number }> {
+  await ensureInit();
+  const client = getClient();
+  await client.execute({
+    sql: `
+      UPDATE comments
+      SET likes = MAX(1, likes + ?)
+      WHERE id = ?;
+    `,
+    args: [delta, commentId.trim()],
+  });
+
+  const res = await client.execute({
+    sql: "SELECT likes FROM comments WHERE id = ? LIMIT 1",
+    args: [commentId.trim()],
+  });
+
+  const likes = res.rows.length > 0 ? Number(res.rows[0].likes) : 1;
+  return { success: true, likes };
 }
