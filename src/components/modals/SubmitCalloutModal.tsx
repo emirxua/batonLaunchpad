@@ -5,6 +5,7 @@ import { CalloutItem } from "@/types/token";
 import { useWallet, useConnection } from "@solana/wallet-adapter-react";
 import { useWalletModal } from "@solana/wallet-adapter-react-ui";
 import { formatNumber } from "@/lib/utils";
+import { useUserProfile } from "@/hooks/useUserProfile";
 import {
   Radio,
   Flame,
@@ -32,6 +33,7 @@ export function SubmitCalloutModal({
   const { connection } = useConnection();
   const { connected, publicKey } = useWallet();
   const { setVisible } = useWalletModal();
+  const { username } = useUserProfile();
 
   const [tokenCA, setTokenCA] = useState("");
   const [tokenSymbol, setTokenSymbol] = useState("");
@@ -156,7 +158,9 @@ export function SubmitCalloutModal({
       return;
     }
 
-    const shortHandle = publicKey
+    const shortHandle = username
+      ? username
+      : publicKey
       ? `${publicKey.toBase58().slice(0, 4)}…${publicKey.toBase58().slice(-4)}`
       : "anon_alpha";
 
@@ -169,7 +173,9 @@ export function SubmitCalloutModal({
 
     const newCallout: CalloutItem = {
       id: `callout-user-${Date.now()}`,
-      callerName: connected
+      callerName: username
+        ? `@${username}`
+        : connected
         ? hasHolderProof
           ? `Verified Holder (${shortHandle})`
           : `Degen (${shortHandle})`

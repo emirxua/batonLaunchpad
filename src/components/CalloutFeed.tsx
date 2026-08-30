@@ -47,7 +47,8 @@ export function CalloutFeed({ onSelectToken, filterSymbol }: CalloutFeedProps) {
   const [selectedCaller, setSelectedCaller] = useState<string>("all");
   const [searchQuery, setSearchQuery] = useState("");
   const [copiedCA, setCopiedCA] = useState<string | null>(null);
-  const [upvotedMap, setUpvotedMap] = useState<Record<string, number>>({});
+  const [likedCalloutsMap, setLikedCalloutsMap] = useState<Record<string, boolean>>({});
+  const [likesDeltaMap, setLikesDeltaMap] = useState<Record<string, number>>({});
   const [isSubmitModalOpen, setIsSubmitModalOpen] = useState(false);
   const [selectedDiscussionCallout, setSelectedDiscussionCallout] = useState<CalloutItem | null>(null);
   const [userCreatedCallouts, setUserCreatedCallouts] = useState<CalloutItem[]>([]);
@@ -62,9 +63,14 @@ export function CalloutFeed({ onSelectToken, filterSymbol }: CalloutFeedProps) {
 
   const handleUpvote = (id: string, e: React.MouseEvent) => {
     e.stopPropagation();
-    setUpvotedMap((prev) => ({
+    const isCurrentlyLiked = likedCalloutsMap[id] || false;
+    setLikedCalloutsMap((prev) => ({
       ...prev,
-      [id]: (prev[id] || 0) + 1,
+      [id]: !isCurrentlyLiked,
+    }));
+    setLikesDeltaMap((prev) => ({
+      ...prev,
+      [id]: (prev[id] || 0) + (isCurrentlyLiked ? -1 : 1),
     }));
   };
 
@@ -310,7 +316,7 @@ export function CalloutFeed({ onSelectToken, filterSymbol }: CalloutFeedProps) {
         {/* ── Callout Cards Grid ────────────────────────────────────────── */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           {filteredCallouts.map((item: CalloutItem) => {
-            const upvoteCount = item.upvotes + (upvotedMap[item.id] || 0);
+            const upvoteCount = Math.max(0, item.upvotes + (likesDeltaMap[item.id] || 0));
             const percentGain = Math.round((item.multiplier - 1) * 100);
 
             return (
@@ -511,10 +517,14 @@ export function CalloutFeed({ onSelectToken, filterSymbol }: CalloutFeedProps) {
                     <button
                       type="button"
                       onClick={(e) => handleUpvote(item.id, e)}
-                      className="px-2 py-1 rounded-lg bg-zinc-100 dark:bg-zinc-900 hover:bg-amber-500/10 text-zinc-600 dark:text-zinc-400 hover:text-amber-400 border border-zinc-200 dark:border-white/5 text-[11px] font-bold flex items-center gap-1 transition-all cursor-pointer"
+                      className={`px-2.5 py-1 rounded-lg border text-[11px] font-bold flex items-center gap-1.5 transition-all cursor-pointer ${
+                        likedCalloutsMap[item.id]
+                          ? "bg-amber-500/20 text-amber-400 border-amber-500/40 shadow-sm"
+                          : "bg-zinc-100 dark:bg-zinc-900 hover:bg-amber-500/10 text-zinc-600 dark:text-zinc-400 hover:text-amber-400 border-zinc-200 dark:border-white/5"
+                      }`}
                     >
-                      <ThumbsUp className="w-3 h-3" />
-                      <span>{upvoteCount}</span>
+                      <ThumbsUp className={`w-3 h-3 ${likedCalloutsMap[item.id] ? "fill-current text-amber-400" : ""}`} />
+                      <span>{Math.max(0, item.upvotes + (likesDeltaMap[item.id] || 0))}</span>
                     </button>
 
                     {/* Quick Buy CTA */}
