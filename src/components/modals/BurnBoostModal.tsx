@@ -355,13 +355,14 @@ export const BurnBoostModal: React.FC<BurnBoostModalProps> = ({
     try {
       // 1. Build real on-chain SPL Token Burn Transaction with BOOST:<targetMint> Memo
       setBurnState("awaiting_approval");
-      const { transaction } = await prepareRealBurnTransaction({
-        connection,
-        userPublicKey: publicKey,
-        burnAmount: amount,
-        targetCoinTicker: displaySymbol || coin.ticker || "BATON",
-        targetMint: coin.mintAddress,
-      });
+      const { transaction, blockhash, lastValidBlockHeight } =
+        await prepareRealBurnTransaction({
+          connection,
+          userPublicKey: publicKey,
+          burnAmount: amount,
+          targetCoinTicker: displaySymbol || coin.ticker || "BATON",
+          targetMint: coin.mintAddress,
+        });
 
       // 2. Request signature from connected Solana wallet
       const signature = await sendTransaction(transaction, connection);
@@ -369,12 +370,11 @@ export const BurnBoostModal: React.FC<BurnBoostModalProps> = ({
 
       // 3. Confirm transaction on-chain
       setBurnState("confirming");
-      const latestBlockhash = await connection.getLatestBlockhash("confirmed");
       const confirmation = await connection.confirmTransaction(
         {
           signature,
-          blockhash: latestBlockhash.blockhash,
-          lastValidBlockHeight: latestBlockhash.lastValidBlockHeight,
+          blockhash,
+          lastValidBlockHeight,
         },
         "confirmed"
       );

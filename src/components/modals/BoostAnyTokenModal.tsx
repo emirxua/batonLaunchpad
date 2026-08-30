@@ -167,13 +167,14 @@ export function BoostAnyTokenModal({
       setBurning(true);
 
       // 1. Prepare SPL token burn transaction
-      const { transaction } = await prepareRealBurnTransaction({
-        connection,
-        userPublicKey: publicKey,
-        burnAmount: numAmount,
-        targetCoinTicker: selectedToken.symbol,
-        targetMint: selectedToken.mint,
-      });
+      const { transaction, blockhash, lastValidBlockHeight } =
+        await prepareRealBurnTransaction({
+          connection,
+          userPublicKey: publicKey,
+          burnAmount: numAmount,
+          targetCoinTicker: selectedToken.symbol,
+          targetMint: selectedToken.mint,
+        });
 
       // 2. Submit transaction to Solana network
       const signature = await sendTransaction(transaction, connection, {
@@ -183,12 +184,11 @@ export function BoostAnyTokenModal({
 
       // 3. Confirm on Solana blockchain
       try {
-        const latestBlockhash = await connection.getLatestBlockhash();
         await connection.confirmTransaction(
           {
             signature,
-            blockhash: latestBlockhash.blockhash,
-            lastValidBlockHeight: latestBlockhash.lastValidBlockHeight,
+            blockhash,
+            lastValidBlockHeight,
           },
           "confirmed"
         );

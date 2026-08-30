@@ -114,13 +114,14 @@ export const BurnModal: React.FC<BurnModalProps> = ({
       setBurning(true);
 
       // 1. Construct verified Solana SPL token burn transaction
-      const { transaction } = await prepareRealBurnTransaction({
-        connection,
-        userPublicKey: publicKey,
-        burnAmount: amount,
-        targetCoinTicker: coin.ticker,
-        targetMint: coin.mintAddress,
-      });
+      const { transaction, blockhash, lastValidBlockHeight } =
+        await prepareRealBurnTransaction({
+          connection,
+          userPublicKey: publicKey,
+          burnAmount: amount,
+          targetCoinTicker: coin.ticker,
+          targetMint: coin.mintAddress,
+        });
 
       // 2. Send transaction to Solana network
       const signature = await sendTransaction(transaction, connection, {
@@ -130,12 +131,11 @@ export const BurnModal: React.FC<BurnModalProps> = ({
 
       // 3. Confirm on Solana blockchain
       try {
-        const latestBlockhash = await connection.getLatestBlockhash();
         await connection.confirmTransaction(
           {
             signature,
-            blockhash: latestBlockhash.blockhash,
-            lastValidBlockHeight: latestBlockhash.lastValidBlockHeight,
+            blockhash,
+            lastValidBlockHeight,
           },
           "confirmed"
         );

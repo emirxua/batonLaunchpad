@@ -5,7 +5,7 @@ import {
   Connection,
 } from "@solana/web3.js";
 import {
-  getAssociatedTokenAddress,
+  getAssociatedTokenAddressSync,
   createBurnInstruction,
   TOKEN_PROGRAM_ID,
 } from "@solana/spl-token";
@@ -39,11 +39,38 @@ export interface PrepareBurnParams {
 }
 
 /**
+ * Fetches the latest Solana blockhash via fast server proxy with multi-RPC fallback
+ */
+export async function getResilientBlockhash(connection: Connection): Promise<{
+  blockhash: string;
+  lastValidBlockHeight: number;
+}> {
+  try {
+    const res = await fetch("/api/solana/blockhash", {
+      cache: "no-store",
+    });
+    const data = await res.json();
+    if (data.success && data.blockhash) {
+      return {
+        blockhash: data.blockhash,
+        lastValidBlockHeight: data.lastValidBlockHeight,
+      };
+    }
+  } catch (proxyErr) {
+    console.warn("Blockhash proxy notice, falling back to direct RPC:", proxyErr);
+  }
+
+  // Fallback to direct client connection
+  return await connection.getLatestBlockhash("confirmed");
+}
+
+/**
  * Builds a real Solana SPL Token Burn Transaction.
  * 1. Derives Associated Token Account (ATA) for $BATON (2vdc4owf1MPz54jJCN61y3QSKqjcPpr32wJ9qKkmpump)
  * 2. Multiplies by 10^6 decimals into a BigInt
  * 3. Creates SPL Token createBurnInstruction
  * 4. Adds transparent Memo instruction BOOST:<targetMint> or BATON_BURN:<amount>:<ticker>
+ * 5. Attaches reliable recentBlockhash without CORS / 403 errors
  */
 export async function prepareRealBurnTransaction({
   connection,
@@ -55,39 +82,26 @@ export async function prepareRealBurnTransaction({
   transaction: Transaction;
   userAta: PublicKey;
   burnAmountBigInt: bigint;
+  blockhash: string;
+  lastValidBlockHeight: number;
 }> {
   const mintPubkey = new PublicKey(BATON_MINT_ADDRESS);
 
-  // 1. Derive user's Associated Token Account
-  const userAta = await getAssociatedTokenAddress(
+  // 1. Derive user's Associated Token Account deterministically
+  const userAta = getAssociatedTokenAddressSync(
     mintPubkey,
     userPublicKey,
     false,
     TOKEN_PROGRAM_ID
   );
 
-  // 2. Check if token account exists on chain
-  try {
-    const accountInfo = await connection.getAccountInfo(userAta);
-    if (!accountInfo) {
-      throw new Error(
-        "Insufficient $BATON balance or no $BATON token account found in your connected wallet."
-      );
-    }
-  } catch (err: unknown) {
-    if (err instanceof Error && err.message.includes("Insufficient $BATON")) {
-      throw err;
-    }
-    console.warn("Could not verify account info on chain due to RPC limits:", err);
-  }
-
-  // 3. Convert burnAmount (e.g. 10000) to BigInt with 6 decimals
+  // 2. Convert burnAmount (e.g. 10000) to BigInt with 6 decimals
   const burnAmountBigInt = BigInt(Math.floor(burnAmount * 1_000_000));
   if (burnAmountBigInt <= BigInt(0)) {
     throw new Error("Burn amount must be greater than zero.");
   }
 
-  // 4. Create SPL Burn Instruction
+  // 3. Create SPL Burn Instruction
   const burnIx = createBurnInstruction(
     userAta,
     mintPubkey,
@@ -97,14 +111,17 @@ export async function prepareRealBurnTransaction({
     TOKEN_PROGRAM_ID
   );
 
-  // 5. Create on-chain transparency Memo Instruction: BOOST:<targetMint>
-  const memoText = targetMint ? `BOOST:${targetMint}` : `BATON_BURN:${burnAmount}:${targetCoinTicker}`;
+  // 4. Create on-chain transparency Memo Instruction: BOOST:<targetMint>
+  const memoText = targetMint
+    ? `BOOST:${targetMint}`
+    : `BATON_BURN:${burnAmount}:${targetCoinTicker}`;
   const memoIx = createMemoInstruction(memoText, [userPublicKey]);
 
-  // 6. Assemble Transaction
+  // 5. Assemble Transaction
   const transaction = new Transaction().add(burnIx, memoIx);
-  const { blockhash, lastValidBlockHeight } =
-    await connection.getLatestBlockhash("confirmed");
+
+  // 6. Fetch resilient blockhash from proxy
+  const { blockhash, lastValidBlockHeight } = await getResilientBlockhash(connection);
   transaction.recentBlockhash = blockhash;
   transaction.lastValidBlockHeight = lastValidBlockHeight;
   transaction.feePayer = userPublicKey;
@@ -113,5 +130,7 @@ export async function prepareRealBurnTransaction({
     transaction,
     userAta,
     burnAmountBigInt,
+    blockhash,
+    lastValidBlockHeight,
   };
 }
