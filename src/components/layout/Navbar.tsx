@@ -226,6 +226,7 @@ export const Navbar: React.FC = () => {
         isOpen={isUsernameModalOpen}
         onClose={closeUsernameModal}
         walletAddress={walletAddress}
+        currentUsername={username}
         onClaimUsername={claimUsername}
       />
     </>

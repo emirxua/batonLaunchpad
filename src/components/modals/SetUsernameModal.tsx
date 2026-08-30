@@ -1,12 +1,13 @@
 "use client";
 
 import React, { useState, useEffect } from "react";
-import { User, X, CheckCircle2, AlertCircle, Sparkles, ShieldCheck } from "lucide-react";
+import { User, X, CheckCircle2, AlertCircle, Sparkles, Edit3 } from "lucide-react";
 
 interface SetUsernameModalProps {
   isOpen: boolean;
   onClose: () => void;
   walletAddress: string;
+  currentUsername?: string | null;
   onClaimUsername: (username: string) => Promise<{ success: boolean; error?: string }>;
 }
 
@@ -14,19 +15,36 @@ export function SetUsernameModal({
   isOpen,
   onClose,
   walletAddress,
+  currentUsername,
   onClaimUsername,
 }: SetUsernameModalProps) {
-  const [handleInput, setHandleInput] = useState("");
+  const [handleInput, setHandleInput] = useState(currentUsername || "");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isAvailable, setIsAvailable] = useState<boolean | null>(null);
   const [isChecking, setIsChecking] = useState(false);
+
+  // Sync initial input with existing handle on open
+  useEffect(() => {
+    if (isOpen) {
+      setHandleInput(currentUsername || "");
+      setErrorMessage(null);
+      setIsAvailable(null);
+    }
+  }, [isOpen, currentUsername]);
 
   // Real-time debounce check for username availability in persistent DB
   useEffect(() => {
     const clean = handleInput.trim().toLowerCase();
     if (!clean || clean.length < 3) {
       setIsAvailable(null);
+      setIsChecking(false);
+      return;
+    }
+
+    // If typing current owned handle, it's always available to the owner
+    if (currentUsername && clean === currentUsername.toLowerCase()) {
+      setIsAvailable(true);
       setIsChecking(false);
       return;
     }
@@ -64,7 +82,7 @@ export function SetUsernameModal({
       active = false;
       clearTimeout(timer);
     };
-  }, [handleInput, walletAddress]);
+  }, [handleInput, walletAddress, currentUsername]);
 
   if (!isOpen) return null;
 
@@ -102,6 +120,7 @@ export function SetUsernameModal({
   };
 
   const isInvalidFormat = handleInput.length > 0 && !/^[a-z0-9]{1,15}$/.test(handleInput);
+  const isEditing = Boolean(currentUsername);
 
   return (
     <div
@@ -118,11 +137,11 @@ export function SetUsernameModal({
         <div className="flex items-center justify-between border-b border-zinc-200 dark:border-white/10 pb-4">
           <div className="flex items-center gap-2.5">
             <div className="w-8 h-8 rounded-xl bg-amber-500/20 text-amber-400 font-bold flex items-center justify-center">
-              <User className="w-4 h-4 text-amber-500" />
+              {isEditing ? <Edit3 className="w-4 h-4 text-amber-500" /> : <User className="w-4 h-4 text-amber-500" />}
             </div>
             <div>
               <h3 className="font-bold text-sm sm:text-base text-zinc-950 dark:text-white uppercase tracking-wider">
-                Claim Your Handle
+                {isEditing ? `Edit Handle (@${currentUsername})` : "Claim Your Handle"}
               </h3>
               <span className="text-[10px] text-zinc-500 block font-mono">
                 Connected Wallet: {walletAddress.slice(0, 4)}…{walletAddress.slice(-4)}
@@ -140,7 +159,7 @@ export function SetUsernameModal({
         <form onSubmit={handleSubmit} className="space-y-4">
           <div className="space-y-2">
             <div className="flex items-center justify-between text-xs font-bold text-zinc-700 dark:text-zinc-300">
-              <span className="uppercase tracking-wider">CHOOSE USERNAME</span>
+              <span className="uppercase tracking-wider">{isEditing ? "UPDATE USERNAME" : "CHOOSE USERNAME"}</span>
               <span className="text-[10px] text-zinc-500 font-normal lowercase font-mono">
                 lowercase letters only (3-15 chars)
               </span>
@@ -155,13 +174,12 @@ export function SetUsernameModal({
                 autoFocus
                 value={handleInput}
                 onChange={(e) => {
-                  // Strictly enforce lowercase english alphanumeric input only
                   const sanitized = e.target.value.toLowerCase().replace(/[^a-z0-9]/g, "");
                   setHandleInput(sanitized);
                   setErrorMessage(null);
                 }}
                 maxLength={15}
-                placeholder="degenking"
+                placeholder="batonoutbid"
                 className={`w-full bg-zinc-50 dark:bg-zinc-900 border rounded-2xl pl-9 pr-4 py-3 text-sm font-black text-zinc-950 dark:text-white outline-none transition-colors placeholder:text-zinc-600 font-mono lowercase ${
                   isAvailable === true
                     ? "border-emerald-500 shadow-[0_0_10px_rgba(16,185,129,0.15)]"
@@ -182,7 +200,7 @@ export function SetUsernameModal({
                 <span className="text-amber-500 animate-pulse font-bold">Checking DB...</span>
               ) : isAvailable === true ? (
                 <span className="text-emerald-400 font-bold flex items-center gap-1">
-                  <CheckCircle2 className="w-3.5 h-3.5" /> Available
+                  <CheckCircle2 className="w-3.5 h-3.5" /> {isEditing && handleInput === currentUsername ? "Current Handle" : "Available"}
                 </span>
               ) : isAvailable === false && handleInput.length >= 3 ? (
                 <span className="text-rose-400 font-bold flex items-center gap-1">
@@ -209,13 +227,13 @@ export function SetUsernameModal({
             {isSubmitting ? (
               <>
                 <span className="w-3.5 h-3.5 border-2 border-zinc-950 border-t-transparent rounded-full animate-spin" />
-                <span>Checking Database...</span>
+                <span>Saving to Turso DB...</span>
               </>
             ) : (
               <>
                 <Sparkles className="w-3.5 h-3.5" />
                 <span>
-                  CLAIM @{handleInput || "handle"} &amp; CONTINUE
+                  {isEditing ? `UPDATE @${handleInput || "handle"}` : `CLAIM @${handleInput || "handle"} & CONTINUE`}
                 </span>
               </>
             )}

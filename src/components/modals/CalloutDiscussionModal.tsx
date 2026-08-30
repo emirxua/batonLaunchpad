@@ -353,6 +353,7 @@ export function CalloutDiscussionModal({
         isOpen={isUsernameModalOpen}
         onClose={closeUsernameModal}
         walletAddress={walletAddress}
+        currentUsername={username}
         onClaimUsername={claimUsername}
       />
     </>

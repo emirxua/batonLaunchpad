@@ -36,6 +36,7 @@ export function useUserProfile() {
         if (data && data.username) {
           setUsernameState(data.username);
           localStorage.setItem(`outbid_handle_${walletAddress}`, data.username);
+          setIsUsernameModalOpen(false);
         } else if (!cached && !hasPrompted) {
           // Connected wallet has no username set yet
           setIsUsernameModalOpen(true);
