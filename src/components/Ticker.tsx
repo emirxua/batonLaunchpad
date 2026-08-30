@@ -1,11 +1,46 @@
 "use client";
 
 import React from "react";
+import useSWR from "swr";
 import { useMarketStats } from "@/hooks/useMarketData";
 import { Flame, Zap } from "lucide-react";
 
+const fetcher = (url: string) => fetch(url).then((res) => res.json());
+
 export const Ticker: React.FC = React.memo(() => {
-  const { markets, isLoading } = useMarketStats();
+  const { markets } = useMarketStats();
+
+  const { data: trendingData } = useSWR("/api/trending", fetcher, {
+    refreshInterval: 10_000,
+    revalidateOnFocus: false,
+    dedupingInterval: 5_000,
+  });
+
+  const trendingItems = React.useMemo(() => {
+    const raw: any[] = trendingData?.tokens || trendingData?.data || [];
+    return raw.slice(0, 8).map((t: any) => {
+      const price = t.priceUsd ?? t.price ?? 0;
+      const change = t.priceChange24h ?? 0;
+      const isPos = change >= 0;
+      return {
+        symbol: (t.symbol || "TOKEN").toUpperCase(),
+        priceFormatted:
+          price < 0.0001
+            ? `$${price.toFixed(6)}`
+            : price < 1
+            ? `$${price.toFixed(4)}`
+            : `$${price.toFixed(2)}`,
+        changeFormatted: `${isPos ? "+" : ""}${change.toFixed(1)}%`,
+        isPositive: isPos,
+      };
+    });
+  }, [trendingData]);
+
+  // Combine top macro crypto markets (SOL, BTC, ETH, BNB) with top trending Solana tokens
+  const combinedStream = React.useMemo(() => {
+    const list = [...markets, ...trendingItems];
+    return list;
+  }, [markets, trendingItems]);
 
   return (
     <div className="w-full bg-zinc-100 dark:bg-[#07080A] text-zinc-700 dark:text-zinc-300 border-b border-zinc-200 dark:border-white/10 h-8 flex items-center overflow-hidden select-none z-50 relative font-mono text-[11px] font-bold">
@@ -26,7 +61,7 @@ export const Ticker: React.FC = React.memo(() => {
 
       {/* ── Continuous Marquee Feed ──────────────────────────────────────── */}
       <div className="flex overflow-hidden w-full group">
-        {markets.length === 0 ? (
+        {combinedStream.length === 0 ? (
           <div className="px-4 text-xs text-zinc-500 flex items-center gap-2 animate-pulse">
             <Zap className="w-3 h-3 text-amber-400" />
             <span>Connecting to live Solana &amp; Crypto price streams…</span>
@@ -34,9 +69,9 @@ export const Ticker: React.FC = React.memo(() => {
         ) : (
           <div className="animate-marquee-gpu items-center flex">
             {/* Loop 1 */}
-            {markets.map((m) => (
-              <div key={`m1-${m.symbol}`} className="flex items-center gap-1.5 px-4 whitespace-nowrap">
-                <span className="text-zinc-500 uppercase text-[10px]">{m.symbol}/USD:</span>
+            {combinedStream.map((m, idx) => (
+              <div key={`m1-${m.symbol}-${idx}`} className="flex items-center gap-1.5 px-4 whitespace-nowrap">
+                <span className="text-zinc-500 uppercase text-[10px]">${m.symbol}:</span>
                 <span className="font-black text-zinc-950 dark:text-zinc-100">{m.priceFormatted}</span>
                 <span
                   className={`text-[10px] px-1 py-0.5 rounded font-bold ${
@@ -52,9 +87,9 @@ export const Ticker: React.FC = React.memo(() => {
             ))}
 
             {/* Loop 2 */}
-            {markets.map((m) => (
-              <div key={`m2-${m.symbol}`} className="flex items-center gap-1.5 px-4 whitespace-nowrap">
-                <span className="text-zinc-500 uppercase text-[10px]">{m.symbol}/USD:</span>
+            {combinedStream.map((m, idx) => (
+              <div key={`m2-${m.symbol}-${idx}`} className="flex items-center gap-1.5 px-4 whitespace-nowrap">
+                <span className="text-zinc-500 uppercase text-[10px]">${m.symbol}:</span>
                 <span className="font-black text-zinc-950 dark:text-zinc-100">{m.priceFormatted}</span>
                 <span
                   className={`text-[10px] px-1 py-0.5 rounded font-bold ${

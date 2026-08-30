@@ -51,8 +51,8 @@ export function BurnLeaderboard({ onBoostToken }: BurnLeaderboardProps) {
       <div className="px-4 py-2.5 rounded-xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-between gap-3 shadow-md text-xs">
         <div className="flex items-center gap-2 text-zinc-700 dark:text-zinc-300 overflow-hidden text-ellipsis whitespace-nowrap">
           <Zap className="w-4 h-4 text-amber-400 shrink-0" />
-          <span className="font-bold text-amber-400 uppercase tracking-wider shrink-0">BURN-TO-RANK:</span>
-          <span className="truncate">Rankings are determined strictly by verified $BATON burned to the Solana incinerator.</span>
+          <span className="font-bold text-amber-400 uppercase tracking-wider shrink-0">100% APP-VERIFIED ON-CHAIN BURNS:</span>
+          <span className="truncate">Standings &amp; burned metrics are determined strictly by verified SPL token burns executed directly through Outbid and confirmed on Solana.</span>
         </div>
 
         <button

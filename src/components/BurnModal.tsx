@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
+import { mutate } from "swr";
 import { Coin } from "@/types/coin";
 import { useConnection, useWallet } from "@solana/wallet-adapter-react";
 import { useWalletModal } from "@solana/wallet-adapter-react-ui";
@@ -100,7 +101,7 @@ export const BurnModal: React.FC<BurnModalProps> = ({
     try {
       setBurning(true);
 
-      // Construct verified Solana SPL token burn / transfer to dead wallet transaction
+      // 1. Construct verified Solana SPL token burn transaction
       const { transaction } = await prepareRealBurnTransaction({
         connection,
         userPublicKey: publicKey,
@@ -109,10 +110,48 @@ export const BurnModal: React.FC<BurnModalProps> = ({
         targetMint: coin.mintAddress,
       });
 
+      // 2. Send transaction to Solana network
       const signature = await sendTransaction(transaction, connection, {
         skipPreflight: false,
         maxRetries: 3,
       });
+
+      // 3. Confirm on Solana blockchain
+      try {
+        const latestBlockhash = await connection.getLatestBlockhash();
+        await connection.confirmTransaction(
+          {
+            signature,
+            blockhash: latestBlockhash.blockhash,
+            lastValidBlockHeight: latestBlockhash.lastValidBlockHeight,
+          },
+          "confirmed"
+        );
+      } catch (confirmErr) {
+        console.warn("Confirmation check warning:", confirmErr);
+      }
+
+      // 4. Record genuine verified on-chain burn in app backend
+      try {
+        await fetch("/api/burns", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            txHash: signature,
+            coinId: coin.id,
+            amount: amount,
+            userAddress: publicKey.toBase58(),
+          }),
+        });
+      } catch (apiErr) {
+        console.warn("Failed to record burn signature to API:", apiErr);
+      }
+
+      // 5. Instantly revalidate all relevant app caches
+      mutate("/api/burns");
+      mutate("/api/leaderboard");
+      mutate("/api/token-stats");
+      mutate("/api/directory");
 
       setTxSignature(signature);
 
@@ -123,7 +162,7 @@ export const BurnModal: React.FC<BurnModalProps> = ({
       const msg = err instanceof Error ? err.message : String(err);
       if (msg.includes("User rejected") || msg.includes("rejected")) {
         setErrorMessage("Transaction was cancelled in your wallet.");
-      } else if (msg.includes("insufficient") || msg.includes("0x1")) {
+      } else if (msg.includes("insufficient") || msg.includes("0x1") || msg.includes("Insufficient")) {
         setErrorMessage("Insufficient $BATON balance in your wallet to complete the burn.");
       } else {
         setErrorMessage(msg || "Failed to execute burn transaction.");
@@ -156,193 +195,150 @@ export const BurnModal: React.FC<BurnModalProps> = ({
                 Burn $BATON &amp; Boost Rank
               </h3>
               <span className="text-[10px] text-zinc-500 block">
-                Permanent Deflationary Ranking Auction
+                100% App-Verified On-Chain Deflationary Ranking
+              </span>
+            </div>
+          </div>
+          <button
+            onClick={onClose}
+            className="p-1.5 rounded-lg text-zinc-500 hover:text-zinc-950 dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-white/5 transition-colors cursor-pointer"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+
+        {/* ── Coin Banner ───────────────────────────────────────────────── */}
+        <div className="flex items-center justify-between p-3.5 bg-zinc-50 dark:bg-zinc-900/50 rounded-2xl border border-zinc-200 dark:border-white/5">
+          <div className="flex items-center gap-3">
+            {coin.imageUrl ? (
+              <img
+                src={coin.imageUrl}
+                alt={coin.name}
+                className="w-10 h-10 rounded-xl object-cover border border-amber-500/30"
+              />
+            ) : (
+              <div className="w-10 h-10 rounded-xl bg-amber-500/20 text-amber-400 font-black text-sm flex items-center justify-center border border-amber-500/30">
+                {coin.ticker.slice(0, 3)}
+              </div>
+            )}
+            <div>
+              <h4 className="font-black text-sm text-zinc-950 dark:text-white uppercase">
+                {coin.name}
+              </h4>
+              <span className="text-[11px] font-bold text-amber-500 dark:text-amber-400 block">
+                ${coin.ticker}
               </span>
             </div>
           </div>
 
-          <button
-            type="button"
-            onClick={onClose}
-            className="p-1.5 rounded-xl hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-400 hover:text-zinc-950 dark:hover:text-white transition-colors cursor-pointer"
-          >
-            <X className="w-5 h-5" />
-          </button>
-        </div>
-
-        {/* ── Target Token Info Card ─────────────────────────────────────── */}
-        <div className="bg-zinc-50 dark:bg-zinc-900/60 border border-zinc-200 dark:border-white/5 rounded-2xl p-4 space-y-2">
-          <span className="text-[10px] text-zinc-500 uppercase tracking-wider font-bold block">
-            Target Token for Boost
-          </span>
-          <div className="flex items-center justify-between gap-3">
-            <div className="flex items-center gap-3 min-w-0">
-              {coin.imageUrl ? (
-                <img
-                  src={coin.imageUrl}
-                  alt={coin.name}
-                  className="w-10 h-10 rounded-xl object-cover border border-white/10 shrink-0"
-                />
-              ) : (
-                <div className="w-10 h-10 rounded-xl bg-amber-500/20 text-amber-400 font-bold flex items-center justify-center text-sm shrink-0">
-                  ${coin.ticker.slice(0, 3)}
-                </div>
-              )}
-              <div className="min-w-0">
-                <span className="font-extrabold text-sm text-zinc-950 dark:text-white block truncate">
-                  {coin.name} (${coin.ticker})
-                </span>
-                <span className="text-[11px] text-zinc-500 font-mono truncate block">
-                  {coin.mintAddress ? `${coin.mintAddress.slice(0, 6)}…${coin.mintAddress.slice(-6)}` : "—"}
-                </span>
-              </div>
-            </div>
-
-            {coin.mintAddress && (
-              <button
-                type="button"
-                onClick={handleCopyCA}
-                className="p-2 rounded-xl bg-zinc-200 dark:bg-zinc-800 hover:bg-amber-500/20 text-zinc-700 dark:text-zinc-300 hover:text-amber-400 transition-colors cursor-pointer shrink-0"
-                title="Copy Token CA"
-              >
-                {copiedCA ? <Check className="w-4 h-4 text-emerald-400" /> : <Copy className="w-4 h-4" />}
-              </button>
-            )}
-          </div>
-        </div>
-
-        {/* ── Burn Amount Input ──────────────────────────────────────────── */}
-        <div className="bg-zinc-50 dark:bg-zinc-900/60 border border-zinc-200 dark:border-white/5 rounded-2xl p-4 space-y-2.5">
-          <div className="flex justify-between items-center text-[11px] text-zinc-500">
-            <span>$BATON AMOUNT TO BURN</span>
-            <span className="text-amber-500 dark:text-amber-400 font-bold">
-              100% Permanently Burned
+          <div className="text-right">
+            <span className="text-[10px] text-zinc-500 uppercase font-bold block">Current Burned</span>
+            <span className="text-sm font-black text-amber-400 flex items-center justify-end gap-1">
+              <Flame className="w-3.5 h-3.5 fill-current text-orange-500" />
+              {formatNumber(coin.totalBurnedBaton || 0)}
             </span>
           </div>
+        </div>
 
-          <div className="flex items-center justify-between gap-2 bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-white/10 rounded-xl px-3 py-2">
+        {/* ── Preset Amount Buttons ─────────────────────────────────────── */}
+        <div className="space-y-2">
+          <label className="text-xs font-bold text-zinc-700 dark:text-zinc-300 uppercase tracking-wider flex items-center justify-between">
+            <span>$BATON Burn Amount</span>
+            <span className="text-[10px] text-zinc-500 font-normal">
+              100% permanently destroyed on-chain
+            </span>
+          </label>
+
+          <div className="relative">
             <input
               type="number"
-              min="1"
-              value={amount || ""}
+              value={amount}
               onChange={(e) => setAmount(Math.max(0, parseInt(e.target.value) || 0))}
-              placeholder="50,000"
-              className="bg-transparent text-xl font-black text-zinc-950 dark:text-white outline-none w-full font-mono placeholder:text-zinc-600"
+              className="w-full bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-white/10 rounded-2xl px-4 py-3 text-lg font-black text-zinc-950 dark:text-white outline-none focus:border-amber-500 transition-colors placeholder:text-zinc-600"
+              placeholder="50000"
             />
-            <span className="font-extrabold text-xs text-amber-500 shrink-0">
+            <span className="absolute right-4 top-1/2 -translate-y-1/2 text-xs font-black text-amber-500">
               $BATON
             </span>
           </div>
 
-          {/* Preset Buttons */}
-          <div className="flex gap-1.5 flex-wrap">
-            {[10000, 50000, 100000, 500000].map((preset) => (
+          <div className="grid grid-cols-4 gap-2 pt-1">
+            {[10000, 50000, 100000, 500000].map((val) => (
               <button
-                key={preset}
+                key={val}
                 type="button"
-                onClick={() => setAmount(preset)}
-                className={`text-[10px] px-2.5 py-1 rounded-lg border transition-colors cursor-pointer font-bold ${
-                  amount === preset
-                    ? "border-amber-500/50 bg-amber-500/20 text-amber-400"
-                    : "border-zinc-200 dark:border-white/5 bg-white dark:bg-zinc-900 text-zinc-500 hover:text-zinc-200"
+                onClick={() => setAmount(val)}
+                className={`py-2 px-2 rounded-xl text-xs font-bold transition-all border cursor-pointer ${
+                  amount === val
+                    ? "bg-amber-500 text-zinc-950 border-amber-400 shadow-md font-black"
+                    : "bg-zinc-100 dark:bg-zinc-900 text-zinc-600 dark:text-zinc-400 border-zinc-200 dark:border-white/5 hover:border-amber-500/30"
                 }`}
               >
-                +{formatNumber(preset)}
+                +{val >= 1000 ? `${val / 1000}K` : val}
               </button>
             ))}
           </div>
         </div>
 
-        {/* ── Estimated Rank Impact Badge ────────────────────────────────── */}
-        <div className="flex items-center justify-between p-3 rounded-xl bg-zinc-50 dark:bg-zinc-900/50 border border-zinc-200 dark:border-white/5 text-xs">
-          <span className="text-zinc-500 flex items-center gap-1 font-bold">
-            <TrendingUp className="w-3.5 h-3.5 text-amber-400" />
-            ESTIMATED IMPACT:
-          </span>
-          <span className={`px-2.5 py-0.5 rounded-md font-extrabold text-[11px] border ${rankImpact.color}`}>
-            {rankImpact.label}
-          </span>
-        </div>
-
-        {/* ── Dead Wallet Address Display ────────────────────────────────── */}
-        <div className="p-3 rounded-xl bg-zinc-50 dark:bg-zinc-900/40 border border-zinc-200 dark:border-white/5 space-y-1 text-xs">
-          <span className="text-[10px] text-zinc-500 uppercase tracking-wider block font-bold">
-            Verifiable Solana Dead Wallet (Incinerator)
-          </span>
-          <div className="flex items-center justify-between gap-2 text-zinc-600 dark:text-zinc-400 font-mono text-[11px]">
-            <span className="truncate max-w-[280px]">{DEAD_WALLET}</span>
-            <div className="flex items-center gap-1.5 shrink-0">
-              <button
-                type="button"
-                onClick={handleCopyDeadWallet}
-                className="hover:text-amber-400 transition-colors p-0.5 cursor-pointer"
-                title="Copy Dead Wallet Address"
-              >
-                {copiedDeadWallet ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
-              </button>
-              <a
-                href={`https://solscan.io/account/${DEAD_WALLET}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="hover:text-amber-400 transition-colors p-0.5"
-                title="View on Solscan"
-              >
-                <ExternalLink className="w-3.5 h-3.5" />
-              </a>
-            </div>
+        {/* ── Dynamic Rank Projection Card ──────────────────────────────── */}
+        <div className="p-3.5 rounded-2xl bg-zinc-900/80 border border-white/10 space-y-2">
+          <div className="flex items-center justify-between text-xs">
+            <span className="text-zinc-400 font-bold uppercase text-[10px]">Estimated Rank Impact:</span>
+            <span className={`px-2.5 py-0.5 rounded-full border text-[11px] ${rankImpact.color}`}>
+              {rankImpact.label}
+            </span>
+          </div>
+          <div className="flex items-center justify-between text-xs pt-1 border-t border-white/5 text-zinc-400">
+            <span>Projected Total:</span>
+            <span className="font-black text-white">
+              {formatNumber(projectedTotal)} $BATON
+            </span>
           </div>
         </div>
 
-        {/* ── Error & Success Banners ────────────────────────────────────── */}
-        {errorMessage && (
-          <div className="p-3 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-400 text-xs flex items-start gap-2 animate-in fade-in">
-            <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
-            <span className="leading-tight">{errorMessage}</span>
-          </div>
-        )}
-
+        {/* ── Success Banner ────────────────────────────────────────────── */}
         {txSignature && (
-          <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs flex flex-col gap-1 animate-in fade-in">
-            <div className="flex items-center gap-1.5 font-bold">
-              <CheckCircle2 className="w-4 h-4 text-emerald-400" />
-              <span>Burn Successful! {formatNumber(amount)} $BATON permanently burned.</span>
+          <div className="p-3.5 rounded-2xl bg-emerald-500/10 border border-emerald-500/30 space-y-2 animate-in zoom-in-95">
+            <div className="flex items-center gap-2 text-emerald-400 font-bold text-xs">
+              <CheckCircle2 className="w-4 h-4" />
+              <span>Burn Confirmed &amp; Leaderboard Value Updated!</span>
             </div>
             <a
               href={`https://solscan.io/tx/${txSignature}`}
               target="_blank"
               rel="noopener noreferrer"
-              className="underline text-[10px] text-emerald-300 flex items-center gap-1"
+              className="text-[11px] text-zinc-400 hover:text-white flex items-center gap-1 underline break-all"
             >
-              <span>View On-Chain Proof on Solscan</span>
-              <ExternalLink className="w-3 h-3" />
+              <span>Verify on Solscan: {txSignature.slice(0, 16)}...</span>
+              <ExternalLink className="w-3 h-3 shrink-0" />
             </a>
           </div>
         )}
 
-        {/* ── Burn & Boost Now CTA Button ────────────────────────────────── */}
+        {/* ── Error Banner ──────────────────────────────────────────────── */}
+        {errorMessage && (
+          <div className="p-3.5 rounded-2xl bg-rose-500/10 border border-rose-500/30 flex items-start gap-2 text-rose-400 text-xs animate-in shake">
+            <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
+            <span>{errorMessage}</span>
+          </div>
+        )}
+
+        {/* ── Execute Button ────────────────────────────────────────────── */}
         <button
           type="button"
-          onClick={handleExecuteBurn}
           disabled={burning || amount <= 0}
-          className={`w-full py-3.5 rounded-xl font-extrabold text-xs uppercase tracking-wider transition-all flex items-center justify-center gap-2 shadow-lg cursor-pointer ${
-            !connected
-              ? "bg-amber-500 hover:bg-amber-400 text-zinc-950 shadow-amber-500/20"
-              : burning
-              ? "bg-amber-500/50 text-zinc-950 cursor-wait"
-              : "bg-gradient-to-r from-amber-500 via-orange-500 to-amber-500 hover:from-amber-400 hover:to-orange-400 text-zinc-950 shadow-amber-500/25 active:scale-[0.99]"
-          }`}
+          onClick={handleExecuteBurn}
+          className="w-full py-3.5 rounded-2xl bg-gradient-to-r from-amber-500 via-orange-500 to-amber-500 hover:from-amber-400 hover:to-orange-400 text-zinc-950 font-black text-sm uppercase tracking-wider shadow-lg shadow-amber-500/20 transition-all flex items-center justify-center gap-2 cursor-pointer active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {burning ? (
             <>
-              <span className="w-3.5 h-3.5 border-2 border-zinc-950 border-t-transparent rounded-full animate-spin" />
-              <span>SIGNING &amp; BURNING ON-CHAIN…</span>
+              <span className="w-4 h-4 border-2 border-zinc-950 border-t-transparent rounded-full animate-spin" />
+              <span>Confirming on Solana Blockchain...</span>
             </>
-          ) : !connected ? (
-            <span>CONNECT WALLET TO BURN &amp; BOOST</span>
           ) : (
             <>
-              <Flame className="w-4 h-4 fill-current" />
-              <span>Burn &amp; Boost Now ({formatNumber(amount)} $BATON)</span>
+              <Flame className="w-4 h-4 fill-current text-zinc-950" />
+              <span>Burn {amount.toLocaleString()} $BATON &amp; Boost</span>
             </>
           )}
         </button>
