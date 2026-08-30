@@ -1,43 +1,56 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
-import { RecordedBurn } from "@/app/api/burns/route";
+import useSWR from "swr";
 
-export function useRecentBurns(intervalMs: number = 60_000) {
-  const [recentBurns, setRecentBurns] = useState<RecordedBurn[]>([]);
-  const [totalRecordedBurns, setTotalRecordedBurns] = useState<number>(0);
-  const [totalBurnedAmount, setTotalBurnedAmount] = useState<number>(0);
-  const [isLoading, setIsLoading] = useState<boolean>(true);
+const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
-  const fetchBurns = useCallback(async () => {
-    try {
-      const res = await fetch("/api/burns");
-      if (!res.ok) throw new Error("Failed to fetch recent burns");
-      const data = await res.json();
-      if (data.success) {
-        setRecentBurns(data.recentBurns || []);
-        setTotalRecordedBurns(data.totalRecordedBurns || 0);
-        setTotalBurnedAmount(data.totalBurnedAmount || 0);
-      }
-    } catch (err) {
-      console.warn("Could not fetch recent burns:", err);
-    } finally {
-      setIsLoading(false);
+export interface BurnRecord {
+  id: string;
+  txHash: string;
+  txSignature?: string;
+  coinId: string;
+  coinName?: string;
+  coinTicker?: string;
+  coinMint?: string;
+  amount: number;
+  userAddress: string;
+  timestamp: number;
+  isRealBurn?: boolean;
+}
+
+export function useRecentBurns(_interval?: number) {
+  const { data, error, isLoading, mutate } = useSWR(
+    "/api/burns",
+    fetcher,
+    {
+      refreshInterval: 30_000,
+      revalidateOnFocus: false,
+      dedupingInterval: 15_000,
     }
-  }, []);
+  );
 
-  useEffect(() => {
-    fetchBurns();
-    if (intervalMs <= 0) return;
-    const interval = setInterval(fetchBurns, intervalMs);
-    return () => clearInterval(interval);
-  }, [fetchBurns, intervalMs]);
+  const rawBurns: BurnRecord[] = (data?.recentBurns || []).map((b: any) => ({
+    id: b.id || `burn-${b.txHash}`,
+    txHash: b.txHash,
+    txSignature: b.txHash,
+    coinId: b.coinId,
+    coinName: b.coinName || "Token",
+    coinTicker: b.coinTicker || "TOKEN",
+    coinMint: b.coinMint || b.coinId,
+    amount: b.amount || 0,
+    userAddress: b.userAddress || "anon",
+    timestamp: b.timestamp || Date.now(),
+    isRealBurn: true,
+  }));
+
+  const totalRecordedBurns = data?.totalBurnedAmount || 0;
 
   return {
-    recentBurns,
+    recentBurns: rawBurns,
     totalRecordedBurns,
-    totalBurnedAmount,
     isLoading,
-    refresh: fetchBurns,
+    error,
+    refresh: mutate,
+    mutate,
   };
 }

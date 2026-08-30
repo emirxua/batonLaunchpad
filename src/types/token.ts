@@ -1,0 +1,80 @@
+export interface GlobalMarketItem {
+  symbol: string;
+  name: string;
+  price: number;
+  priceFormatted: string;
+  change24h: number;
+  changeFormatted: string;
+  isPositive: boolean;
+  volume24h: number;
+  volumeFormatted: string;
+  sparkline: number[];
+}
+
+export interface TrendingTokenItem {
+  id: string;
+  name: string;
+  symbol: string;
+  ca: string;
+  price: number;
+  priceFormatted: string;
+  mcap: number;
+  mcapFormatted: string;
+  volume24h: number;
+  volumeFormatted: string;
+  priceChange24h: number;
+  priceChangeFormatted: string;
+  bondingCurveProgress: number;
+  badge: "Hot" | "Graduating" | "New" | "Top Volume";
+  iconUrl?: string;
+  dexScreenerUrl?: string;
+}
+
+export interface CalloutItem {
+  id: string;
+  callerName: string;
+  callerHandle: string;
+  callerAvatar: string;
+  callerAvatarUrl?: string;
+  callerBadge?: string;
+  tokenName: string;
+  tokenSymbol: string;
+  tokenCA: string;
+  tokenIconUrl?: string;
+  calloutPrice: number;
+  currentPrice: number;
+  entryMcap: number;
+  currentMcap: number;
+  multiplier: number;
+  timeAgo: string;
+  upvotes: number;
+  batonBurned: number;
+  thesis: string;
+}
+
+export interface CommentItem {
+  id: string;
+  calloutId?: string;
+  authorName: string;
+  authorHandle: string;
+  authorAvatar: string;
+  authorBadge?: string;
+  sentiment: "BULLISH" | "BEARISH";
+  commentText: string;
+  timeAgo: string;
+  upvotes: number;
+}
+
+export interface LeaderboardItem {
+  rank: number;
+  projectName: string;
+  symbol: string;
+  ca: string;
+  totalBatonBurned: number;
+  boostedBy: string;
+  timeRemaining: string;
+  mcap: number;
+  mcapFormatted: string;
+  volume24h: number;
+  iconUrl?: string;
+}

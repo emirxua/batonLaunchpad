@@ -4,11 +4,11 @@ import { useEffect, useState, useCallback } from "react";
 import { useConnection, useWallet } from "@solana/wallet-adapter-react";
 import { PublicKey, LAMPORTS_PER_SOL } from "@solana/web3.js";
 
-import { FALLBACK_BATON_MINT } from "@/lib/solana-burn";
+import { OFFICIAL_BATON_MINT } from "@/lib/solana-burn";
 
-// Optional default mint address for $BATON (can be overridden via env)
+// Official mint address for $BATON (can be overridden via env)
 const BATON_TOKEN_MINT =
-  process.env.NEXT_PUBLIC_BATON_MINT_ADDRESS || FALLBACK_BATON_MINT;
+  process.env.NEXT_PUBLIC_BATON_MINT_ADDRESS || OFFICIAL_BATON_MINT;
 
 export interface UserBalanceState {
   solBalance: number | null;
@@ -64,7 +64,6 @@ export function useUserBatonBalance(tokenMintAddress: string = BATON_TOKEN_MINT)
           setBatonBalance(0);
         }
       } catch (tokenErr) {
-        // Fallback if invalid mint address or dev environment
         console.warn("Could not fetch $BATON token balance:", tokenErr);
         setBatonBalance(0);
       }

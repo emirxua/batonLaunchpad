@@ -3,26 +3,16 @@ const nextConfig = {
   typescript: {
     ignoreBuildErrors: true,
   },
-  eslint: {
-    ignoreDuringBuilds: true,
+  experimental: {
+    serverComponentsExternalPackages: ["pino-pretty", "lokijs", "encoding"],
   },
-  webpack: (config, { isServer }) => {
+  webpack: (config) => {
     config.resolve.fallback = {
       ...config.resolve.fallback,
       fs: false,
       net: false,
       tls: false,
       crypto: false,
-      lokijs: false,
-      'pino-pretty': false,
-      encoding: false,
-    };
-    if (!isServer) {
-      config.externals = [...(config.externals || []), 'pino-pretty', 'lokijs', 'encoding'];
-    }
-    config.module = {
-      ...config.module,
-      exprContextCritical: false,
     };
     return config;
   },

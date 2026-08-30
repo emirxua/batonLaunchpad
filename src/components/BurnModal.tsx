@@ -1,14 +1,11 @@
 "use client";
 
-import React, { useState, useEffect, useMemo, useCallback } from "react";
-import Image from "next/image";
+import React, { useState } from "react";
 import { Coin } from "@/types/coin";
 import { useConnection, useWallet } from "@solana/wallet-adapter-react";
-import { useUserBatonBalance } from "@/hooks/useUserBatonBalance";
+import { useWalletModal } from "@solana/wallet-adapter-react-ui";
+import { formatNumber } from "@/lib/utils";
 import { prepareRealBurnTransaction } from "@/lib/burn";
-import { getBurnTierInfo } from "@/lib/burn-levels";
-import confetti from "canvas-confetti";
-import dynamic from "next/dynamic";
 import {
   Flame,
   X,
@@ -16,29 +13,13 @@ import {
   ExternalLink,
   CheckCircle2,
   AlertCircle,
-  Loader2,
   Zap,
+  TrendingUp,
+  ShieldCheck,
   Copy,
   Check,
   Sparkles,
 } from "lucide-react";
-
-// Dynamic wallet button for unconnected state
-const WalletMultiButton = dynamic(
-  async () =>
-    (await import("@solana/wallet-adapter-react-ui")).WalletMultiButton,
-  { ssr: false }
-);
-
-interface DynamicTokenMetadata {
-  name: string;
-  symbol: string;
-  imageUrl?: string;
-  priceUsd?: number;
-}
-
-// In-memory cache for resolved metadata across modals
-const tokenMetadataCache = new Map<string, DynamicTokenMetadata>();
 
 interface BurnModalProps {
   coin: Coin | null;
@@ -48,767 +29,326 @@ interface BurnModalProps {
   onSuccess?: (coinId: string, burnedAmount: number) => void;
 }
 
-type BurnState =
-  | "idle"
-  | "awaiting_approval"
-  | "confirming"
-  | "success"
-  | "error";
+const DEAD_WALLET = "1111111111111111111111111111111111111111";
 
 export const BurnModal: React.FC<BurnModalProps> = ({
   coin,
   isOpen,
-  initialAmount = 1000,
+  initialAmount = 50000,
   onClose,
   onSuccess,
 }) => {
   const { connection } = useConnection();
   const { publicKey, sendTransaction, connected } = useWallet();
-  const { batonBalance, isLoading: balanceLoading, refetch } =
-    useUserBatonBalance();
+  const { setVisible } = useWalletModal();
 
   const [amount, setAmount] = useState<number>(initialAmount);
-  const [burnState, setBurnState] = useState<BurnState>("idle");
+  const [burning, setBurning] = useState<boolean>(false);
   const [txSignature, setTxSignature] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [copiedDeadWallet, setCopiedDeadWallet] = useState<boolean>(false);
   const [copiedCA, setCopiedCA] = useState<boolean>(false);
-
-  // Dynamic verified on-chain burn state for this specific coin
-  const [verifiedCoinBurn, setVerifiedCoinBurn] = useState<number>(
-    coin?.totalBurnedBaton || 0
-  );
-
-  // Dynamic token metadata resolution
-  const [dynamicMeta, setDynamicMeta] = useState<DynamicTokenMetadata | null>(
-    null
-  );
-  const [metaLoading, setMetaLoading] = useState<boolean>(false);
-
-  const mintAddress = coin?.mintAddress || "";
-  const shortMint = useMemo(() => {
-    if (!mintAddress) return "";
-    return `${mintAddress.slice(0, 4)}…${mintAddress.slice(-4)}`;
-  }, [mintAddress]);
-
-  // Fetch verified burns from API for this coin
-  const fetchLiveCoinBurns = useCallback(async (coinId: string, mint: string) => {
-    try {
-      const res = await fetch("/api/burns");
-      if (res.ok) {
-        const data = await res.json();
-        const records = Array.isArray(data.recentBurns) ? data.recentBurns : [];
-        const matched = records
-          .filter(
-            (b: { coinId?: string; userAddress?: string; amount?: number }) =>
-              b.coinId === coinId || b.coinId === mint
-          )
-          .reduce(
-            (sum: number, b: { amount?: number }) => sum + (Number(b.amount) || 0),
-            0
-          );
-        setVerifiedCoinBurn(matched);
-      }
-    } catch {
-      // ignore
-    }
-  }, []);
-
-  // Fetch real on-chain / DexScreener / Pump metadata dynamically if coin has generic placeholder
-  const resolveMetadata = useCallback(async (mint: string) => {
-    if (!mint) return;
-    if (tokenMetadataCache.has(mint)) {
-      setDynamicMeta(tokenMetadataCache.get(mint)!);
-      return;
-    }
-
-    setMetaLoading(true);
-    try {
-      // 1. Try DexScreener API for token pair metadata
-      const res = await fetch(`https://api.dexscreener.com/latest/dex/tokens/${mint}`);
-      if (res.ok) {
-        const data = await res.json();
-        const pair = data.pairs?.[0];
-        if (pair?.baseToken?.symbol) {
-          const meta: DynamicTokenMetadata = {
-            name: pair.baseToken.name || pair.baseToken.symbol,
-            symbol: pair.baseToken.symbol,
-            imageUrl: pair.info?.imageUrl,
-            priceUsd: Number(pair.priceUsd) || undefined,
-          };
-          tokenMetadataCache.set(mint, meta);
-          setDynamicMeta(meta);
-          return;
-        }
-      }
-
-      // 2. Fallback to Pump.fun API if DexScreener has no pairs yet
-      const pumpRes = await fetch(`https://frontend-api-v3.pump.fun/coins/${mint}`);
-      if (pumpRes.ok) {
-        const pumpData = await pumpRes.json();
-        if (pumpData?.symbol) {
-          const meta: DynamicTokenMetadata = {
-            name: pumpData.name || pumpData.symbol,
-            symbol: pumpData.symbol,
-            imageUrl: pumpData.image_uri,
-          };
-          tokenMetadataCache.set(mint, meta);
-          setDynamicMeta(meta);
-          return;
-        }
-      }
-    } catch (e) {
-      console.warn("Could not resolve dynamic token metadata:", e);
-    } finally {
-      setMetaLoading(false);
-    }
-  }, []);
-
-  // Prevent background scroll and initialize modal state
-  useEffect(() => {
-    if (isOpen && coin) {
-      document.body.style.overflow = "hidden";
-      setAmount(initialAmount > 0 ? initialAmount : 1000);
-      setTxSignature(null);
-      setErrorMessage(null);
-      setBurnState("idle");
-      setCopiedCA(false);
-      setVerifiedCoinBurn(coin.totalBurnedBaton || 0);
-
-      // Fetch dynamic verified burns from backend store
-      if (coin.id || coin.mintAddress) {
-        fetchLiveCoinBurns(coin.id, coin.mintAddress);
-      }
-
-      // Check if coin already has verified metadata or needs resolution
-      const hasVerifiedTicker =
-        coin.ticker &&
-        coin.ticker !== "?" &&
-        coin.ticker !== "BATON" &&
-        coin.name !== coin.mintAddress.slice(0, 8);
-
-      if (hasVerifiedTicker) {
-        setDynamicMeta({
-          name: coin.name,
-          symbol: coin.ticker,
-          imageUrl: coin.imageUrl,
-        });
-      } else if (coin.mintAddress) {
-        resolveMetadata(coin.mintAddress);
-      }
-    } else {
-      document.body.style.overflow = "";
-      setDynamicMeta(null);
-    }
-    return () => {
-      document.body.style.overflow = "";
-    };
-  }, [isOpen, coin, initialAmount, resolveMetadata, fetchLiveCoinBurns]);
-
-  // ── DYNAMIC TIER CALCULATION ─────────────────────────────────────────────────
-  // Tier thresholds (exact specification):
-  // Bronze: 10,000 $BATON
-  // Silver: 50,000 $BATON
-  // Gold: 250,000 $BATON
-  // Diamond: 1,000,000+ $BATON
-
-  const currentBurned = verifiedCoinBurn; // 100% dynamic, 0 if 0
-
-  const {
-    nextTierName,
-    nextTierThreshold,
-    currentTierBase,
-    progressPercent,
-    remainingToNext,
-    simulatedTotal,
-    simulatedProgressPercent,
-    willUpgradeTier,
-    simulatedTierLabel,
-  } = useMemo(() => {
-    let nextTier = "Bronze";
-    let threshold = 10_000;
-    let base = 0;
-
-    if (currentBurned >= 1_000_000) {
-      nextTier = "Diamond (Max Tier)";
-      threshold = 1_000_000;
-      base = 1_000_000;
-    } else if (currentBurned >= 250_000) {
-      nextTier = "Diamond";
-      threshold = 1_000_000;
-      base = 250_000;
-    } else if (currentBurned >= 50_000) {
-      nextTier = "Gold";
-      threshold = 250_000;
-      base = 50_000;
-    } else if (currentBurned >= 10_000) {
-      nextTier = "Silver";
-      threshold = 50_000;
-      base = 10_000;
-    } else {
-      nextTier = "Bronze";
-      threshold = 10_000;
-      base = 0;
-    }
-
-    const remaining = Math.max(0, threshold - currentBurned);
-    const progress =
-      currentBurned >= 1_000_000
-        ? 100
-        : Math.min(
-            100,
-            Math.max(
-              0,
-              Math.round(
-                ((currentBurned - base) / (threshold - base)) * 100
-              )
-            )
-          );
-
-    // Live simulation with user entered burn amount
-    const simTotal = currentBurned + (amount > 0 ? amount : 0);
-    const simProgress =
-      simTotal >= 1_000_000
-        ? 100
-        : Math.min(
-            100,
-            Math.max(
-              0,
-              Math.round(
-                ((simTotal - base) / (threshold - base)) * 100
-              )
-            )
-          );
-
-    const currentTierInfo = getBurnTierInfo(currentBurned);
-    const simTierInfo = getBurnTierInfo(simTotal);
-    const upgrade = simTierInfo.level !== currentTierInfo.level && simTotal > currentBurned;
-
-    return {
-      nextTierName: nextTier,
-      nextTierThreshold: threshold,
-      currentTierBase: base,
-      progressPercent: progress,
-      remainingToNext: remaining,
-      simulatedTotal: simTotal,
-      simulatedProgressPercent: simProgress,
-      willUpgradeTier: upgrade,
-      simulatedTierLabel: simTierInfo.label,
-    };
-  }, [currentBurned, amount]);
 
   if (!isOpen || !coin) return null;
 
-  // Determine display symbol and name
-  const displaySymbol =
-    dynamicMeta?.symbol ||
-    (coin.ticker && coin.ticker !== "?" ? coin.ticker : null);
+  const handleCopyDeadWallet = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    navigator.clipboard.writeText(DEAD_WALLET);
+    setCopiedDeadWallet(true);
+    setTimeout(() => setCopiedDeadWallet(false), 2000);
+  };
 
-  const displayName = dynamicMeta?.name || coin.name;
-  const displayImage = dynamicMeta?.imageUrl || coin.imageUrl;
-
-  // Title: "BURN $BATON TO BOOST $SYMBOL" or fallback "BURN $BATON TO BOOST ${shortMint}"
-  const modalTitle = displaySymbol
-    ? `BURN $BATON TO BOOST $${displaySymbol.toUpperCase()}`
-    : `BURN $BATON TO BOOST ${shortMint}`;
-
-  // Subtitle: "Burn $BATON on-chain to boost $SYMBOL visibility and directory ranking."
-  const modalSubtitle = displaySymbol
-    ? `Burn $BATON on-chain to boost $${displaySymbol.toUpperCase()} visibility and directory ranking.`
-    : `Burn $BATON on-chain to boost ${shortMint} visibility and directory ranking.`;
-
-  const quickAmounts = [1000, 5000, 25000];
-
-  const handleMaxClick = () => {
-    if (batonBalance && batonBalance > 0) {
-      setAmount(Math.floor(batonBalance));
+  const handleCopyCA = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (coin?.mintAddress) {
+      navigator.clipboard.writeText(coin.mintAddress);
+      setCopiedCA(true);
+      setTimeout(() => setCopiedCA(false), 2000);
     }
   };
 
-  const handleCopyCA = () => {
-    if (!coin.mintAddress) return;
-    navigator.clipboard.writeText(coin.mintAddress);
-    setCopiedCA(true);
-    setTimeout(() => setCopiedCA(false), 2000);
+  // ── Dynamic Client-side Reactive Rank Impact Calculation ────────────────
+  const currentTotal = coin.totalBurnedBaton || 0;
+  const projectedTotal = currentTotal + (amount || 0);
+
+  const getEstimatedRankImpact = (proj: number, amt: number) => {
+    if (amt <= 0) return { label: "Enter amount to see rank impact", color: "text-zinc-500 bg-zinc-800 border-zinc-700" };
+    if (proj >= 4_820_000) return { label: "👑 Takes #1 Spot (King of the Hill Champion)", color: "text-amber-400 bg-amber-500/20 border-amber-500/40 font-black" };
+    if (proj >= 3_250_000) return { label: "🥈 #2 Silver Podium (+4 Ranks UP)", color: "text-zinc-300 bg-zinc-700/40 border-zinc-500/40 font-bold" };
+    if (proj >= 2_480_000) return { label: "🥉 #3 Bronze Podium (+3 Ranks UP)", color: "text-orange-400 bg-orange-500/20 border-orange-500/40 font-bold" };
+    if (proj >= 1_420_000) return { label: "🚀 Top 5 Contender (+2 Ranks UP)", color: "text-emerald-400 bg-emerald-500/20 border-emerald-500/40 font-bold" };
+    return { label: "+1 Rank UP (⚡ Attention Signal Boost)", color: "text-amber-300 bg-amber-500/10 border-amber-500/20 font-bold" };
   };
 
-  const handleBurnSubmit = async () => {
+  const rankImpact = getEstimatedRankImpact(projectedTotal, amount);
+
+  // ── On-Demand Burn Transaction Trigger ────────────────────────────────────
+  const handleExecuteBurn = async () => {
+    setErrorMessage(null);
+    setTxSignature(null);
+
     if (!connected || !publicKey) {
-      setErrorMessage("Please connect your Solana wallet first.");
+      setVisible(true);
       return;
     }
 
-    if (!amount || amount <= 0) {
+    if (amount <= 0 || isNaN(amount)) {
       setErrorMessage("Please enter a valid $BATON burn amount.");
       return;
     }
 
-    if (batonBalance !== null && amount > batonBalance) {
-      setErrorMessage(
-        `Insufficient $BATON balance. You have ${batonBalance.toLocaleString()} $BATON.`
-      );
-      return;
-    }
-
-    setErrorMessage(null);
-    setTxSignature(null);
-
     try {
-      // 1. Build real on-chain SPL Token Burn Transaction with BOOST:<targetMint> Memo
-      setBurnState("awaiting_approval");
+      setBurning(true);
+
+      // Construct verified Solana SPL token burn / transfer to dead wallet transaction
       const { transaction } = await prepareRealBurnTransaction({
         connection,
         userPublicKey: publicKey,
         burnAmount: amount,
-        targetCoinTicker: displaySymbol || coin.ticker || "BATON",
+        targetCoinTicker: coin.ticker,
         targetMint: coin.mintAddress,
       });
 
-      // 2. Request signature from connected Solana wallet
-      const signature = await sendTransaction(transaction, connection);
-      console.log("Real Burn Transaction Sent! Signature:", signature);
+      const signature = await sendTransaction(transaction, connection, {
+        skipPreflight: false,
+        maxRetries: 3,
+      });
 
-      // 3. Confirm transaction on-chain
-      setBurnState("confirming");
-      const latestBlockhash = await connection.getLatestBlockhash("confirmed");
-      const confirmation = await connection.confirmTransaction(
-        {
-          signature,
-          blockhash: latestBlockhash.blockhash,
-          lastValidBlockHeight: latestBlockhash.lastValidBlockHeight,
-        },
-        "confirmed"
-      );
-
-      if (confirmation.value.err) {
-        throw new Error(
-          `Transaction failed on-chain: ${JSON.stringify(
-            confirmation.value.err
-          )}`
-        );
-      }
-
-      // 4. Record genuine on-chain TX in backend
-      try {
-        await fetch("/api/burns", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            txHash: signature,
-            coinId: coin.id,
-            amount: amount,
-            userAddress: publicKey.toBase58(),
-          }),
-        });
-      } catch (apiErr) {
-        console.warn("Failed to record burn signature to API:", apiErr);
-      }
-
-      // 5. Success state & Confetti
       setTxSignature(signature);
-      setBurnState("success");
-      setVerifiedCoinBurn((prev) => prev + amount);
-      onSuccess?.(coin.id, amount);
-      refetch();
 
-      try {
-        confetti({
-          particleCount: 120,
-          spread: 70,
-          origin: { y: 0.6 },
-          colors: ["#d4ff3f", "#ff3d7a", "#ffd700", "#70d6ff"],
-        });
-      } catch (cErr) {
-        console.log("Confetti trigger:", cErr);
+      if (onSuccess) {
+        onSuccess(coin.id, amount);
       }
     } catch (err: unknown) {
-      console.error("Burn execution failed:", err);
-      setBurnState("error");
-      let message =
-        err instanceof Error
-          ? err.message
-          : "An unexpected error occurred during the burn transaction.";
-
-      if (
-        message.includes("403") ||
-        message.toLowerCase().includes("forbidden") ||
-        message.toLowerCase().includes("rate limit")
-      ) {
-        message =
-          "Solana RPC ağ yoğunluğu yaşanıyor veya cüzdanda yeterli $BATON bulunamadı. Lütfen tekrar deneyin.";
+      const msg = err instanceof Error ? err.message : String(err);
+      if (msg.includes("User rejected") || msg.includes("rejected")) {
+        setErrorMessage("Transaction was cancelled in your wallet.");
+      } else if (msg.includes("insufficient") || msg.includes("0x1")) {
+        setErrorMessage("Insufficient $BATON balance in your wallet to complete the burn.");
+      } else {
+        setErrorMessage(msg || "Failed to execute burn transaction.");
       }
-      setErrorMessage(message);
+    } finally {
+      setBurning(false);
     }
   };
-
-  const isProcessing =
-    burnState === "awaiting_approval" || burnState === "confirming";
 
   return (
     <div
       onClick={onClose}
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-white dark:bg-black/80 backdrop-blur-md overflow-y-auto animate-in fade-in duration-200"
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-in fade-in duration-150 font-mono select-none cursor-pointer"
     >
       <div
         onClick={(e) => e.stopPropagation()}
-        className="w-full max-w-md max-h-[90vh] overflow-y-auto bg-[#111318]/95 border border-zinc-200 dark:border-white/10 rounded-2xl p-6 sm:p-7 space-y-5 shadow-2xl shadow-black/80 relative my-auto transition-all"
+        className="bg-white dark:bg-[#0D0E12] border border-amber-500/30 rounded-3xl w-full max-w-lg p-6 sm:p-7 space-y-5 shadow-2xl relative overflow-hidden cursor-default"
       >
-        {/* Modal Header: full dynamic title without truncate */}
-        <div className="flex items-start justify-between pb-3.5 border-b border-zinc-200 dark:border-white/10 gap-3">
-          <div className="flex items-start gap-3 flex-1 min-w-0">
-            <div className="w-10 h-10 rounded-xl bg-orange-500/15 border border-orange-500/30 flex items-center justify-center text-orange-400 shadow-[0_0_15px_rgba(249,115,22,0.25)] shrink-0 mt-0.5">
-              <Flame className="w-5 h-5 fill-current animate-pulse" />
+        {/* Top Glow */}
+        <div className="absolute top-0 right-0 -mr-20 -mt-20 w-60 h-60 bg-amber-500/10 rounded-full blur-3xl pointer-events-none" />
+
+        {/* ── Modal Header ──────────────────────────────────────────────── */}
+        <div className="flex items-center justify-between border-b border-zinc-200 dark:border-white/10 pb-4">
+          <div className="flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded-xl bg-orange-500/20 text-orange-400 font-bold flex items-center justify-center">
+              <Flame className="w-4 h-4 fill-current text-orange-500" />
             </div>
-            <div className="flex-1 min-w-0">
-              <h3 className="font-archivo text-base sm:text-lg text-zinc-950 dark:text-white font-black tracking-wide uppercase leading-snug break-words">
-                {modalTitle}
+            <div>
+              <h3 className="font-bold text-sm sm:text-base text-zinc-950 dark:text-white uppercase tracking-wider">
+                Burn $BATON &amp; Boost Rank
               </h3>
-              <p className="font-space text-[11px] sm:text-xs text-zinc-500 dark:text-zinc-400 mt-1 leading-relaxed break-words">
-                {modalSubtitle}
-              </p>
+              <span className="text-[10px] text-zinc-500 block">
+                Permanent Deflationary Ranking Auction
+              </span>
             </div>
           </div>
 
           <button
+            type="button"
             onClick={onClose}
-            disabled={isProcessing}
-            className="p-1.5 rounded-xl border border-zinc-200 dark:border-white/10 text-zinc-500 dark:text-zinc-400 hover:text-white hover:border-white/20 transition-colors disabled:opacity-50 shrink-0 mt-0.5 cursor-pointer"
-            title="Close modal"
+            className="p-1.5 rounded-xl hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-400 hover:text-zinc-950 dark:hover:text-white transition-colors cursor-pointer"
           >
-            <X className="w-4 h-4" />
+            <X className="w-5 h-5" />
           </button>
         </div>
 
-        {/* Target Token Künyesi / Info Card */}
-        <div className="p-3.5 rounded-xl bg-white dark:bg-zinc-950/70 border border-zinc-200 dark:border-white/10 space-y-2 font-mono">
+        {/* ── Target Token Info Card ─────────────────────────────────────── */}
+        <div className="bg-zinc-50 dark:bg-zinc-900/60 border border-zinc-200 dark:border-white/5 rounded-2xl p-4 space-y-2">
+          <span className="text-[10px] text-zinc-500 uppercase tracking-wider font-bold block">
+            Target Token for Boost
+          </span>
           <div className="flex items-center justify-between gap-3">
-            <div className="flex items-center gap-2.5 min-w-0">
-              {displayImage ? (
-                <div className="w-8 h-8 rounded-lg overflow-hidden border border-zinc-200 dark:border-white/10 bg-zinc-50 dark:bg-zinc-900 shrink-0">
-                  <Image
-                    src={displayImage}
-                    alt={displayName || "token"}
-                    width={32}
-                    height={32}
-                    className="w-full h-full object-cover"
-                    unoptimized
-                  />
-                </div>
+            <div className="flex items-center gap-3 min-w-0">
+              {coin.imageUrl ? (
+                <img
+                  src={coin.imageUrl}
+                  alt={coin.name}
+                  className="w-10 h-10 rounded-xl object-cover border border-white/10 shrink-0"
+                />
               ) : (
-                <div className="w-8 h-8 rounded-lg bg-orange-500/20 border border-orange-500/30 flex items-center justify-center text-xs font-bold text-orange-400 shrink-0 uppercase">
-                  {(displaySymbol || displayName || "T").slice(0, 2)}
+                <div className="w-10 h-10 rounded-xl bg-amber-500/20 text-amber-400 font-bold flex items-center justify-center text-sm shrink-0">
+                  ${coin.ticker.slice(0, 3)}
                 </div>
               )}
-
               <div className="min-w-0">
-                <div className="flex items-center gap-1.5">
-                  <span className="font-bold text-zinc-950 dark:text-white text-xs truncate">
-                    {displaySymbol ? `$${displaySymbol.toUpperCase()}` : shortMint}
-                  </span>
-                  {displayName && displayName !== displaySymbol && (
-                    <span className="text-[11px] text-zinc-500 dark:text-zinc-400 truncate">
-                      ({displayName})
-                    </span>
-                  )}
-                </div>
-                {metaLoading && (
-                  <span className="text-[10px] text-zinc-500 flex items-center gap-1">
-                    <Loader2 className="w-2.5 h-2.5 animate-spin" />
-                    Fetching metadata…
-                  </span>
-                )}
+                <span className="font-extrabold text-sm text-zinc-950 dark:text-white block truncate">
+                  {coin.name} (${coin.ticker})
+                </span>
+                <span className="text-[11px] text-zinc-500 font-mono truncate block">
+                  {coin.mintAddress ? `${coin.mintAddress.slice(0, 6)}…${coin.mintAddress.slice(-6)}` : "—"}
+                </span>
               </div>
             </div>
 
-            <div className="flex items-center gap-1.5 shrink-0">
-              <a
-                href={`https://pump.fun/coin/${coin.mintAddress}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="px-2 py-1 rounded-lg bg-white/5 hover:bg-white/10 border border-zinc-200 dark:border-white/10 text-lime-400 hover:text-lime-300 text-[10px] font-bold transition-colors inline-flex items-center gap-1"
-                title="Pump.fun"
-              >
-                <span>Pump</span>
-                <ExternalLink className="w-2.5 h-2.5" />
-              </a>
-              <a
-                href={`https://dexscreener.com/solana/${coin.mintAddress}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="px-2 py-1 rounded-lg bg-white/5 hover:bg-white/10 border border-zinc-200 dark:border-white/10 text-zinc-700 dark:text-zinc-300 hover:text-white text-[10px] font-bold transition-colors inline-flex items-center gap-1"
-                title="DexScreener"
-              >
-                <span>DEX</span>
-                <ExternalLink className="w-2.5 h-2.5" />
-              </a>
-            </div>
-          </div>
-
-          {/* CA row with copy button */}
-          <div className="flex items-center justify-between gap-2 pt-2 border-t border-zinc-100 dark:border-white/5 text-[11px] text-zinc-500 dark:text-zinc-400">
-            <span className="text-zinc-500 text-[10px] uppercase tracking-wider">
-              CA:
-            </span>
-            <div className="flex items-center gap-1.5 min-w-0">
-              <span className="font-mono text-zinc-700 dark:text-zinc-300 truncate text-[10px]">
-                {coin.mintAddress}
-              </span>
+            {coin.mintAddress && (
               <button
                 type="button"
                 onClick={handleCopyCA}
-                className="p-1 hover:text-orange-400 transition-colors text-zinc-500 shrink-0"
-                title="Copy Contract Address"
+                className="p-2 rounded-xl bg-zinc-200 dark:bg-zinc-800 hover:bg-amber-500/20 text-zinc-700 dark:text-zinc-300 hover:text-amber-400 transition-colors cursor-pointer shrink-0"
+                title="Copy Token CA"
               >
-                {copiedCA ? (
-                  <Check className="w-3 h-3 text-emerald-400" />
-                ) : (
-                  <Copy className="w-3 h-3" />
-                )}
+                {copiedCA ? <Check className="w-4 h-4 text-emerald-400" /> : <Copy className="w-4 h-4" />}
               </button>
+            )}
+          </div>
+        </div>
+
+        {/* ── Burn Amount Input ──────────────────────────────────────────── */}
+        <div className="bg-zinc-50 dark:bg-zinc-900/60 border border-zinc-200 dark:border-white/5 rounded-2xl p-4 space-y-2.5">
+          <div className="flex justify-between items-center text-[11px] text-zinc-500">
+            <span>$BATON AMOUNT TO BURN</span>
+            <span className="text-amber-500 dark:text-amber-400 font-bold">
+              100% Permanently Burned
+            </span>
+          </div>
+
+          <div className="flex items-center justify-between gap-2 bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-white/10 rounded-xl px-3 py-2">
+            <input
+              type="number"
+              min="1"
+              value={amount || ""}
+              onChange={(e) => setAmount(Math.max(0, parseInt(e.target.value) || 0))}
+              placeholder="50,000"
+              className="bg-transparent text-xl font-black text-zinc-950 dark:text-white outline-none w-full font-mono placeholder:text-zinc-600"
+            />
+            <span className="font-extrabold text-xs text-amber-500 shrink-0">
+              $BATON
+            </span>
+          </div>
+
+          {/* Preset Buttons */}
+          <div className="flex gap-1.5 flex-wrap">
+            {[10000, 50000, 100000, 500000].map((preset) => (
+              <button
+                key={preset}
+                type="button"
+                onClick={() => setAmount(preset)}
+                className={`text-[10px] px-2.5 py-1 rounded-lg border transition-colors cursor-pointer font-bold ${
+                  amount === preset
+                    ? "border-amber-500/50 bg-amber-500/20 text-amber-400"
+                    : "border-zinc-200 dark:border-white/5 bg-white dark:bg-zinc-900 text-zinc-500 hover:text-zinc-200"
+                }`}
+              >
+                +{formatNumber(preset)}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* ── Estimated Rank Impact Badge ────────────────────────────────── */}
+        <div className="flex items-center justify-between p-3 rounded-xl bg-zinc-50 dark:bg-zinc-900/50 border border-zinc-200 dark:border-white/5 text-xs">
+          <span className="text-zinc-500 flex items-center gap-1 font-bold">
+            <TrendingUp className="w-3.5 h-3.5 text-amber-400" />
+            ESTIMATED IMPACT:
+          </span>
+          <span className={`px-2.5 py-0.5 rounded-md font-extrabold text-[11px] border ${rankImpact.color}`}>
+            {rankImpact.label}
+          </span>
+        </div>
+
+        {/* ── Dead Wallet Address Display ────────────────────────────────── */}
+        <div className="p-3 rounded-xl bg-zinc-50 dark:bg-zinc-900/40 border border-zinc-200 dark:border-white/5 space-y-1 text-xs">
+          <span className="text-[10px] text-zinc-500 uppercase tracking-wider block font-bold">
+            Verifiable Solana Dead Wallet (Incinerator)
+          </span>
+          <div className="flex items-center justify-between gap-2 text-zinc-600 dark:text-zinc-400 font-mono text-[11px]">
+            <span className="truncate max-w-[280px]">{DEAD_WALLET}</span>
+            <div className="flex items-center gap-1.5 shrink-0">
+              <button
+                type="button"
+                onClick={handleCopyDeadWallet}
+                className="hover:text-amber-400 transition-colors p-0.5 cursor-pointer"
+                title="Copy Dead Wallet Address"
+              >
+                {copiedDeadWallet ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
+              </button>
+              <a
+                href={`https://solscan.io/account/${DEAD_WALLET}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="hover:text-amber-400 transition-colors p-0.5"
+                title="View on Solscan"
+              >
+                <ExternalLink className="w-3.5 h-3.5" />
+              </a>
             </div>
           </div>
         </div>
 
-        {/* Success State Screen */}
-        {burnState === "success" && txSignature ? (
-          <div className="py-6 space-y-6 text-center font-mono animate-in zoom-in-95 duration-200">
-            <div className="w-16 h-16 rounded-2xl bg-lime-400/15 border border-lime-400/40 text-lime-400 mx-auto flex items-center justify-center shadow-[0_0_30px_rgba(163,230,53,0.3)]">
-              <CheckCircle2 className="w-8 h-8" />
-            </div>
-
-            <div className="space-y-2">
-              <h4 className="font-archivo text-2xl text-zinc-950 dark:text-white uppercase font-black">
-                BURN CONFIRMED ON SOLANA!
-              </h4>
-              <p className="text-xs text-zinc-500 dark:text-zinc-400 max-w-sm mx-auto font-space">
-                <span className="text-lime-400 font-bold">
-                  {amount.toLocaleString()} $BATON
-                </span>{" "}
-                permanently burned on-chain to boost{" "}
-                <strong className="text-zinc-950 dark:text-white">
-                  {displaySymbol ? `$${displaySymbol.toUpperCase()}` : shortMint}
-                </strong>
-                .
-              </p>
-            </div>
-
-            {/* Solscan Link Box */}
-            <div className="p-3.5 rounded-xl border border-zinc-200 dark:border-white/10 bg-zinc-50 dark:bg-zinc-900/60 text-xs flex items-center justify-between gap-3">
-              <span className="text-zinc-500 dark:text-zinc-400 truncate font-mono text-[11px]">
-                {txSignature.slice(0, 8)}...{txSignature.slice(-8)}
-              </span>
-              <a
-                href={`https://solscan.io/tx/${txSignature}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-lime-400 hover:underline inline-flex items-center gap-1 font-bold shrink-0 text-xs"
-              >
-                <span>View on Solscan</span>
-                <ExternalLink className="w-3.5 h-3.5" />
-              </a>
-            </div>
-
-            <button
-              onClick={onClose}
-              className="w-full py-3.5 rounded-xl bg-lime-400 text-black font-bold uppercase tracking-wider text-xs shadow-[0_0_20px_rgba(163,230,53,0.3)] hover:bg-lime-300 transition-all cursor-pointer"
-            >
-              Done &amp; Return
-            </button>
+        {/* ── Error & Success Banners ────────────────────────────────────── */}
+        {errorMessage && (
+          <div className="p-3 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-400 text-xs flex items-start gap-2 animate-in fade-in">
+            <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
+            <span className="leading-tight">{errorMessage}</span>
           </div>
-        ) : (
-          <>
-            {/* 1. Dynamic Tier Progress Bar with Live Simulation Preview */}
-            <div className="p-3.5 rounded-xl border border-zinc-200 dark:border-white/10 bg-zinc-50 dark:bg-zinc-900/50 space-y-2.5 font-mono">
-              <div className="flex items-center justify-between text-xs">
-                <div className="flex items-center gap-1.5 text-zinc-500 dark:text-zinc-400">
-                  <Zap className="w-3.5 h-3.5 text-orange-400" />
-                  <span>Next Tier:</span>
-                  <span className="text-zinc-950 dark:text-white font-bold uppercase">
-                    {nextTierName} ({nextTierThreshold.toLocaleString()} $BATON)
-                  </span>
-                </div>
-                <div className="flex items-center gap-1.5">
-                  <span className="text-orange-400 font-bold">
-                    {progressPercent}%
-                  </span>
-                  {amount > 0 && simulatedProgressPercent > progressPercent && (
-                    <span className="text-lime-400 text-[11px] font-bold">
-                      → {simulatedProgressPercent}%
-                    </span>
-                  )}
-                </div>
-              </div>
-
-              {/* Progress Track: base fill + simulated boost preview */}
-              <div className="w-full h-3 rounded-full bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-white/10 overflow-hidden p-0.5 relative flex">
-                {/* Existing Burned Base */}
-                <div
-                  className="h-full rounded-l-full bg-gradient-to-r from-orange-500 via-amber-400 to-orange-400 shadow-[0_0_12px_rgba(249,115,22,0.5)] transition-all duration-300"
-                  style={{ width: `${progressPercent}%` }}
-                />
-                {/* Simulated Boost Delta */}
-                {amount > 0 && simulatedProgressPercent > progressPercent && (
-                  <div
-                    className="h-full bg-gradient-to-r from-lime-400 to-emerald-400 animate-pulse shadow-[0_0_10px_rgba(163,230,53,0.8)] transition-all duration-300 rounded-r-full"
-                    style={{
-                      width: `${simulatedProgressPercent - progressPercent}%`,
-                    }}
-                  />
-                )}
-              </div>
-
-              {/* Dynamic Stats Row */}
-              <div className="flex items-center justify-between text-[10px] text-zinc-500 dark:text-zinc-400 pt-0.5">
-                <span>
-                  Current:{" "}
-                  <strong className="text-zinc-800 dark:text-zinc-200">
-                    {currentBurned.toLocaleString()} $BATON
-                  </strong>
-                </span>
-
-                {remainingToNext > 0 ? (
-                  <span>
-                    Remaining:{" "}
-                    <strong className="text-orange-400 font-semibold">
-                      {remainingToNext.toLocaleString()} $BATON
-                    </strong>
-                  </span>
-                ) : (
-                  <span className="text-lime-400 font-bold">
-                    ★ Diamond Rank Reached
-                  </span>
-                )}
-              </div>
-
-              {/* Tier Upgrade Live Banner if simulated burn achieves next rank */}
-              {willUpgradeTier && (
-                <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-lime-400/10 border border-lime-400/30 text-lime-400 text-[10px] font-bold animate-pulse">
-                  <Sparkles className="w-3 h-3 shrink-0" />
-                  <span>
-                    This burn (+{amount.toLocaleString()} $BATON) unlocks the{" "}
-                    {simulatedTierLabel} Tier!
-                  </span>
-                </div>
-              )}
-            </div>
-
-            {/* 2. Amount Input & Wallet Balance */}
-            <div className="space-y-2.5 font-mono">
-              <div className="flex items-center justify-between text-xs">
-                <label className="text-zinc-500 dark:text-zinc-400 font-medium">
-                  Burn Amount ($BATON):
-                </label>
-                {connected && (
-                  <div className="text-zinc-500 dark:text-zinc-400 flex items-center gap-1 text-[11px]">
-                    <Wallet className="w-3 h-3 text-orange-400" />
-                    <span>Balance:</span>
-                    <span className="text-zinc-950 dark:text-white font-bold">
-                      {balanceLoading
-                        ? "..."
-                        : `${(batonBalance ?? 0).toLocaleString()} $BATON`}
-                    </span>
-                  </div>
-                )}
-              </div>
-
-              <div className="relative">
-                <input
-                  type="number"
-                  min="1"
-                  value={amount || ""}
-                  onChange={(e) => setAmount(Number(e.target.value) || 0)}
-                  placeholder="Enter amount..."
-                  disabled={isProcessing}
-                  className="w-full bg-white dark:bg-zinc-950/80 border border-zinc-200 dark:border-white/10 rounded-xl px-4 py-3 text-base font-bold text-zinc-950 dark:text-white placeholder:text-zinc-600 focus:border-orange-500 focus:outline-none transition-colors"
-                />
-                <span className="absolute right-4 top-3.5 text-xs font-black text-orange-400 uppercase tracking-wider pointer-events-none">
-                  $BATON
-                </span>
-              </div>
-
-              {/* Quick Increment Buttons */}
-              <div className="grid grid-cols-4 gap-2 pt-0.5">
-                {quickAmounts.map((q) => (
-                  <button
-                    key={q}
-                    type="button"
-                    onClick={() => setAmount((prev) => prev + q)}
-                    disabled={isProcessing}
-                    className="py-1.5 rounded-lg border border-zinc-200 dark:border-white/10 bg-zinc-50 dark:bg-zinc-900/60 hover:border-white/25 text-zinc-700 dark:text-zinc-300 hover:text-white text-xs font-semibold transition-colors cursor-pointer"
-                  >
-                    +{q.toLocaleString()}
-                  </button>
-                ))}
-                <button
-                  type="button"
-                  onClick={handleMaxClick}
-                  disabled={isProcessing || !batonBalance}
-                  className="py-1.5 rounded-lg border border-orange-500/40 bg-orange-500/10 text-orange-400 font-bold text-xs hover:bg-orange-500 hover:text-white disabled:opacity-40 transition-all cursor-pointer"
-                >
-                  MAX
-                </button>
-              </div>
-            </div>
-
-            {/* Error Display */}
-            {errorMessage && (
-              <div className="p-3 rounded-xl border border-rose-500/30 bg-rose-500/10 text-rose-400 text-xs font-mono flex items-center gap-2">
-                <AlertCircle className="w-4 h-4 shrink-0" />
-                <span>{errorMessage}</span>
-              </div>
-            )}
-
-            {/* Action Buttons */}
-            <div className="flex gap-3 pt-1 font-mono">
-              {!connected ? (
-                <div className="w-full flex flex-col items-center gap-2">
-                  <WalletMultiButton />
-                  <p className="text-[11px] text-zinc-500">
-                    Connect your Solana wallet to execute on-chain burn.
-                  </p>
-                </div>
-              ) : (
-                <>
-                  <button
-                    type="button"
-                    onClick={onClose}
-                    disabled={isProcessing}
-                    className="flex-1 py-3 rounded-xl border border-zinc-200 dark:border-white/10 bg-zinc-50 dark:bg-zinc-900/60 text-zinc-700 dark:text-zinc-300 hover:text-white text-xs font-bold uppercase tracking-wider transition-colors disabled:opacity-50 cursor-pointer"
-                  >
-                    Cancel
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={handleBurnSubmit}
-                    disabled={isProcessing || amount <= 0}
-                    className="flex-[2] py-3 rounded-xl bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-zinc-950 dark:text-white text-xs font-black uppercase tracking-wider shadow-[0_0_20px_rgba(249,115,22,0.3)] active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center justify-center gap-2 cursor-pointer"
-                  >
-                    {burnState === "awaiting_approval" ? (
-                      <>
-                        <Loader2 className="w-4 h-4 animate-spin" />
-                        <span>Awaiting Wallet...</span>
-                      </>
-                    ) : burnState === "confirming" ? (
-                      <>
-                        <Loader2 className="w-4 h-4 animate-spin" />
-                        <span>Confirming On-Chain...</span>
-                      </>
-                    ) : (
-                      <>
-                        <Flame className="w-4 h-4 fill-current" />
-                        <span>Confirm Burn 🔥</span>
-                      </>
-                    )}
-                  </button>
-                </>
-              )}
-            </div>
-          </>
         )}
+
+        {txSignature && (
+          <div className="p-3 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs flex flex-col gap-1 animate-in fade-in">
+            <div className="flex items-center gap-1.5 font-bold">
+              <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+              <span>Burn Successful! {formatNumber(amount)} $BATON permanently burned.</span>
+            </div>
+            <a
+              href={`https://solscan.io/tx/${txSignature}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="underline text-[10px] text-emerald-300 flex items-center gap-1"
+            >
+              <span>View On-Chain Proof on Solscan</span>
+              <ExternalLink className="w-3 h-3" />
+            </a>
+          </div>
+        )}
+
+        {/* ── Burn & Boost Now CTA Button ────────────────────────────────── */}
+        <button
+          type="button"
+          onClick={handleExecuteBurn}
+          disabled={burning || amount <= 0}
+          className={`w-full py-3.5 rounded-xl font-extrabold text-xs uppercase tracking-wider transition-all flex items-center justify-center gap-2 shadow-lg cursor-pointer ${
+            !connected
+              ? "bg-amber-500 hover:bg-amber-400 text-zinc-950 shadow-amber-500/20"
+              : burning
+              ? "bg-amber-500/50 text-zinc-950 cursor-wait"
+              : "bg-gradient-to-r from-amber-500 via-orange-500 to-amber-500 hover:from-amber-400 hover:to-orange-400 text-zinc-950 shadow-amber-500/25 active:scale-[0.99]"
+          }`}
+        >
+          {burning ? (
+            <>
+              <span className="w-3.5 h-3.5 border-2 border-zinc-950 border-t-transparent rounded-full animate-spin" />
+              <span>SIGNING &amp; BURNING ON-CHAIN…</span>
+            </>
+          ) : !connected ? (
+            <span>CONNECT WALLET TO BURN &amp; BOOST</span>
+          ) : (
+            <>
+              <Flame className="w-4 h-4 fill-current" />
+              <span>Burn &amp; Boost Now ({formatNumber(amount)} $BATON)</span>
+            </>
+          )}
+        </button>
       </div>
     </div>
   );
 };
 
-export { BurnBoostModal } from "@/components/modals/BurnBoostModal";
 export default BurnModal;

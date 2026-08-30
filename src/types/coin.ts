@@ -22,4 +22,6 @@ export interface Coin {
   totalBurnedBaton: number;
   burnLevel: BurnLevel;
   pairAddress?: string;
+  liquidityUsd?: number;
+  dexScreenerUrl?: string;
 }

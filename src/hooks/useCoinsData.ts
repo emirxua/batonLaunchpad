@@ -1,88 +1,57 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import useSWR from "swr";
 import { Coin } from "@/types/coin";
-import { getFallbackCoins } from "@/lib/tracked-coins";
+import { getBurnLevel } from "@/lib/burn-levels";
 
-export interface CoinsDataState {
-  coins: Coin[];
-  featuredCoin: Coin | null;
-  isLoading: boolean;
-  isError: boolean;
-  error: string | null;
-  lastUpdated: Date | null;
-  refresh: () => Promise<void>;
-}
+const fetcher = (url: string) => fetch(url).then((r) => r.json());
 
-export function useCoinsData(pollingIntervalMs: number = 60_000): CoinsDataState {
-  const [coins, setCoins] = useState<Coin[]>(() => getFallbackCoins());
-  const [isLoading, setIsLoading] = useState<boolean>(true);
-  const [isError, setIsError] = useState<boolean>(false);
-  const [error, setError] = useState<string | null>(null);
-  const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
-
-  const fetchCoins = useCallback(async (showLoading: boolean = false) => {
-    if (showLoading) setIsLoading(true);
-    setIsError(false);
-    setError(null);
-
-    try {
-      const response = await fetch("/api/coins", {
-        headers: {
-          Accept: "application/json",
-        },
-      });
-
-      if (!response.ok) {
-        throw new Error(`API returned HTTP status ${response.status}`);
-      }
-
-      const result = await response.json();
-
-      if (result.success && Array.isArray(result.data) && result.data.length > 0) {
-        setCoins(result.data);
-        setLastUpdated(new Date());
-      } else {
-        throw new Error(result.error || "Invalid response format from /api/coins");
-      }
-    } catch (err: unknown) {
-      console.warn("useCoinsData: Failed to refresh coins data, keeping cache.", err);
-      setIsError(true);
-      setError(err instanceof Error ? err.message : "Error fetching coins data");
-    } finally {
-      setIsLoading(false);
+export function useCoinsData(_interval?: number) {
+  const { data, error, isLoading, mutate } = useSWR(
+    "/api/coins",
+    fetcher,
+    {
+      refreshInterval: 30_000,
+      revalidateOnFocus: false,
+      dedupingInterval: 15_000,
     }
-  }, []);
+  );
 
-  // Initial fetch
-  useEffect(() => {
-    fetchCoins(true);
-  }, [fetchCoins]);
-
-  // Polling every 30s
-  useEffect(() => {
-    if (pollingIntervalMs <= 0) return;
-
-    const interval = setInterval(() => {
-      fetchCoins(false);
-    }, pollingIntervalMs);
-
-    return () => clearInterval(interval);
-  }, [fetchCoins, pollingIntervalMs]);
-
-  // Identify featured coin ($BATON or top burned)
-  const featuredCoin =
-    coins.find((c) => c.ticker === "BATON" || c.id === "baton-primary") ||
-    coins[0] ||
-    null;
+  const rawCoins: Coin[] = (data?.data || []).map((t: any) => {
+    const burned = t.totalBurnedBaton ?? 0;
+    return {
+      id: t.id || `coin-${t.mintAddress}`,
+      name: t.name || "Baton",
+      ticker: t.ticker || "BATON",
+      mintAddress: t.mintAddress || "2vdc4owf1MPz54jJCN61y3QSKqjcPpr32wJ9qKkmpump",
+      imageUrl: t.imageUrl,
+      headerUrl: t.headerUrl,
+      iconColor: t.iconColor || "#ff3d7a",
+      category: t.category || "Mascots",
+      description: t.description || "",
+      website: t.website,
+      twitter: t.twitter,
+      viewsCount: t.viewsCount || 0,
+      marketCap: t.marketCap || 0,
+      volume24h: t.volume24h || 0,
+      change24h: t.change24h || 0,
+      priceUsd: t.priceUsd || 0,
+      sparkline: t.sparkline || [],
+      totalBurnedBaton: burned,
+      burnLevel: t.burnLevel || getBurnLevel(burned),
+      pairAddress: t.pairAddress,
+      liquidityUsd: t.liquidityUsd || 0,
+    };
+  });
 
   return {
-    coins,
-    featuredCoin,
+    coins: rawCoins,
+    featuredCoin: rawCoins[0] || null,
+    totalCoinsCount: rawCoins.length,
+    lastUpdated: new Date(),
     isLoading,
-    isError,
     error,
-    lastUpdated,
-    refresh: () => fetchCoins(true),
+    refresh: mutate,
+    mutate,
   };
 }

@@ -15,10 +15,6 @@ export interface TrackedCoinConfig {
   twitter?: string;
   viewsCount?: number;
   totalBurnedBaton: number;
-  fallbackMarketCap: number;
-  fallbackVolume24h: number;
-  fallbackChange24h: number;
-  fallbackPriceUsd: number;
   sparkline: number[];
 }
 
@@ -33,24 +29,20 @@ export const TRACKED_COINS: TrackedCoinConfig[] = [
     name: "Baton — The Premier Solana Burn Engine",
     ticker: "BATON",
     mintAddress: "2vdc4owf1MPz54jJCN61y3QSKqjcPpr32wJ9qKkmpump",
-    imageUrl: "https://cdn.dexscreener.com/cms/images/B_1EShunz2lCb0jz?width=800&height=800&quality=95&format=auto",
+    imageUrl: "/images/baton-logo.png",
     headerUrl: "https://cdn.dexscreener.com/cms/images/vVNqFVaQ0jWxKguy?width=1500&height=500&quality=95&format=auto",
     iconColor: "#ff3d7a",
     category: "Mascots",
     description: "Official Solana mascot directory and on-chain burn engine. Burn $BATON to overtake #1 rank.",
     website: "https://pump.fun/coin/2vdc4owf1MPz54jJCN61y3QSKqjcPpr32wJ9qKkmpump",
     twitter: "https://x.com/buybaton",
-    viewsCount: 41194,
+    viewsCount: 0,
     totalBurnedBaton: 0,
-    fallbackMarketCap: 12_435,
-    fallbackVolume24h: 653,
-    fallbackChange24h: 16.09,
-    fallbackPriceUsd: 0.00001246,
-    sparkline: [10, 12, 11, 14, 13, 16, 18],
+    sparkline: [],
   },
 ];
 
-export function getFallbackCoins(): Coin[] {
+export function getTrackedCoins(): Coin[] {
   return TRACKED_COINS.map((tc) => ({
     id: tc.id,
     name: tc.name,
@@ -63,11 +55,11 @@ export function getFallbackCoins(): Coin[] {
     description: tc.description,
     website: tc.website,
     twitter: tc.twitter,
-    viewsCount: tc.viewsCount,
-    priceUsd: tc.fallbackPriceUsd,
-    marketCap: tc.fallbackMarketCap,
-    volume24h: tc.fallbackVolume24h,
-    change24h: tc.fallbackChange24h,
+    viewsCount: tc.viewsCount || 0,
+    priceUsd: 0,
+    marketCap: 0,
+    volume24h: 0,
+    change24h: 0,
     sparkline: tc.sparkline,
     totalBurnedBaton: tc.totalBurnedBaton,
     burnLevel: getBurnLevel(tc.totalBurnedBaton),

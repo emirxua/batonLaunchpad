@@ -40,6 +40,8 @@ export interface PumpCalloutListResponse {
 export interface CalloutCard extends PumpCallout {
   callerWallet: string;   // = userId
   callerLabel: string;    // human label from watchlist
+  coinSymbol?: string;
+  coinName?: string;
 }
 
 // ─── API route response shape ────────────────────────────────────────────────

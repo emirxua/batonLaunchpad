@@ -1,8 +1,11 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { TopHolder } from "@/app/api/token-stats/route";
 import { formatNumber } from "@/lib/utils";
+import { useTokenStats } from "@/hooks/useTokenStats";
+import { useConnection } from "@solana/wallet-adapter-react";
+import { PublicKey } from "@solana/web3.js";
 import {
   Users,
   ExternalLink,
@@ -14,6 +17,7 @@ import {
 } from "lucide-react";
 
 interface TopHoldersProps {
+  mint?: string;
   holders?: TopHolder[];
   totalHoldersCount?: number;
   isLoading?: boolean;
@@ -22,19 +26,27 @@ interface TopHoldersProps {
 }
 
 export const TopHolders: React.FC<TopHoldersProps> = React.memo(({
-  holders = [],
-  totalHoldersCount = 0,
-  isLoading = false,
+  mint = "2vdc4owf1MPz54jJCN61y3QSKqjcPpr32wJ9qKkmpump",
+  holders: propHolders,
+  totalHoldersCount: propTotalCount,
+  isLoading: propLoading = false,
   onRefresh,
-  lastUpdated,
+  lastUpdated: propLastUpdated,
 }) => {
   const [copiedAddress, setCopiedAddress] = useState<string | null>(null);
+  const { stats, topHolders: liveHolders, totalHoldersCount: liveCount, isLoading: liveLoading, refresh: refreshStats, lastUpdated: liveLastUpdated } = useTokenStats(15_000);
+
+  const holders = propHolders !== undefined && propHolders.length > 0 ? propHolders : liveHolders;
+  const totalHoldersCount = propTotalCount !== undefined && propTotalCount > 0 ? propTotalCount : liveCount;
+  const isLoading = propHolders !== undefined ? propLoading : (liveLoading && holders.length === 0);
+  const lastUpdated = propLastUpdated || liveLastUpdated;
 
   const handleCopy = (address: string) => {
     navigator.clipboard.writeText(address);
     setCopiedAddress(address);
     setTimeout(() => setCopiedAddress(null), 2000);
   };
+
 
   return (
     <section className="rounded-3xl border border-line bg-bg-card p-6 sm:p-8 space-y-5 shadow-xl relative overflow-hidden content-auto">

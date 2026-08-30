@@ -1,37 +1,36 @@
+@import "@solana/wallet-adapter-react-ui/styles.css";
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
 :root {
-  --bg: #FAF9F6;
-  --bg-raised: #FFFFFF;
-  --bg-card: #FFFFFF;
-  --line: #E5E7EB;
-  --text: #111827;
-  --text-dim: #4B5563;
+  --bg: #0B0E14;
+  --bg-raised: #111620;
+  --bg-card: #151B26;
+  --line: #1E2638;
+  --text: #F3F4F6;
+  --text-dim: #9CA3AF;
   --text-faint: #6B7280;
-  --acid: #F97316;
-  --acid-dim: #EA580C;
-  --magenta: #EF4444;
-  --magenta-dim: #DC2626;
-  --up: #10B981;
-  --down: #EF4444;
+  --solana-green: #14F195;
+  --solana-purple: #9945FF;
+  --amber: #F59E0B;
+  --up: #14F195;
+  --down: #F43F5E;
 }
 
 .dark {
-  --bg: #0B0C0E;
-  --bg-raised: #15171C;
-  --bg-card: #15171C;
-  --line: #22262F;
-  --text: #FFFFFF;
+  --bg: #0B0E14;
+  --bg-raised: #0D1117;
+  --bg-card: #151A23;
+  --line: #1F2736;
+  --text: #F9FAFB;
   --text-dim: #9CA3AF;
   --text-faint: #6B7280;
-  --acid: #F97316;
-  --acid-dim: #EA580C;
-  --magenta: #F43F5E;
-  --magenta-dim: #E11D48;
-  --up: #10B981;
-  --down: #EF4444;
+  --solana-green: #14F195;
+  --solana-purple: #9945FF;
+  --amber: #F59E0B;
+  --up: #14F195;
+  --down: #F43F5E;
 }
 
 * {
@@ -39,10 +38,9 @@
 }
 
 html, body {
-  background-color: var(--bg);
+  background-color: #0B0E14;
   color: var(--text);
-  transition: background-color 0.25s ease, color 0.25s ease, border-color 0.25s ease;
-  font-family: var(--font-space), -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  font-family: var(--font-space), var(--font-mono), -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
   min-height: 100vh;
   margin: 0;
   padding: 0;
@@ -52,117 +50,82 @@ html, body {
   text-rendering: optimizeLegibility;
 }
 
-/* Custom Thin Scrollbar */
+/* Custom Cyberpunk Scrollbar */
 ::-webkit-scrollbar {
-  width: 6px;
-  height: 0px;
-}
-
-::-webkit-scrollbar:vertical {
-  height: 6px;
-}
-
-@layer utilities {
-  /* Webkit tarayıcılar (Chrome, Safari) */
-  .no-scrollbar::-webkit-scrollbar {
-    display: none;
-  }
-  /* Firefox & Edge */
-  .no-scrollbar {
-    -ms-overflow-style: none;
-    scrollbar-width: none;
-  }
+  width: 5px;
+  height: 5px;
 }
 
 ::-webkit-scrollbar-track {
-  background: var(--bg);
+  background: #0B0E14;
 }
 
 ::-webkit-scrollbar-thumb {
-  background: var(--line);
+  background: #1F2736;
   border-radius: 9999px;
   transition: background-color 0.2s ease;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: var(--acid);
+  background: #14F195;
 }
 
-/* Firefox Scrollbar */
-* {
-  scrollbar-width: thin;
-  scrollbar-color: var(--line) var(--bg);
+@layer utilities {
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+
+  /* Solana Neon Glow Utilities */
+  .glow-green {
+    box-shadow: 0 0 15px rgba(20, 241, 149, 0.35);
+  }
+
+  .glow-purple {
+    box-shadow: 0 0 15px rgba(153, 69, 255, 0.35);
+  }
+
+  .glow-amber {
+    box-shadow: 0 0 15px rgba(245, 158, 11, 0.35);
+  }
+
+  .border-neon-solana {
+    border-color: rgba(20, 241, 149, 0.4);
+  }
+
+  .btn-cyber {
+    transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+  }
+  .btn-cyber:hover {
+    transform: translateY(-1px) scale(1.01);
+  }
+  .btn-cyber:active {
+    transform: translateY(1px) scale(0.98);
+  }
 }
 
 /* Global Focus Styles */
 *:focus-visible {
-  outline: 2px solid var(--acid) !important;
+  outline: 2px solid #14F195 !important;
   outline-offset: 2px !important;
 }
 
-/* Headings font */
-h1, h2, h3, .font-heading {
-  font-family: var(--font-archivo), sans-serif;
-}
-
-/* Numeric / Price display font */
-.font-mono-num {
-  font-family: var(--font-mono), monospace;
-  font-variant-numeric: tabular-nums;
-}
-
-/* GPU Accelerated Layer & 60 FPS Optimizations */
-.gpu-layer {
-  transform: translateZ(0);
-  will-change: transform;
-  backface-visibility: hidden;
-}
-
-/* Content Visibility for 60 FPS scrolling performance */
-.content-auto {
-  content-visibility: auto;
-  contain-intrinsic-size: 0 350px;
-}
-
-/* Hardware Accelerated Marquee */
-@keyframes marquee-gpu {
-  0% {
-    transform: translate3d(0, 0, 0);
-  }
-  100% {
-    transform: translate3d(-50%, 0, 0);
-  }
+/* Marquee Animations */
+@keyframes marquee {
+  0% { transform: translateX(0%); }
+  100% { transform: translateX(-50%); }
 }
 
 .animate-marquee-gpu {
   display: flex;
   width: max-content;
+  animation: marquee 30s linear infinite;
   will-change: transform;
-  transform: translate3d(0, 0, 0);
-  animation: marquee-gpu 28s linear infinite;
 }
 
 .animate-marquee-gpu:hover {
   animation-play-state: paused;
-}
-
-/* Shimmer Loading Skeleton */
-@keyframes shimmer {
-  0% {
-    background-position: -200% 0;
-  }
-  100% {
-    background-position: 200% 0;
-  }
-}
-
-.skeleton-shimmer {
-  background: linear-gradient(
-    90deg,
-    var(--bg-card) 25%,
-    var(--bg-raised) 50%,
-    var(--bg-card) 75%
-  );
-  background-size: 200% 100%;
-  animation: shimmer 1.8s infinite;
 }

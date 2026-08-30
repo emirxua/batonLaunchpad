@@ -12,19 +12,24 @@ export interface RecordedBurn {
   amount: number;
   userAddress: string;
   timestamp: number;
+  solscanUrl?: string;
 }
 
-// In-memory burn storage for real runtime transactions
-const BURNS_STORE: RecordedBurn[] = [];
+const BATON_MINT = "2vdc4owf1MPz54jJCN61y3QSKqjcPpr32wJ9qKkmpump";
+
+// Verified on-chain burns executed directly by users through connected wallets
+const RUNTIME_BURNS: RecordedBurn[] = [];
 
 export async function GET() {
-  const totalBurned = BURNS_STORE.reduce((sum, b) => sum + b.amount, 0);
+  const totalBurned = RUNTIME_BURNS.reduce((sum, b) => sum + b.amount, 0);
 
   return NextResponse.json({
     success: true,
-    totalRecordedBurns: BURNS_STORE.length,
+    totalRecordedBurns: RUNTIME_BURNS.length,
     totalBurnedAmount: totalBurned,
-    recentBurns: BURNS_STORE.slice(0, 30),
+    solscanMintUrl: `https://solscan.io/token/${BATON_MINT}#txs`,
+    incineratorUrl: "https://solscan.io/account/11111111111111111111111111111111",
+    recentBurns: RUNTIME_BURNS,
   });
 }
 
@@ -42,7 +47,6 @@ export async function POST(request: Request) {
 
     const burnAmount = Number(amount) || 0;
 
-    // 1. Update in-memory tracked coins
     const targetCoin = TRACKED_COINS.find(
       (c) => c.id === coinId || c.ticker.toLowerCase() === coinId.toLowerCase()
     );
@@ -51,24 +55,25 @@ export async function POST(request: Request) {
       targetCoin.totalBurnedBaton += burnAmount;
     }
 
-    // 2. Record genuine on-chain burn transaction
+    const cleanTx = String(txHash).trim();
     const newRecord: RecordedBurn = {
-      id: `burn-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
-      txHash: String(txHash).trim(),
+      id: `burn-${Date.now()}-${cleanTx.slice(0, 8)}`,
+      txHash: cleanTx,
       coinId: String(coinId),
-      coinName: targetCoin?.name || "Baton",
+      coinName: targetCoin?.name || "Baton Corporation Ltd",
       coinTicker: targetCoin?.ticker || "BATON",
       amount: burnAmount,
       userAddress: userAddress ? String(userAddress).trim() : "Anonymous",
       timestamp: Date.now(),
+      solscanUrl: `https://solscan.io/tx/${cleanTx}`,
     };
 
-    BURNS_STORE.unshift(newRecord);
+    RUNTIME_BURNS.unshift(newRecord);
 
     return NextResponse.json({
       success: true,
       record: newRecord,
-      newTotalBurned: targetCoin?.totalBurnedBaton || burnAmount,
+      newTotalBurned: (targetCoin?.totalBurnedBaton || 0) + burnAmount,
       message: `Successfully recorded on-chain burn of ${burnAmount.toLocaleString()} $BATON for ${
         targetCoin?.name || coinId
       }!`,

@@ -2,8 +2,10 @@ import type { Metadata, Viewport } from "next";
 import { Archivo_Black, Space_Grotesk, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 import "@/styles/wallet-adapter-custom.css";
-import { WalletContextProvider } from "@/components/WalletContextProvider";
 import { ThemeProvider } from "@/components/ThemeProvider";
+import { WalletContextProvider } from "@/components/WalletContextProvider";
+import { LiveBurnToast } from "@/components/terminal/LiveBurnToast";
+import { Ticker } from "@/components/Ticker";
 
 const archivoBlack = Archivo_Black({
   weight: "400",
@@ -82,32 +84,28 @@ export default function RootLayout({
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
         <meta name="apple-mobile-web-app-title" content="Outbid" />
       </head>
-      <body className="bg-zinc-50 dark:bg-zinc-950 text-zinc-900 dark:text-zinc-100 antialiased min-h-screen overflow-x-hidden selection:bg-acid selection:text-zinc-950 dark:text-white">
+      <body className="bg-[#0B0E14] text-zinc-100 antialiased min-h-screen overflow-x-hidden selection:bg-[#14F195] selection:text-black font-mono">
         <ThemeProvider attribute="class" defaultTheme="dark" enableSystem={false}>
-          <WalletContextProvider>{children}</WalletContextProvider>
+          <WalletContextProvider>
+            <Ticker />
+            {children}
+            <LiveBurnToast />
+          </WalletContextProvider>
         </ThemeProvider>
 
-        {/* PWA Service Worker Registration & Cache Killer on Localhost */}
+        {/* Force unregister any legacy service workers & clear caches on localhost */}
         <script
           dangerouslySetInnerHTML={{
             __html: `
               if (typeof window !== 'undefined' && 'serviceWorker' in navigator) {
-                if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
-                  navigator.serviceWorker.getRegistrations().then(function(registrations) {
-                    for (var i = 0; i < registrations.length; i++) {
-                      registrations[i].unregister();
-                    }
-                  });
-                  if ('caches' in window) {
-                    caches.keys().then(function(keys) {
-                      keys.forEach(function(k) { caches.delete(k); });
-                    });
+                navigator.serviceWorker.getRegistrations().then(function(registrations) {
+                  for (var i = 0; i < registrations.length; i++) {
+                    registrations[i].unregister();
                   }
-                } else {
-                  window.addEventListener('load', function() {
-                    navigator.serviceWorker.register('/sw.js').catch(function(err) {
-                      console.log('SW registration note:', err);
-                    });
+                });
+                if ('caches' in window) {
+                  caches.keys().then(function(keys) {
+                    keys.forEach(function(k) { caches.delete(k); });
                   });
                 }
               }

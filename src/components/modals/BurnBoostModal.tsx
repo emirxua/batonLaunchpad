@@ -434,7 +434,7 @@ export const BurnBoostModal: React.FC<BurnBoostModalProps> = ({
         message.toLowerCase().includes("rate limit")
       ) {
         message =
-          "Solana RPC ağ yoğunluğu yaşanıyor veya cüzdanda yeterli $BATON bulunamadı. Lütfen tekrar deneyin.";
+          "Solana RPC network is congested or insufficient $BATON balance in your wallet. Please try again.";
       }
       setErrorMessage(message);
     }

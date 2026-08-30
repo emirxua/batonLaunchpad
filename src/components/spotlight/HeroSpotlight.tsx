@@ -3,9 +3,9 @@
 import React, { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import useSWR from "swr";
 import { Coin } from "@/types/coin";
 import { useCoinsData } from "@/hooks/useCoinsData";
+import { useTokenStats } from "@/hooks/useTokenStats";
 import { formatCurrency, formatNumber } from "@/lib/utils";
 import {
   Crown,
@@ -13,18 +13,14 @@ import {
   ArrowRight,
   Copy,
   Check,
-  ExternalLink,
   TrendingUp,
   TrendingDown,
-  Zap,
 } from "lucide-react";
 
 interface HeroSpotlightProps {
   onBoostCoin?: (coin: Coin) => void;
   className?: string;
 }
-
-const lookupFetcher = (url: string) => fetch(url).then((r) => r.json());
 
 export const HeroSpotlight: React.FC<HeroSpotlightProps> = ({
   onBoostCoin,
@@ -33,42 +29,28 @@ export const HeroSpotlight: React.FC<HeroSpotlightProps> = ({
   const { coins, isLoading } = useCoinsData();
   const [copiedCA, setCopiedCA] = useState<boolean>(false);
 
-  // 1. Dynamically select the #1 token with the highest totalBurnedBaton
-  const rankedCoins = [...coins].sort(
-    (a, b) => b.totalBurnedBaton - a.totalBurnedBaton
-  );
-  const top1Coin: Coin | undefined = rankedCoins[0];
+  // 1. On-chain burn data from Solana RPC (15s refresh)
+  const { totalBurned, burnPercentage, isLoading: burnLoading } = useTokenStats(15_000);
 
-  // 2. Fetch live real-time price & DexScreener metadata for the #1 token
-  const { data: liveMeta } = useSWR(
-    top1Coin?.mintAddress
-      ? `/api/token-lookup?mint=${encodeURIComponent(top1Coin.mintAddress)}`
-      : null,
-    lookupFetcher,
-    {
-      refreshInterval: 60_000,
-      dedupingInterval: 30_000,
-      revalidateOnFocus: false,
-      revalidateOnReconnect: false,
-    }
-  );
+  const top1Coin: Coin | null = coins[0] || null;
 
-  if (isLoading || !top1Coin) {
+  if (!top1Coin) {
     return (
-      <div className={`w-full p-6 sm:p-8 rounded-3xl bg-white dark:bg-zinc-950/80 border border-zinc-200 dark:border-white/10 animate-pulse ${className}`}>
-        <div className="h-6 w-48 bg-zinc-800 rounded-full mb-4" />
-        <div className="h-10 w-64 bg-zinc-800 rounded-xl mb-6" />
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 h-20 bg-zinc-50 dark:bg-zinc-900/50 rounded-2xl" />
+      <div className={`relative w-full rounded-3xl p-6 sm:p-8 overflow-hidden bg-gradient-to-b from-[#14161D] via-[#0E1015] to-[#08090C] border border-amber-500/30 ring-1 ring-amber-400/40 shadow-xl font-mono ${className}`}>
+        <div className="flex items-center gap-2 text-xs text-zinc-500 animate-pulse">
+          <Crown className="w-4 h-4 text-amber-400" />
+          <span>Loading #1 Attention Leader spotlight…</span>
+        </div>
       </div>
     );
   }
 
-  const displayName = liveMeta?.name || top1Coin.name;
-  const displaySymbol = liveMeta?.symbol || top1Coin.ticker;
-  const displayIcon = liveMeta?.iconUrl || top1Coin.imageUrl;
-  const displayPrice = liveMeta?.priceUsd ?? top1Coin.priceUsd ?? 0;
-  const displayMcap = liveMeta?.marketCap ?? top1Coin.marketCap ?? 0;
-  const displayChange24h = liveMeta?.priceChange24h ?? top1Coin.change24h ?? 0;
+  const displayName = top1Coin.name;
+  const displaySymbol = top1Coin.ticker;
+  const displayIcon = top1Coin.imageUrl;
+  const displayPrice = top1Coin.priceUsd ?? 0;
+  const displayMcap = top1Coin.marketCap;
+  const displayChange24h = top1Coin.change24h;
   const isPositive = displayChange24h >= 0;
 
   const handleCopy = (mint: string) => {
@@ -190,11 +172,19 @@ export const HeroSpotlight: React.FC<HeroSpotlightProps> = ({
             <div className="p-2 rounded-xl bg-amber-500/10 border border-amber-500/30 space-y-0.5">
               <div className="text-[9px] text-amber-400 font-bold uppercase tracking-wider flex items-center justify-center gap-1">
                 <Flame className="w-2.5 h-2.5" />
-                Burned
+                Burned (On-chain)
               </div>
-              <div className="font-black text-amber-300 text-xs sm:text-sm truncate">
-                {formatNumber(top1Coin.totalBurnedBaton)} $BATON
-              </div>
+              {burnLoading && totalBurned === 0 ? (
+                <div className="h-4 w-16 bg-amber-500/20 rounded animate-pulse mx-auto" />
+              ) : (
+                <div className="font-black text-amber-300 text-xs sm:text-sm truncate" title={`${burnPercentage.toFixed(4)}% of supply`}>
+                  {totalBurned > 0
+                    ? `${formatNumber(totalBurned)} $BATON`
+                    : top1Coin.totalBurnedBaton > 0
+                    ? `${formatNumber(top1Coin.totalBurnedBaton)} $BATON`
+                    : "0 $BATON"}
+                </div>
+              )}
             </div>
           </div>
 

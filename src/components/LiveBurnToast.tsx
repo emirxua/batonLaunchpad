@@ -1,1 +1,1 @@
-export const LiveBurnToast = () => null;
+export { LiveBurnToast, default } from "./terminal/LiveBurnToast";

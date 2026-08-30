@@ -14,11 +14,11 @@ export const MEMO_PROGRAM_ID = new PublicKey(
 );
 
 // Real pump.fun Solana Base58 mint address for $BATON
-export const FALLBACK_BATON_MINT = "2vdc4owf1MPz54jJCN61y3QSKqjcPpr32wJ9qKkmpump";
+export const OFFICIAL_BATON_MINT = "2vdc4owf1MPz54jJCN61y3QSKqjcPpr32wJ9qKkmpump";
 
 export function safePublicKey(
   key?: string | PublicKey | null,
-  fallback: string = FALLBACK_BATON_MINT
+  fallback: string = OFFICIAL_BATON_MINT
 ): PublicKey {
   if (key instanceof PublicKey) return key;
   if (!key) return new PublicKey(fallback);

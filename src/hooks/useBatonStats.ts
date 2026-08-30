@@ -1,6 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import useSWR from "swr";
+
+const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
 export interface BatonStats {
   totalBurned: number;
@@ -10,12 +12,18 @@ export interface BatonStats {
 }
 
 export function useBatonStats() {
-  const [stats] = useState<BatonStats>({
-    totalBurned: 48_290_420,
-    activeCampaigns: 142,
-    totalMarketCap: 18_450_000,
-    solanaTps: 2840,
+  const { data } = useSWR("/api/directory", fetcher, {
+    refreshInterval: 30_000,
+    revalidateOnFocus: false,
+    dedupingInterval: 15_000,
   });
+
+  const stats: BatonStats = {
+    totalBurned: data?.totalBurned ?? 0,
+    activeCampaigns: data?.marketOverview?.activeRooms ?? 0,
+    totalMarketCap: data?.marketOverview?.attentionLeaderMcap ?? 0,
+    solanaTps: 2500,
+  };
 
   return { stats };
 }

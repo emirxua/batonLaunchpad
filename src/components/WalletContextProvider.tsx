@@ -6,14 +6,8 @@ import {
   WalletProvider,
 } from "@solana/wallet-adapter-react";
 import { WalletModalProvider } from "@solana/wallet-adapter-react-ui";
-import {
-  PhantomWalletAdapter,
-  SolflareWalletAdapter,
-} from "@solana/wallet-adapter-wallets";
 
-export const DEFAULT_RPC =
-  process.env.NEXT_PUBLIC_SOLANA_RPC_URL?.trim() ||
-  "https://rpc.ankr.com/solana";
+export const DEFAULT_RPC = "https://solana-rpc.publicnode.com";
 
 interface WalletContextProviderProps {
   children: ReactNode;
@@ -24,21 +18,14 @@ export const WalletContextProvider: FC<WalletContextProviderProps> = ({
 }) => {
   const endpoint = useMemo(() => {
     const raw = process.env.NEXT_PUBLIC_SOLANA_RPC_URL?.trim();
-    if (raw && (raw.startsWith("http://") || raw.startsWith("https://"))) {
+    if (raw && (raw.startsWith("http://") || raw.startsWith("https://")) && !raw.includes("ankr.com") && !raw.includes("api.mainnet-beta.solana.com")) {
       return raw;
     }
     return DEFAULT_RPC;
   }, []);
 
-  const wallets = useMemo(() => {
-    if (typeof window === "undefined") {
-      return [];
-    }
-    return [
-      new PhantomWalletAdapter(),
-      new SolflareWalletAdapter(),
-    ];
-  }, []);
+  // Standard wallet auto-discovery handles Phantom, Solflare, Backpack, etc. natively
+  const wallets = useMemo(() => [], []);
 
   return (
     <ConnectionProvider endpoint={endpoint}>

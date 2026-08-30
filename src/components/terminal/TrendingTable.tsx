@@ -1,8 +1,8 @@
 "use client";
 
 import React, { useState, useMemo, useCallback } from "react";
-import Image from "next/image";
 import useSWR from "swr";
+import Image from "next/image";
 import { DexTrendingToken, TerminalActiveTab } from "@/lib/types/terminal";
 import { useWatchlist } from "@/lib/hooks/useWatchlist";
 import { formatCurrency } from "@/lib/utils";
@@ -67,23 +67,36 @@ export const TrendingTable: React.FC<TrendingTableProps> = ({
       : activeTab === "volume"
       ? "volume"
       : "trending";
-  const apiUrl = `/api/trending?limit=30&minMcap=70000&sortBy=${sortByParam}`;
 
-  const { data, isLoading, error } = useSWR<TrendingApiResponse>(
-    apiUrl,
+  const { data, error, isLoading, mutate } = useSWR<TrendingApiResponse>(
+    `/api/trending?sortBy=${sortByParam}`,
     fetcher,
     {
-      refreshInterval: 30_000,
-      dedupingInterval: 15_000,
+      refreshInterval: 60_000,
       revalidateOnFocus: false,
-      revalidateOnReconnect: false,
-      errorRetryCount: 2,
-      errorRetryInterval: 10_000,
-      keepPreviousData: true,
+      dedupingInterval: 30_000,
     }
   );
 
-  const tokens = useMemo(() => data?.tokens || [], [data?.tokens]);
+  const tokens: DexTrendingToken[] = useMemo(() => {
+    return (data?.tokens || []).map((t: any) => ({
+      mint: t.mint || t.ca,
+      pairAddress: t.pairAddress || t.mint || t.ca,
+      symbol: t.symbol || "TOKEN",
+      name: t.name || "Solana Token",
+      iconUrl: t.iconUrl || null,
+      priceUsd: t.priceUsd || t.price || 0,
+      priceChange24h: t.priceChange24h || 0,
+      marketCap: t.marketCap || t.mcap || 0,
+      volume24h: t.volume24h || 0,
+      txnCount24h: t.txnCount24h || 0,
+      bondingCurveProgress: t.bondingCurveProgress ?? 0,
+      liquidityUsd: t.liquidityUsd || t.liquidity?.usd || 0,
+      isPumpFun: true,
+      category: t.category || "Memes",
+      createdTimestamp: t.createdTimestamp || 0,
+    }));
+  }, [data]);
 
   const handleCopy = React.useCallback((mint: string, e: React.MouseEvent) => {
     e.stopPropagation();
@@ -213,7 +226,16 @@ export const TrendingTable: React.FC<TrendingTableProps> = ({
                   colSpan={7}
                   className="py-12 text-center text-zinc-500 font-mono text-xs"
                 >
-                  Failed to load trending tokens from DexScreener. Retrying...
+                  <div className="flex flex-col items-center justify-center gap-2">
+                    <span className="text-rose-400">Error loading live DexScreener movers</span>
+                    <button
+                      type="button"
+                      onClick={() => mutate()}
+                      className="px-3 py-1 bg-rose-500/10 border border-rose-500/30 rounded text-rose-300 hover:bg-rose-500/20 text-xs font-bold cursor-pointer transition-colors"
+                    >
+                      Error loading data - Retry
+                    </button>
+                  </div>
                 </td>
               </tr>
             ) : tokens.length === 0 ? (
@@ -222,7 +244,7 @@ export const TrendingTable: React.FC<TrendingTableProps> = ({
                   colSpan={7}
                   className="py-12 text-center text-zinc-500 font-mono text-xs"
                 >
-                  No tokens matching criteria.
+                  No active movers found.
                 </td>
               </tr>
             ) : (
@@ -235,7 +257,10 @@ export const TrendingTable: React.FC<TrendingTableProps> = ({
                 return (
                   <tr
                     key={token.mint}
-                    onClick={() => onSelectToken(token.mint, token.symbol)}
+                    onClick={() => {
+                      onSelectToken(token.mint, token.symbol);
+                      onTradeToken?.(token);
+                    }}
                     className={`transition-colors cursor-pointer group select-none ${
                       isSelected
                         ? "bg-orange-500/15 hover:bg-orange-500/20"
@@ -388,3 +413,7 @@ export const TrendingTable: React.FC<TrendingTableProps> = ({
     </div>
   );
 };
+
+export default TrendingTable;
+
+

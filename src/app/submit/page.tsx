@@ -462,7 +462,7 @@ export default function SubmitCoinPage() {
                 </span>
               </div>
 
-              {/* Mock Coin Card Preview */}
+              {/* Live Form Coin Card Preview */}
               <div className="rounded-2xl border border-line bg-bg-card p-5 space-y-4 shadow-2xl">
                 <div className="flex items-start justify-between gap-2">
                   <div className="flex items-center gap-3 min-w-0">

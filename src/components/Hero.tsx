@@ -1,7 +1,10 @@
+"use client";
+
 import React from "react";
 import Image from "next/image";
 import { Flame, Coins, Trophy, AlertTriangle, ExternalLink } from "lucide-react";
 import { formatNumber } from "@/lib/utils";
+import { useTokenStats } from "@/hooks/useTokenStats";
 
 interface HeroProps {
   totalBurnedBaton?: number;
@@ -12,12 +15,15 @@ interface HeroProps {
 }
 
 export const Hero: React.FC<HeroProps> = ({
-  totalBurnedBaton = 0,
+  totalBurnedBaton: propBurned,
   activeCoinsCount = 1,
   topCommunityTicker = "$BATON",
   topCommunityTier = "DIAMOND",
   headerUrl = "https://cdn.dexscreener.com/cms/images/vVNqFVaQ0jWxKguy?width=1500&height=500&quality=95&format=auto",
 }) => {
+  const { totalBurned: onChainBurned } = useTokenStats(15_000);
+  const totalBurnedBaton = propBurned !== undefined && propBurned > 0 ? propBurned : onChainBurned;
+
   return (
     <section className="relative w-full overflow-hidden border-b border-line bg-gradient-to-b from-zinc-50 via-white to-zinc-100 dark:from-[#0a0b0d] dark:via-[#0e1014] dark:to-[#0a0b0d] py-12 sm:py-16">
       {/* Background Banner Cover Overlay */}
@@ -58,13 +64,13 @@ export const Hero: React.FC<HeroProps> = ({
           </div>
 
           <a
-            href="https://x.com/buybaton"
+            href="https://x.com/metoutbid"
             target="_blank"
             rel="noopener noreferrer"
             className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border border-zinc-200/80 dark:border-line bg-white/90 dark:bg-bg-raised/90 text-zinc-700 dark:text-text-dim hover:text-zinc-900 dark:hover:text-text font-mono text-[11px] font-bold shadow-sm transition-all"
           >
-            <span>@buybaton on X</span>
-            <ExternalLink className="w-3 h-3 text-emerald-600 dark:text-acid" />
+            <span>@metoutbid on X</span>
+            <ExternalLink className="w-3 h-3 text-amber-500 dark:text-acid" />
           </a>
         </div>
 

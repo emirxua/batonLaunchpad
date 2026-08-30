@@ -1,48 +1,44 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
-import { TokenStatsResponse } from "@/app/api/token-stats/route";
+import useSWR from "swr";
+import { TopHolder, TokenStatsResponse } from "@/app/api/token-stats/route";
 
-export function useTokenStats(intervalMs: number = 60_000) {
-  const [stats, setStats] = useState<TokenStatsResponse | null>(null);
-  const [isLoading, setIsLoading] = useState<boolean>(true);
-  const [error, setError] = useState<Error | null>(null);
-  const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
+const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
-  const fetchStats = useCallback(async () => {
-    try {
-      const res = await fetch("/api/token-stats");
-      if (!res.ok) {
-        throw new Error(`HTTP error ${res.status}`);
-      }
-      const data: TokenStatsResponse = await res.json();
-      setStats(data);
-      setLastUpdated(new Date());
-      setError(null);
-    } catch (err: unknown) {
-      console.warn("Failed to fetch token stats:", err);
-      setError(err instanceof Error ? err : new Error("Unknown error"));
-    } finally {
-      setIsLoading(false);
+export function useTokenStats(interval: number = 15_000) {
+  const { data, error, isLoading, isValidating, mutate } = useSWR<TokenStatsResponse>(
+    "/api/token-stats",
+    fetcher,
+    {
+      refreshInterval: interval,
+      revalidateOnFocus: false,
+      dedupingInterval: 10_000,
     }
-  }, []);
+  );
 
-  useEffect(() => {
-    fetchStats();
-    const timer = setInterval(fetchStats, intervalMs);
-    return () => clearInterval(timer);
-  }, [fetchStats, intervalMs]);
+  const totalBurned = data?.totalBurned ?? 0;
+  const burnPercentage = data?.burnPercentage ?? 0;
+  const topHolders: TopHolder[] = data?.topHolders ?? [];
+  const totalHoldersCount = data?.totalHoldersCount ?? topHolders.length;
 
   return {
-    stats,
-    totalBurned: stats?.totalBurned ?? 0,
-    currentSupply: stats?.currentSupply ?? 1_000_000_000,
-    burnPercentage: stats?.burnPercentage ?? 0,
-    topHolders: stats?.topHolders ?? [],
-    totalHoldersCount: stats?.totalHoldersCount ?? 0,
+    stats: {
+      totalBurned,
+      totalCoinsCount: 1,
+      activeRooms: 1,
+      totalVolume24h: 0,
+    },
+    totalBurned,
+    burnPercentage,
+    totalCoinsCount: 1,
+    activeRooms: 1,
+    totalVolume24h: 0,
+    topHolders,
+    totalHoldersCount,
+    lastUpdated: data?.lastUpdated ? new Date(data.lastUpdated) : new Date(),
     isLoading,
-    error,
-    lastUpdated,
-    refresh: fetchStats,
+    isValidating,
+    mutate,
+    refresh: mutate,
   };
 }

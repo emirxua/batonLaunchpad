@@ -71,11 +71,11 @@ export async function prepareRealBurnTransaction({
     const accountInfo = await connection.getAccountInfo(userAta);
     if (!accountInfo) {
       throw new Error(
-        "Yeterli $BATON bakiyesi veya cüzdanınızda $BATON token hesabı bulunamadı."
+        "Insufficient $BATON balance or no $BATON token account found in your connected wallet."
       );
     }
   } catch (err: unknown) {
-    if (err instanceof Error && err.message.includes("Yeterli $BATON")) {
+    if (err instanceof Error && err.message.includes("Insufficient $BATON")) {
       throw err;
     }
     console.warn("Could not verify account info on chain due to RPC limits:", err);
