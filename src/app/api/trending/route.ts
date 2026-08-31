@@ -106,16 +106,47 @@ const TOP_SOLANA_TRENDING_MINTS = [
 let persistentTrendingCache: TokenItem[] = [];
 let lastFetchTimestamp = 0;
 
+async function getLiveDexScreenerTrendingMints(): Promise<string[]> {
+  const solMints = new Set<string>();
+  // Always include BATON
+  solMints.add("2vdc4owf1MPz54jJCN61y3QSKqjcPpr32wJ9qKkmpump");
+
+  try {
+    const results = await Promise.allSettled([
+      fetch("https://api.dexscreener.com/token-boosts/top/v1", { cache: "no-store" }).then((r) =>
+        r.ok ? r.json() : []
+      ),
+      fetch("https://api.dexscreener.com/token-boosts/latest/v1", { cache: "no-store" }).then((r) =>
+        r.ok ? r.json() : []
+      ),
+      fetch("https://api.dexscreener.com/token-profiles/latest/v1", { cache: "no-store" }).then((r) =>
+        r.ok ? r.json() : []
+      ),
+    ]);
+
+    results.forEach((res) => {
+      if (res.status === "fulfilled" && Array.isArray(res.value)) {
+        res.value.forEach((item: any) => {
+          if (item?.chainId === "solana" && item.tokenAddress) {
+            solMints.add(item.tokenAddress);
+          }
+        });
+      }
+    });
+  } catch {}
+
+  // Fallback to top verified mints if needed
+  TOP_SOLANA_TRENDING_MINTS.forEach((m) => solMints.add(m));
+
+  return Array.from(solMints).slice(0, 30);
+}
+
 async function fetchTrendingBatch(): Promise<TokenItem[]> {
   try {
-    // Top Solana trending mints + dynamic boosts
-    const mintsToFetch = [
-      "2vdc4owf1MPz54jJCN61y3QSKqjcPpr32wJ9qKkmpump", // $BATON
-      ...TOP_SOLANA_TRENDING_MINTS.filter((m) => m !== "2vdc4owf1MPz54jJCN61y3QSKqjcPpr32wJ9qKkmpump"),
-    ];
+    const mintsToFetch = await getLiveDexScreenerTrendingMints();
 
     const ctrl = new AbortController();
-    const tid = setTimeout(() => ctrl.abort(), 4000);
+    const tid = setTimeout(() => ctrl.abort(), 4500);
     const res = await fetch(`${DEX_BASE}/latest/dex/tokens/${mintsToFetch.join(",")}`, {
       headers: {
         Accept: "application/json",
