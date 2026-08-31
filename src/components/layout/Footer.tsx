@@ -26,7 +26,7 @@ export const Footer: React.FC = () => {
   };
 
   return (
-    <footer className="w-full border-t border-zinc-200 dark:border-white/[0.08] bg-white/95 dark:bg-[#07080A]/95 backdrop-blur-xl py-5 mt-10 transition-colors text-xs font-mono text-zinc-600 dark:text-zinc-400 select-none">
+    <footer className="w-full border-t border-zinc-200 dark:border-white/[0.08] bg-white/95 dark:bg-[#07080A]/95 backdrop-blur-xl pt-6 pb-28 md:pb-8 mt-8 transition-colors text-xs font-mono text-zinc-600 dark:text-zinc-400 select-none">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-4">
         {/* ── Main Unified Row: Brand, Quick Links, $BATON CA, Social ─── */}
         <div className="flex flex-col lg:flex-row items-center justify-between gap-4">
