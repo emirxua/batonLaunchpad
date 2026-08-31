@@ -73,7 +73,6 @@ export function TrendingGrid({ onSelectToken }: TrendingGridProps) {
       !token.dexId.toLowerCase().includes("meteora");
 
     if (isPumpCoin) {
-      onSelectToken?.(token.ca, token.symbol, token.name, token.iconUrl);
       if (typeof window !== "undefined") {
         window.open(`https://pump.fun/coin/${token.ca}`, "_blank", "noopener,noreferrer");
       }
