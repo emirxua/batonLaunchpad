@@ -138,7 +138,7 @@ export function TrendingGrid({ onSelectToken }: TrendingGridProps) {
         <div className="flex items-center gap-2">
           <TrendingUp className="w-4 h-4 text-amber-500" />
           <h2 className="text-sm sm:text-base font-bold text-zinc-950 dark:text-white uppercase tracking-wider">
-            TRENDING TOKENS (6H LIVE)
+            TRENDING TOKENS
           </h2>
           <span className="text-[10px] text-zinc-500 bg-zinc-200 dark:bg-zinc-800 px-2 py-0.5 rounded font-bold">
             {filteredTokens.length} Tokens
@@ -157,7 +157,7 @@ export function TrendingGrid({ onSelectToken }: TrendingGridProps) {
                   : "text-zinc-500 hover:text-zinc-200"
               }`}
             >
-              TRENDING 6H ({allTokens.length})
+              ALL ({allTokens.length})
             </button>
             <button
               type="button"
@@ -168,7 +168,7 @@ export function TrendingGrid({ onSelectToken }: TrendingGridProps) {
                   : "text-zinc-500 hover:text-zinc-200"
               }`}
             >
-              🔥 6H GAINERS
+              🔥 GAINERS
             </button>
             <button
               type="button"
@@ -179,7 +179,7 @@ export function TrendingGrid({ onSelectToken }: TrendingGridProps) {
                   : "text-zinc-500 hover:text-zinc-200"
               }`}
             >
-              ⚡ 6H VOL
+              ⚡ TOP VOL
             </button>
             <button
               type="button"

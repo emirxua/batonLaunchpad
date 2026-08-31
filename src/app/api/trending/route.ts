@@ -106,53 +106,17 @@ const TOP_SOLANA_TRENDING_MINTS = [
 let persistentTrendingCache: TokenItem[] = [];
 let lastFetchTimestamp = 0;
 
-async function fetchFromDexScreenerProfilesAndBoosts(): Promise<string[]> {
-  const mints: string[] = [];
-  try {
-    const [boostsRes, profilesRes] = await Promise.allSettled([
-      fetch("https://api.dexscreener.com/token-boosts/top/v1", {
-        headers: { Accept: "application/json" },
-        cache: "no-store",
-      }),
-      fetch("https://api.dexscreener.com/token-profiles/latest/v1", {
-        headers: { Accept: "application/json" },
-        cache: "no-store",
-      }),
-    ]);
-
-    if (boostsRes.status === "fulfilled" && boostsRes.value.ok) {
-      const data = await boostsRes.value.json();
-      if (Array.isArray(data)) {
-        data
-          .filter((t: any) => t.chainId === "solana" && t.tokenAddress)
-          .forEach((t: any) => mints.push(t.tokenAddress));
-      }
-    }
-
-    if (profilesRes.status === "fulfilled" && profilesRes.value.ok) {
-      const data = await profilesRes.value.json();
-      if (Array.isArray(data)) {
-        data
-          .filter((t: any) => t.chainId === "solana" && t.tokenAddress)
-          .forEach((t: any) => mints.push(t.tokenAddress));
-      }
-    }
-  } catch {}
-  return Array.from(new Set(mints));
-}
-
 async function fetchTrendingBatch(): Promise<TokenItem[]> {
   try {
-    // 1. Get latest boosted & active profiles on Solana to merge with core mints
-    const dynamicMints = await fetchFromDexScreenerProfilesAndBoosts();
-    const combinedMints = Array.from(
-      new Set(["2vdc4owf1MPz54jJCN61y3QSKqjcPpr32wJ9qKkmpump", ...dynamicMints, ...TOP_SOLANA_TRENDING_MINTS])
-    ).slice(0, 35);
+    // Top Solana trending mints + dynamic boosts
+    const mintsToFetch = [
+      "2vdc4owf1MPz54jJCN61y3QSKqjcPpr32wJ9qKkmpump", // $BATON
+      ...TOP_SOLANA_TRENDING_MINTS.filter((m) => m !== "2vdc4owf1MPz54jJCN61y3QSKqjcPpr32wJ9qKkmpump"),
+    ];
 
-    // 2. Fetch all token metrics in a SINGLE batch request (fast, no rate limiting)
     const ctrl = new AbortController();
-    const tid = setTimeout(() => ctrl.abort(), 3500);
-    const res = await fetch(`${DEX_BASE}/latest/dex/tokens/${combinedMints.join(",")}`, {
+    const tid = setTimeout(() => ctrl.abort(), 4000);
+    const res = await fetch(`${DEX_BASE}/latest/dex/tokens/${mintsToFetch.join(",")}`, {
       headers: {
         Accept: "application/json",
         "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
@@ -235,19 +199,15 @@ async function fetchTrendingBatch(): Promise<TokenItem[]> {
         dexScreenerUrl: p.url || `https://dexscreener.com/solana/${p.pairAddress || mint}`,
         dexId,
         bondingCurveProgress: 100,
-        badge: isBaton ? "Core Token" : change6h >= 50 ? "6H Breakout" : vol6h >= 500_000 ? "Top 6H Vol" : "Trending 6H",
+        badge: isBaton ? "Core Token" : change6h >= 50 ? "Breakout" : vol6h >= 500_000 ? "Top Vol" : "Trending",
       });
     }
 
     const items = Array.from(tokenMap.values());
     if (items.length > 0) {
-      // Sort by 6H activity: BATON on top, then tokens with image + highest 6H volume
       items.sort((a, b) => {
         if (a.mint === "2vdc4owf1MPz54jJCN61y3QSKqjcPpr32wJ9qKkmpump") return -1;
         if (b.mint === "2vdc4owf1MPz54jJCN61y3QSKqjcPpr32wJ9qKkmpump") return 1;
-        const aHasImg = Boolean(a.iconUrl) ? 1 : 0;
-        const bHasImg = Boolean(b.iconUrl) ? 1 : 0;
-        if (aHasImg !== bHasImg) return bHasImg - aHasImg;
         return (b.volume6h || b.volume24h) - (a.volume6h || a.volume24h);
       });
 
@@ -256,7 +216,7 @@ async function fetchTrendingBatch(): Promise<TokenItem[]> {
       return items;
     }
   } catch (err) {
-    console.warn("[trending] Batch fetch notice:", err);
+    console.warn("[trending] Batch fetch error:", err);
   }
 
   return persistentTrendingCache;
