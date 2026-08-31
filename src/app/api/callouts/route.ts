@@ -1,13 +1,13 @@
 import { NextRequest, NextResponse } from "next/server";
 import { CalloutCard, PumpCalloutListResponse, WatchedSummary } from "@/lib/types/callouts";
-import { getWatchlistMap } from "@/lib/callouts/watchlist";
+import { getWatchlistMap, DEFAULT_WATCHLIST } from "@/lib/callouts/watchlist";
 
 export const dynamic = "force-dynamic";
-export const revalidate = 20;
+export const revalidate = 15;
 
 const PUMP_BASE = "https://frontend-api-v3.pump.fun";
 const DEX_BASE = "https://api.dexscreener.com";
-const FETCH_TIMEOUT_MS = 3500;
+const FETCH_TIMEOUT_MS = 4000;
 
 // Persistent in-memory storage for user-submitted community callouts
 let userSubmittedCallouts: CalloutCard[] = [];
@@ -33,7 +33,82 @@ async function fetchWithTimeout(url: string, ms = FETCH_TIMEOUT_MS): Promise<Res
 }
 
 /**
- * Safe fetch from pump caller wallets
+ * Fetch real callouts from Cloudflare Worker proxy
+ */
+async function fetchRealCalloutsFromProxy(): Promise<CalloutCard[]> {
+  const proxyUrl =
+    process.env.CALLOUT_PROXY_BASE ||
+    process.env.NEXT_PUBLIC_CALLOUT_PROXY_URL ||
+    "https://pump-callout-proxy.emir1903topuz106.workers.dev/";
+
+  try {
+    const res = await fetchWithTimeout(proxyUrl, 4500);
+    if (!res.ok) return [];
+
+    const data = await res.json();
+    const labelMap = getWatchlistMap();
+    const rawResults = Array.isArray(data?.results) ? data.results : [];
+    const list: CalloutCard[] = [];
+
+    for (const item of rawResults) {
+      const wallet = item.wallet;
+      if (!wallet) continue;
+      const label =
+        labelMap[wallet] ??
+        DEFAULT_WATCHLIST[wallet] ??
+        `${wallet.slice(0, 4)}…${wallet.slice(-4)}`;
+
+      const isOk = item.ok !== false && (!item.status || item.status === 200);
+      if (!isOk) continue;
+
+      const calloutsList = Array.isArray(item.callouts) ? item.callouts : [];
+      for (const c of calloutsList) {
+        if (!c || !c.coinMint) continue;
+        list.push({
+          calloutId: c.calloutId || `callout-${c.coinMint}-${wallet.slice(0, 6)}`,
+          userId: wallet,
+          callerWallet: wallet,
+          callerLabel: label,
+          coinMint: c.coinMint,
+          coinName: c.coinName || c.name || "Solana Project",
+          coinSymbol: (c.coinSymbol || c.symbol || "TOKEN").toUpperCase(),
+          marketCap: c.marketCap || 0,
+          calloutPrice: c.calloutPrice || 0,
+          calloutPriceUsd: c.calloutPriceUsd || 0,
+          multiple: Number(c.multiple) || 1.0,
+          createdAt: c.createdAt || Date.now(),
+          maxPriceSol: c.maxPriceSol || 0,
+          maxPriceUsd: c.maxPriceUsd || 0,
+          thesis: c.thesis || "",
+          user_uuid: c.user_uuid || `user-${wallet.slice(0, 6)}`,
+          likes: c.likes || 0,
+          hasLiked: c.hasLiked || false,
+          hasReposted: c.hasReposted || false,
+          repostCount: c.repostCount || 0,
+          quoteCount: c.quoteCount || 0,
+          commentCount: c.commentCount || 0,
+          replyCount: c.replyCount || 0,
+          maxMultiplier: Number(c.maxMultiplier) || Number(c.multiple) || 1.0,
+          maxMultiplierAt: c.maxMultiplierAt || new Date().toISOString(),
+          viewCount: c.viewCount || 0,
+          mediaUrl: c.mediaUrl || null,
+          quotedCalloutId: c.quotedCalloutId || null,
+          quotedCallout: c.quotedCallout || null,
+          updates: Array.isArray(c.updates) ? c.updates : [],
+          updateCount: c.updateCount || 0,
+        });
+      }
+    }
+
+    return list;
+  } catch (err) {
+    console.warn("[callouts] Proxy fetch error:", err);
+    return [];
+  }
+}
+
+/**
+ * Fallback direct safe fetch from individual pump caller wallet
  */
 async function fetchCallerCalloutsSafe(
   wallet: string,
@@ -47,90 +122,41 @@ async function fetchCallerCalloutsSafe(
     const callouts = json.callouts ?? [];
 
     return callouts.map((c: any) => ({
-      ...c,
-      coinSymbol: c.coinSymbol || c.symbol || "",
-      coinName: c.coinName || c.name || "",
+      calloutId: c.calloutId || `callout-${c.coinMint}-${wallet.slice(0, 6)}`,
+      userId: wallet,
       callerWallet: wallet,
       callerLabel: label,
+      coinMint: c.coinMint,
+      coinName: c.coinName || c.name || "Solana Project",
+      coinSymbol: (c.coinSymbol || c.symbol || "TOKEN").toUpperCase(),
+      marketCap: c.marketCap || 0,
+      calloutPrice: c.calloutPrice || 0,
+      calloutPriceUsd: c.calloutPriceUsd || 0,
+      multiple: Number(c.multiple) || 1.0,
+      createdAt: c.createdAt || Date.now(),
+      maxPriceSol: c.maxPriceSol || 0,
+      maxPriceUsd: c.maxPriceUsd || 0,
+      thesis: c.thesis || "",
+      user_uuid: c.user_uuid || `user-${wallet.slice(0, 6)}`,
+      likes: c.likes || 0,
+      hasLiked: c.hasLiked || false,
+      hasReposted: c.hasReposted || false,
+      repostCount: c.repostCount || 0,
+      quoteCount: c.quoteCount || 0,
+      commentCount: c.commentCount || 0,
+      replyCount: c.replyCount || 0,
+      maxMultiplier: Number(c.maxMultiplier) || Number(c.multiple) || 1.0,
+      maxMultiplierAt: c.maxMultiplierAt || new Date().toISOString(),
+      viewCount: c.viewCount || 0,
+      mediaUrl: c.mediaUrl || null,
+      quotedCalloutId: c.quotedCalloutId || null,
+      quotedCallout: c.quotedCallout || null,
+      updates: Array.isArray(c.updates) ? c.updates : [],
+      updateCount: c.updateCount || 0,
     }));
   } catch {
     return [];
   }
-}
-
-/**
- * Real-time Solana Alpha Breakout Signals from Pump.fun
- */
-async function fetchLiveSolanaBreakoutSignals(): Promise<CalloutCard[]> {
-  const cards: CalloutCard[] = [];
-
-  try {
-    const pumpRes = await fetchWithTimeout(
-      `${PUMP_BASE}/coins?offset=0&limit=30&sort=last_trade_timestamp&order=DESC&include_nsfw=false`,
-      3000
-    );
-
-    const callerAliases = [
-      { label: "Alpha Whale", wallet: "2fg5QD1eD7rzNNCsvnhmXFm5hqNgwTTG8p7kQ6f3rx6f" },
-      { label: "Smart Node", wallet: "5YRgrP3mjGzrzirYYN5HAQH19cTYREYwGxW6XRJQUzij" },
-      { label: "Degen Sniper", wallet: "FNcrF6nt9BXswJrHom4hNmXCeW9no2C8wKh5UqdP8ueu" },
-      { label: "Solana Scout", wallet: "7fEXteaTtmX1uR8fpChEXsevM4icH5vq8LNL9dzDupX2" },
-      { label: "Meme Radar", wallet: "BSzpGGB3AMwtW126RT3Z27STSBrVjKV5A96H4BsUKdtD" },
-      { label: "Early Bird", wallet: "6i2aHtxfqkC2biTo98FSkP59FVHPKFRLZWDbdghN6WKK" },
-    ];
-
-    if (pumpRes.ok) {
-      const pumpCoins: any[] = await pumpRes.json();
-      if (Array.isArray(pumpCoins)) {
-        pumpCoins.slice(0, 25).forEach((c, idx) => {
-          if (!c.mint) return;
-          const caller = callerAliases[idx % callerAliases.length];
-          const mcap = Number(c.usd_market_cap) || 12000;
-          const solPrice = 150;
-          const calloutPriceSol = mcap / (1_000_000_000 * solPrice);
-          const mult = Number((1 + (Math.abs(Math.sin(idx + 1)) * 1.5 + 0.15)).toFixed(2));
-
-          cards.push({
-            calloutId: `live-signal-${c.mint}`,
-            userId: caller.wallet,
-            callerWallet: caller.wallet,
-            callerLabel: caller.label,
-            coinMint: c.mint,
-            coinName: c.name || "Solana Project",
-            coinSymbol: (c.symbol || "TOKEN").toUpperCase(),
-            marketCap: Math.round(mcap / mult),
-            calloutPrice: calloutPriceSol,
-            calloutPriceUsd: mcap / 1_000_000_000,
-            multiple: mult,
-            createdAt: c.created_timestamp || (Date.now() - (idx + 1) * 360000),
-            maxPriceSol: calloutPriceSol * mult,
-            maxPriceUsd: (mcap / 1_000_000_000) * mult,
-            thesis: c.description ? c.description.slice(0, 140) : "Rapid on-chain volume & momentum breakout on Solana.",
-            user_uuid: `user-${caller.wallet.slice(0, 6)}`,
-            likes: 0,
-            hasLiked: false,
-            hasReposted: false,
-            repostCount: 0,
-            quoteCount: 0,
-            commentCount: 0,
-            replyCount: 0,
-            maxMultiplier: mult,
-            maxMultiplierAt: new Date().toISOString(),
-            viewCount: 0,
-            mediaUrl: c.image_uri || null,
-            quotedCalloutId: null,
-            quotedCallout: null,
-            updates: [],
-            updateCount: 0,
-          } as any);
-        });
-      }
-    }
-  } catch (err) {
-    console.warn("[callouts] Signal generation notice:", err);
-  }
-
-  return cards;
 }
 
 /**
@@ -256,20 +282,21 @@ export async function GET() {
     });
   }
 
-  // 1. Fetch live signals from breakout scanner
-  const breakoutCards = await fetchLiveSolanaBreakoutSignals();
+  // 1. Fetch real callouts from Cloudflare worker proxy
+  let realCallouts = await fetchRealCalloutsFromProxy();
 
-  // 2. Fetch from any responding pump caller endpoints
-  const callerPromises = Object.entries(labelMap).slice(0, 4).map(([w, l]) =>
-    fetchCallerCalloutsSafe(w, l)
-  );
-  const callerResults = await Promise.allSettled(callerPromises);
-  const directCards: CalloutCard[] = [];
-  callerResults.forEach((r) => {
-    if (r.status === "fulfilled") directCards.push(...r.value);
-  });
+  // 2. If proxy had no callouts or failed, try direct caller endpoints
+  if (realCallouts.length === 0) {
+    const callerPromises = Object.entries(labelMap).slice(0, 5).map(([w, l]) =>
+      fetchCallerCalloutsSafe(w, l)
+    );
+    const callerResults = await Promise.allSettled(callerPromises);
+    callerResults.forEach((r) => {
+      if (r.status === "fulfilled") realCallouts.push(...r.value);
+    });
+  }
 
-  const combined = [...directCards, ...breakoutCards].sort((a, b) => b.createdAt - a.createdAt);
+  const combined = [...realCallouts].sort((a, b) => b.createdAt - a.createdAt);
   const enriched = await enrichCalloutMetadata(combined);
 
   if (enriched.length > 0) {
@@ -343,11 +370,11 @@ export async function POST(req: NextRequest) {
       marketCap: numMcap,
       calloutPrice: numPrice / 150,
       calloutPriceUsd: numPrice,
-      multiple: 1.15,
+      multiple: 1.0,
       createdAt: Date.now(),
-      maxPriceSol: (numPrice / 150) * 1.15,
-      maxPriceUsd: numPrice * 1.15,
-      thesis: thesis || "Community verified alpha callout on Baton.",
+      maxPriceSol: numPrice / 150,
+      maxPriceUsd: numPrice,
+      thesis: thesis || "Community callout on Baton Terminal.",
       user_uuid: `user-${shortWallet}`,
       likes: 1,
       hasLiked: true,
@@ -356,7 +383,7 @@ export async function POST(req: NextRequest) {
       quoteCount: 0,
       commentCount: 0,
       replyCount: 0,
-      maxMultiplier: 1.15,
+      maxMultiplier: 1.0,
       maxMultiplierAt: new Date().toISOString(),
       viewCount: 1,
       mediaUrl: null,

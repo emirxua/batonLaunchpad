@@ -58,6 +58,9 @@ export interface CalloutItem {
   multiplier: number;
   timeAgo: string;
   upvotes: number;
+  callerWallet?: string;
+  viewsCount?: number;
+  commentCount?: number;
   batonBurned: number;
   burnRank?: number;
   thesis: string;

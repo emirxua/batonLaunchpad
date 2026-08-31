@@ -47,7 +47,7 @@ export function AuthModal({ isOpen, onClose, onGoogleSuccess }: AuthModalProps) 
 
   const clientId =
     process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID ||
-    "1066749969188-k0o888k2v0i9gq959714856m9n1d2s3u.apps.googleusercontent.com";
+    "542093400852-a96ka3turl2be538vco4efves7o5vg22.apps.googleusercontent.com";
 
   // Listen for popup postMessage events from /auth/callback
   useEffect(() => {

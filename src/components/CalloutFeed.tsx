@@ -4,7 +4,7 @@ import React, { useState, useMemo, useRef } from "react";
 import useSWR from "swr";
 import { CalloutDiscussionModal } from "@/components/modals/CalloutDiscussionModal";
 import { JupiterSwapModal } from "@/components/modals/JupiterSwapModal";
-import { formatNumber, formatCurrency } from "@/lib/utils";
+import { formatNumber, formatCurrency, formatTimeAgo } from "@/lib/utils";
 import {
   Flame,
   Radio,
@@ -22,6 +22,7 @@ import {
   ChevronLeft,
   ChevronRight,
   X,
+  Eye,
 } from "lucide-react";
 
 import { CallerFilterModal } from "@/components/modals/CallerFilterModal";
@@ -189,8 +190,9 @@ export function CalloutFeed({ onSelectToken, filterSymbol }: CalloutFeedProps) {
   }, [leaderboardData]);
 
   const rawLiveCallouts: CalloutItem[] = (data?.callouts || []).map((c: any) => {
-    const callerName = c.callerLabel || (c.userId ? `${c.userId.slice(0, 4)}…${c.userId.slice(-4)}` : "Verified Caller");
-    const callerHandle = c.callerWallet ? `${c.callerWallet.slice(0, 4)}…${c.callerWallet.slice(-4)}` : "sol_trader";
+    const callerWallet = c.callerWallet || c.userId || "";
+    const callerName = c.callerLabel || (callerWallet ? `${callerWallet.slice(0, 4)}…${callerWallet.slice(-4)}` : "Verified Caller");
+    const callerHandle = callerWallet ? `${callerWallet.slice(0, 4)}…${callerWallet.slice(-4)}` : "sol_trader";
     const avatarSeed = encodeURIComponent(callerName || callerHandle);
     const callerAvatarUrl = `https://api.dicebear.com/7.x/bottts-neutral/svg?seed=${avatarSeed}&backgroundColor=b6e3f4,c0aede,d1d4f9,ffd5dc,ffdfbf`;
     const tokenIconUrl = c.mediaUrl || (c.coinMint === "2vdc4owf1MPz54jJCN61y3QSKqjcPpr32wJ9qKkmpump" ? "/images/baton-logo.png" : undefined);
@@ -205,9 +207,10 @@ export function CalloutFeed({ onSelectToken, filterSymbol }: CalloutFeedProps) {
       id: c.calloutId || `callout-${c.coinMint}`,
       callerName,
       callerHandle,
+      callerWallet,
       callerAvatar: (c.coinSymbol || "CA").slice(0, 2).toUpperCase(),
       callerAvatarUrl,
-      callerBadge: c.isWatched || ["slingoor", "archelon", "croakie", "cupseyyyyy"].includes(c.callerLabel) ? "Top Whitelist" : "Alpha Node",
+      callerBadge: ["ansemconzimp", "slingoor", "archelon", "croakie", "cupseyyyyy", "ferre", "sapijiju"].includes(String(c.callerLabel || "").toLowerCase()) ? "Verified Alpha" : "Alpha Caller",
       tokenName: c.coinName && c.coinName !== "Solana Token" ? c.coinName : (c.coinSymbol || "Solana Project"),
       tokenSymbol: c.coinSymbol && !c.coinSymbol.startsWith("0x") ? c.coinSymbol.toUpperCase() : (c.coinName ? c.coinName.slice(0, 5).toUpperCase() : "TOKEN"),
       tokenCA: c.coinMint || "2vdc4owf1MPz54jJCN61y3QSKqjcPpr32wJ9qKkmpump",
@@ -217,11 +220,13 @@ export function CalloutFeed({ onSelectToken, filterSymbol }: CalloutFeedProps) {
       entryMcap: c.marketCap || 0,
       currentMcap: Math.round((c.marketCap || 0) * (c.multiple || 1)),
       multiplier: Number((c.multiple || 1).toFixed(2)),
-      timeAgo: c.createdAt ? `${Math.max(1, Math.floor((Date.now() - c.createdAt) / 60000))}m ago` : "Live",
-      upvotes: c.likes || c.upvotes || 0,
+      timeAgo: formatTimeAgo(c.createdAt),
+      upvotes: typeof c.likes === "number" ? c.likes : (c.upvotes || 0),
+      viewsCount: c.viewCount || 0,
+      commentCount: c.commentCount || 0,
       batonBurned,
       burnRank,
-      thesis: c.thesis || "High momentum Solana volume breakout.",
+      thesis: c.thesis || "High momentum Solana breakout on Pump.fun.",
     };
   });
 
@@ -716,8 +721,19 @@ export function CalloutFeed({ onSelectToken, filterSymbol }: CalloutFeedProps) {
 
                 {/* ── Top Row: Caller Info & Time Ago ─────────────────────── */}
                 <div className="flex items-start justify-between gap-2">
-                  <div className="flex items-center gap-2.5 min-w-0">
-                    <div className="w-10 h-10 rounded-xl bg-zinc-800 border border-zinc-200 dark:border-white/10 overflow-hidden flex items-center justify-center shrink-0 shadow-md">
+                  <a
+                    href={item.callerWallet && item.callerWallet.length > 20 ? `https://pump.fun/profile/${item.callerWallet}` : "#"}
+                    target={item.callerWallet && item.callerWallet.length > 20 ? "_blank" : undefined}
+                    rel="noopener noreferrer"
+                    onClick={(e) => {
+                      if (item.callerWallet && item.callerWallet.length > 20) {
+                        e.stopPropagation();
+                      }
+                    }}
+                    className="flex items-center gap-2.5 min-w-0 group/caller hover:opacity-90 transition-opacity cursor-pointer"
+                    title={item.callerWallet && item.callerWallet.length > 20 ? `View ${item.callerName} on Pump.fun (${item.callerWallet})` : item.callerName}
+                  >
+                    <div className="w-10 h-10 rounded-xl bg-zinc-800 border border-zinc-200 dark:border-white/10 group-hover/caller:border-amber-500/50 overflow-hidden flex items-center justify-center shrink-0 shadow-md transition-colors">
                       {item.callerAvatarUrl ? (
                         <img
                           src={item.callerAvatarUrl}
@@ -734,7 +750,7 @@ export function CalloutFeed({ onSelectToken, filterSymbol }: CalloutFeedProps) {
                     </div>
                     <div className="min-w-0">
                       <div className="flex items-center gap-1.5 flex-wrap">
-                        <span className="text-xs sm:text-sm font-bold text-zinc-950 dark:text-white truncate">
+                        <span className="text-xs sm:text-sm font-bold text-zinc-950 dark:text-white group-hover/caller:text-amber-500 dark:group-hover/caller:text-amber-400 transition-colors truncate">
                           {item.callerName}
                         </span>
                         {item.callerBadge && (
@@ -743,15 +759,27 @@ export function CalloutFeed({ onSelectToken, filterSymbol }: CalloutFeedProps) {
                           </span>
                         )}
                       </div>
-                      <span className="text-[10px] text-zinc-500 block truncate">
-                        @{item.callerHandle}
+                      <span className="text-[10px] text-zinc-500 group-hover/caller:text-amber-500/80 transition-colors flex items-center gap-1 truncate">
+                        <span>@{item.callerHandle}</span>
+                        {item.callerWallet && item.callerWallet.length > 20 && (
+                          <ExternalLink className="w-2.5 h-2.5 opacity-60 shrink-0" />
+                        )}
                       </span>
                     </div>
-                  </div>
+                  </a>
 
-                  <span className="text-[10px] text-zinc-500 font-bold bg-zinc-100 dark:bg-zinc-900 px-2 py-0.5 rounded border border-zinc-200 dark:border-white/5 shrink-0">
-                    {item.timeAgo}
-                  </span>
+                  <div className="flex items-center gap-1.5 shrink-0">
+                    {item.viewsCount && item.viewsCount > 0 ? (
+                      <span className="text-[10px] text-zinc-500 font-mono flex items-center gap-1 bg-zinc-100 dark:bg-zinc-900 px-2 py-0.5 rounded border border-zinc-200 dark:border-white/5" title={`${item.viewsCount.toLocaleString()} views on Pump.fun`}>
+                        <Eye className="w-3 h-3 text-zinc-400" />
+                        <span>{formatNumber(item.viewsCount)}</span>
+                      </span>
+                    ) : null}
+
+                    <span className="text-[10px] text-zinc-500 font-bold bg-zinc-100 dark:bg-zinc-900 px-2 py-0.5 rounded border border-zinc-200 dark:border-white/5 shrink-0">
+                      {item.timeAgo}
+                    </span>
+                  </div>
                 </div>
 
                 {/* ── Middle Row: Target Token, Badges & CA ─────────────────── */}
@@ -899,7 +927,7 @@ export function CalloutFeed({ onSelectToken, filterSymbol }: CalloutFeedProps) {
                       title="Open discussion thread"
                     >
                       <MessageSquare className="w-3 h-3 text-amber-400" />
-                      <span>Discuss</span>
+                      <span>Discuss{item.commentCount && item.commentCount > 0 ? ` (${item.commentCount})` : ""}</span>
                     </button>
 
                     {/* Upvote Button */}

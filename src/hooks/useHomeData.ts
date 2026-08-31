@@ -4,6 +4,7 @@ import useSWR from "swr";
 import { Coin } from "@/types/coin";
 import { CalloutItem } from "@/types/token";
 import { getBurnLevel } from "@/lib/burn-levels";
+import { formatTimeAgo } from "@/lib/utils";
 
 const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
@@ -28,23 +29,25 @@ export function useHomeData() {
     }
   );
 
-  const rawCoins = directoryData?.coins || [];
+  const rawCoins: any[] = directoryData?.coins || [];
   const coins: Coin[] = rawCoins.map((c: any) => ({
     id: c.id || `coin-${c.mintAddress}`,
-    name: c.name || "Solana Token",
-    ticker: c.ticker || "TOKEN",
-    mintAddress: c.mintAddress || "",
+    name: c.name,
+    ticker: c.ticker || c.symbol || "TOKEN",
+    mintAddress: c.mintAddress,
     imageUrl: c.imageUrl,
+    headerUrl: c.headerUrl,
     iconColor: c.iconColor || "#f59e0b",
-    marketCap: c.marketCap || 0,
-    volume24h: c.volume24h || 0,
-    change24h: c.change24h || 0,
-    priceUsd: c.priceUsd || 0,
+    category: c.category || "SOLANA",
+    priceUsd: c.priceUsd,
+    marketCap: c.marketCap,
+    volume24h: c.volume24h,
+    change24h: c.change24h,
     sparkline: c.sparkline || [],
     totalBurnedBaton: c.totalBurnedBaton || 0,
     burnLevel: c.burnLevel || getBurnLevel(c.totalBurnedBaton || 0),
-    pairAddress: c.pairAddress,
-    liquidityUsd: c.liquidityUsd || 0,
+    description: c.description,
+    viewsCount: c.viewsCount,
   }));
 
   const top1Coin = directoryData?.top1Coin || coins[0] || null;
@@ -64,7 +67,7 @@ export function useHomeData() {
     entryMcap: c.marketCap || 0,
     currentMcap: Math.round((c.marketCap || 0) * (c.multiple || 1)),
     multiplier: Number((c.multiple || 1).toFixed(2)),
-    timeAgo: c.createdAt ? `${Math.max(1, Math.floor((Date.now() - c.createdAt) / 60000))}m ago` : "Live",
+    timeAgo: formatTimeAgo(c.createdAt),
     upvotes: c.upvotes || 0,
     batonBurned: c.batonBurned || 0,
     thesis: c.thesis || "",
