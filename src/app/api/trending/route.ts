@@ -102,24 +102,27 @@ const TOP_SOLANA_TRENDING_MINTS = [
   "Grass7B4RdKfBCjTKgSqnXkqjwiG6ep2U928xQWpump", // $GRASS
 ];
 
-// Persistent in-memory cache to guarantee fast response
+const DEX_HEADERS = {
+  Accept: "application/json",
+  "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
+};
+
+// In-memory cache for fast response
 let persistentTrendingCache: TokenItem[] = [];
 let lastFetchTimestamp = 0;
 
 async function getLiveDexScreenerTrendingMints(): Promise<string[]> {
   const solMints = new Set<string>();
-  // Always include BATON
-  solMints.add("2vdc4owf1MPz54jJCN61y3QSKqjcPpr32wJ9qKkmpump");
 
   try {
     const results = await Promise.allSettled([
-      fetch("https://api.dexscreener.com/token-boosts/top/v1", { cache: "no-store" }).then((r) =>
+      fetch("https://api.dexscreener.com/token-boosts/top/v1", { headers: DEX_HEADERS, cache: "no-store" }).then((r) =>
         r.ok ? r.json() : []
       ),
-      fetch("https://api.dexscreener.com/token-boosts/latest/v1", { cache: "no-store" }).then((r) =>
+      fetch("https://api.dexscreener.com/token-boosts/latest/v1", { headers: DEX_HEADERS, cache: "no-store" }).then((r) =>
         r.ok ? r.json() : []
       ),
-      fetch("https://api.dexscreener.com/token-profiles/latest/v1", { cache: "no-store" }).then((r) =>
+      fetch("https://api.dexscreener.com/token-profiles/latest/v1", { headers: DEX_HEADERS, cache: "no-store" }).then((r) =>
         r.ok ? r.json() : []
       ),
     ]);
@@ -133,10 +136,14 @@ async function getLiveDexScreenerTrendingMints(): Promise<string[]> {
         });
       }
     });
-  } catch {}
+  } catch (err) {
+    console.warn("[trending] Discovery warning:", err);
+  }
 
-  // Fallback to top verified mints if needed
-  TOP_SOLANA_TRENDING_MINTS.forEach((m) => solMints.add(m));
+  // If fewer than 20 mints found from live boosts, fill from top active Solana coins
+  if (solMints.size < 20) {
+    TOP_SOLANA_TRENDING_MINTS.forEach((m) => solMints.add(m));
+  }
 
   return Array.from(solMints).slice(0, 30);
 }
@@ -144,18 +151,12 @@ async function getLiveDexScreenerTrendingMints(): Promise<string[]> {
 async function fetchTrendingBatch(): Promise<TokenItem[]> {
   try {
     const mintsToFetch = await getLiveDexScreenerTrendingMints();
+    if (mintsToFetch.length === 0) return persistentTrendingCache;
 
-    const ctrl = new AbortController();
-    const tid = setTimeout(() => ctrl.abort(), 4500);
     const res = await fetch(`${DEX_BASE}/latest/dex/tokens/${mintsToFetch.join(",")}`, {
-      headers: {
-        Accept: "application/json",
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
-      },
-      signal: ctrl.signal,
+      headers: DEX_HEADERS,
       cache: "no-store",
     });
-    clearTimeout(tid);
 
     if (!res.ok) {
       throw new Error(`DexScreener batch returned status ${res.status}`);
@@ -190,10 +191,7 @@ async function fetchTrendingBatch(): Promise<TokenItem[]> {
       const symbol = (p.baseToken.symbol || "TOKEN").toUpperCase().slice(0, 10);
       const name = (p.baseToken.name || symbol).slice(0, 28);
 
-      const isBaton = mint === "2vdc4owf1MPz54jJCN61y3QSKqjcPpr32wJ9qKkmpump";
-      const iconUrl = isBaton
-        ? "/images/baton-logo.png"
-        : (p.info?.imageUrl || "");
+      const iconUrl = p.info?.imageUrl || "";
 
       tokenMap.set(mint, {
         id: `token-${mint}`,
@@ -230,17 +228,14 @@ async function fetchTrendingBatch(): Promise<TokenItem[]> {
         dexScreenerUrl: p.url || `https://dexscreener.com/solana/${p.pairAddress || mint}`,
         dexId,
         bondingCurveProgress: 100,
-        badge: isBaton ? "Core Token" : change6h >= 50 ? "Breakout" : vol6h >= 500_000 ? "Top Vol" : "Trending",
+        badge: change6h >= 50 ? "Breakout" : vol6h >= 500_000 ? "Top Vol" : "Trending",
       });
     }
 
     const items = Array.from(tokenMap.values());
     if (items.length > 0) {
-      items.sort((a, b) => {
-        if (a.mint === "2vdc4owf1MPz54jJCN61y3QSKqjcPpr32wJ9qKkmpump") return -1;
-        if (b.mint === "2vdc4owf1MPz54jJCN61y3QSKqjcPpr32wJ9qKkmpump") return 1;
-        return (b.volume6h || b.volume24h) - (a.volume6h || a.volume24h);
-      });
+      // Order strictly by real 6H volume descending
+      items.sort((a, b) => (b.volume6h || b.volume24h) - (a.volume6h || a.volume24h));
 
       persistentTrendingCache = items;
       lastFetchTimestamp = Date.now();
