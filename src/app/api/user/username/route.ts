@@ -1,8 +1,11 @@
 import { NextResponse } from "next/server";
 import {
+  getUserById,
+  getUserByEmail,
   getUserByWallet,
+  getUserByUsername,
   isUsernameAvailable,
-  registerUsername,
+  claimOrUpdateUsername,
 } from "@/lib/turso-db";
 
 export const dynamic = "force-dynamic";
@@ -10,12 +13,15 @@ export const revalidate = 0;
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
+  const userId = searchParams.get("userId")?.trim();
+  const email = searchParams.get("email")?.trim();
   const wallet = searchParams.get("wallet")?.trim();
   const checkUsername = searchParams.get("check")?.trim()?.toLowerCase();
 
   // 1. Availability check endpoint
   if (checkUsername) {
-    const available = await isUsernameAvailable(checkUsername, wallet || undefined);
+    const requester = userId || email || wallet || undefined;
+    const available = await isUsernameAvailable(checkUsername, requester);
     return NextResponse.json({
       success: true,
       username: checkUsername,
@@ -23,18 +29,24 @@ export async function GET(request: Request) {
     });
   }
 
-  // 2. Fetch username for wallet
-  if (!wallet) {
+  // 2. Fetch user by userId, email, or wallet
+  let user = null;
+  if (userId) {
+    user = await getUserById(userId);
+  } else if (email) {
+    user = await getUserByEmail(email);
+  } else if (wallet) {
+    user = await getUserByWallet(wallet);
+  } else {
     return NextResponse.json(
-      { success: false, error: "Wallet address parameter required" },
+      { success: false, error: "userId, email, or wallet parameter required" },
       { status: 400 }
     );
   }
 
-  const user = await getUserByWallet(wallet);
   return NextResponse.json({
     success: true,
-    wallet,
+    user: user || null,
     username: user?.username || null,
   });
 }
@@ -42,11 +54,12 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { wallet, username } = body;
+    const { userId, email, wallet, username } = body;
 
-    if (!wallet || typeof wallet !== "string") {
+    const identifier = userId || email || wallet;
+    if (!identifier || typeof identifier !== "string") {
       return NextResponse.json(
-        { success: false, error: "Valid connected Solana wallet required" },
+        { success: false, error: "Valid userId or email required" },
         { status: 400 }
       );
     }
@@ -55,7 +68,7 @@ export async function POST(request: Request) {
       .trim()
       .toLowerCase();
 
-    const result = await registerUsername(wallet, cleanUsername);
+    const result = await claimOrUpdateUsername(identifier, cleanUsername);
 
     if (!result.success) {
       return NextResponse.json(
@@ -66,9 +79,9 @@ export async function POST(request: Request) {
 
     return NextResponse.json({
       success: true,
-      wallet,
-      username: result.username,
-      message: `Handle @${result.username} successfully claimed!`,
+      user: result.user,
+      username: result.user?.username || cleanUsername,
+      message: `Handle @${cleanUsername} successfully claimed!`,
     });
   } catch (error) {
     console.error("API /api/user/username error:", error);

@@ -4,7 +4,12 @@ import path from "path";
 import { CommentItem } from "@/types/token";
 
 export interface UserRecord {
-  wallet: string;
+  id: string;
+  googleId?: string;
+  email?: string;
+  name?: string;
+  avatarUrl?: string;
+  wallet?: string;
   username: string;
   registeredAt: number;
 }
@@ -53,19 +58,45 @@ export function getClient(): Client {
 async function initDb(): Promise<void> {
   const client = getClient();
 
-  // 1. Users Table
+  // 1. Users Table (Google Auth & Unique Username)
   await client.execute(`
     CREATE TABLE IF NOT EXISTS users (
-      wallet TEXT PRIMARY KEY,
+      id TEXT PRIMARY KEY,
+      google_id TEXT UNIQUE,
+      email TEXT UNIQUE,
+      name TEXT,
+      avatar_url TEXT,
+      wallet TEXT,
       username TEXT UNIQUE NOT NULL,
       registered_at INTEGER NOT NULL
     );
   `);
+
+  // Backward compatibility column additions for existing Turso tables
+  const alterColumns = [
+    "ALTER TABLE users ADD COLUMN id TEXT;",
+    "ALTER TABLE users ADD COLUMN google_id TEXT;",
+    "ALTER TABLE users ADD COLUMN email TEXT;",
+    "ALTER TABLE users ADD COLUMN name TEXT;",
+    "ALTER TABLE users ADD COLUMN avatar_url TEXT;",
+    "ALTER TABLE users ADD COLUMN wallet TEXT;",
+  ];
+  for (const alterSql of alterColumns) {
+    try {
+      await client.execute(alterSql);
+    } catch {
+      // Column already exists
+    }
+  }
+
   await client.execute(`
     CREATE UNIQUE INDEX IF NOT EXISTS idx_users_username_lower ON users(LOWER(username));
   `);
+  await client.execute(`
+    CREATE UNIQUE INDEX IF NOT EXISTS idx_users_email_lower ON users(LOWER(email));
+  `);
 
-  // 2. Burns Table
+  // 2. Burns Table (On-Chain Burns with Username/Wallet Association)
   await client.execute(`
     CREATE TABLE IF NOT EXISTS burns (
       id TEXT PRIMARY KEY,
@@ -75,14 +106,23 @@ async function initDb(): Promise<void> {
       coin_ticker TEXT,
       amount REAL NOT NULL,
       user_address TEXT,
+      username TEXT,
+      user_email TEXT,
       created_at INTEGER NOT NULL
     );
   `);
+  try {
+    await client.execute("ALTER TABLE burns ADD COLUMN username TEXT;");
+    await client.execute("ALTER TABLE burns ADD COLUMN user_email TEXT;");
+  } catch {}
   await client.execute(`
     CREATE INDEX IF NOT EXISTS idx_burns_coin ON burns(coin_id);
   `);
+  await client.execute(`
+    CREATE INDEX IF NOT EXISTS idx_burns_created ON burns(created_at DESC);
+  `);
 
-  // 3. Comments Table
+  // 3. Comments Table (Callout Discussion Stream)
   await client.execute(`
     CREATE TABLE IF NOT EXISTS comments (
       id TEXT PRIMARY KEY,
@@ -100,29 +140,24 @@ async function initDb(): Promise<void> {
     CREATE INDEX IF NOT EXISTS idx_comments_callout ON comments(callout_id);
   `);
 
-  // 4. Migrate legacy .data/users.json if present
-  try {
-    const dataDir = path.join(process.cwd(), ".data");
-    const jsonPath = path.join(dataDir, "users.json");
-    if (fs.existsSync(jsonPath)) {
-      const raw = fs.readFileSync(jsonPath, "utf8");
-      const legacy = JSON.parse(raw);
-      if (legacy?.users) {
-        for (const u of Object.values(legacy.users) as any[]) {
-          if (u.wallet && u.username) {
-            await client.execute({
-              sql: `INSERT INTO users (wallet, username, registered_at)
-                    VALUES (?, ?, ?)
-                    ON CONFLICT(wallet) DO UPDATE SET username=excluded.username;`,
-              args: [u.wallet.trim(), u.username.trim().toLowerCase(), u.registeredAt || Date.now()],
-            }).catch(() => {});
-          }
-        }
-      }
-    }
-  } catch (migErr) {
-    console.warn("[Turso DB] Legacy users migration notice:", migErr);
-  }
+  // 4. Callout Likes / Upvotes Persistence Table
+  await client.execute(`
+    CREATE TABLE IF NOT EXISTS callout_likes (
+      callout_id TEXT NOT NULL,
+      user_identifier TEXT NOT NULL,
+      created_at INTEGER NOT NULL,
+      PRIMARY KEY(callout_id, user_identifier)
+    );
+  `);
+
+  // 5. Watchlist / Tracked Alpha Wallets Table
+  await client.execute(`
+    CREATE TABLE IF NOT EXISTS watchlist (
+      wallet TEXT PRIMARY KEY,
+      label TEXT NOT NULL,
+      created_at INTEGER NOT NULL
+    );
+  `);
 }
 
 export function ensureInit(): Promise<void> {
@@ -135,22 +170,94 @@ export function ensureInit(): Promise<void> {
   return initializedPromise;
 }
 
-// ── USERS CRUD ─────────────────────────────────────────────────────────────
+// ── USERS CRUD (Google Auth + Unique Turso DB Usernames) ─────────────────────
+
+export async function getUserById(id: string): Promise<UserRecord | null> {
+  await ensureInit();
+  const client = getClient();
+  const res = await client.execute({
+    sql: "SELECT id, google_id as googleId, email, name, avatar_url as avatarUrl, wallet, username, registered_at as registeredAt FROM users WHERE id = ? LIMIT 1",
+    args: [id.trim()],
+  });
+
+  if (res.rows.length === 0) return null;
+  const row = res.rows[0];
+  return {
+    id: String(row.id || ""),
+    googleId: row.googleId ? String(row.googleId) : undefined,
+    email: row.email ? String(row.email) : undefined,
+    name: row.name ? String(row.name) : undefined,
+    avatarUrl: row.avatarUrl ? String(row.avatarUrl) : undefined,
+    wallet: row.wallet ? String(row.wallet) : undefined,
+    username: String(row.username || ""),
+    registeredAt: Number(row.registeredAt || Date.now()),
+  };
+}
+
+export async function getUserByGoogleId(googleId: string): Promise<UserRecord | null> {
+  await ensureInit();
+  const client = getClient();
+  const res = await client.execute({
+    sql: "SELECT id, google_id as googleId, email, name, avatar_url as avatarUrl, wallet, username, registered_at as registeredAt FROM users WHERE google_id = ? LIMIT 1",
+    args: [googleId.trim()],
+  });
+
+  if (res.rows.length === 0) return null;
+  const row = res.rows[0];
+  return {
+    id: String(row.id || ""),
+    googleId: row.googleId ? String(row.googleId) : undefined,
+    email: row.email ? String(row.email) : undefined,
+    name: row.name ? String(row.name) : undefined,
+    avatarUrl: row.avatarUrl ? String(row.avatarUrl) : undefined,
+    wallet: row.wallet ? String(row.wallet) : undefined,
+    username: String(row.username || ""),
+    registeredAt: Number(row.registeredAt || Date.now()),
+  };
+}
+
+export async function getUserByEmail(email: string): Promise<UserRecord | null> {
+  await ensureInit();
+  const client = getClient();
+  const clean = email.trim().toLowerCase();
+  const res = await client.execute({
+    sql: "SELECT id, google_id as googleId, email, name, avatar_url as avatarUrl, wallet, username, registered_at as registeredAt FROM users WHERE LOWER(email) = ? LIMIT 1",
+    args: [clean],
+  });
+
+  if (res.rows.length === 0) return null;
+  const row = res.rows[0];
+  return {
+    id: String(row.id || ""),
+    googleId: row.googleId ? String(row.googleId) : undefined,
+    email: row.email ? String(row.email) : undefined,
+    name: row.name ? String(row.name) : undefined,
+    avatarUrl: row.avatarUrl ? String(row.avatarUrl) : undefined,
+    wallet: row.wallet ? String(row.wallet) : undefined,
+    username: String(row.username || ""),
+    registeredAt: Number(row.registeredAt || Date.now()),
+  };
+}
 
 export async function getUserByWallet(wallet: string): Promise<UserRecord | null> {
   await ensureInit();
   const client = getClient();
   const res = await client.execute({
-    sql: "SELECT wallet, username, registered_at as registeredAt FROM users WHERE wallet = ? LIMIT 1",
+    sql: "SELECT id, google_id as googleId, email, name, avatar_url as avatarUrl, wallet, username, registered_at as registeredAt FROM users WHERE wallet = ? LIMIT 1",
     args: [wallet.trim()],
   });
 
   if (res.rows.length === 0) return null;
   const row = res.rows[0];
   return {
-    wallet: String(row.wallet),
-    username: String(row.username),
-    registeredAt: Number(row.registeredAt),
+    id: String(row.id || ""),
+    googleId: row.googleId ? String(row.googleId) : undefined,
+    email: row.email ? String(row.email) : undefined,
+    name: row.name ? String(row.name) : undefined,
+    avatarUrl: row.avatarUrl ? String(row.avatarUrl) : undefined,
+    wallet: row.wallet ? String(row.wallet) : undefined,
+    username: String(row.username || ""),
+    registeredAt: Number(row.registeredAt || Date.now()),
   };
 }
 
@@ -159,82 +266,209 @@ export async function getUserByUsername(username: string): Promise<UserRecord | 
   const client = getClient();
   const clean = username.trim().toLowerCase();
   const res = await client.execute({
-    sql: "SELECT wallet, username, registered_at as registeredAt FROM users WHERE LOWER(username) = ? LIMIT 1",
+    sql: "SELECT id, google_id as googleId, email, name, avatar_url as avatarUrl, wallet, username, registered_at as registeredAt FROM users WHERE LOWER(username) = ? LIMIT 1",
     args: [clean],
   });
 
   if (res.rows.length === 0) return null;
   const row = res.rows[0];
   return {
-    wallet: String(row.wallet),
-    username: String(row.username),
-    registeredAt: Number(row.registeredAt),
+    id: String(row.id || ""),
+    googleId: row.googleId ? String(row.googleId) : undefined,
+    email: row.email ? String(row.email) : undefined,
+    name: row.name ? String(row.name) : undefined,
+    avatarUrl: row.avatarUrl ? String(row.avatarUrl) : undefined,
+    wallet: row.wallet ? String(row.wallet) : undefined,
+    username: String(row.username || ""),
+    registeredAt: Number(row.registeredAt || Date.now()),
   };
 }
 
 export async function isUsernameAvailable(
   username: string,
-  requestingWallet?: string
+  requestingUserId?: string
 ): Promise<boolean> {
   await ensureInit();
   const client = getClient();
   const clean = username.trim().toLowerCase();
 
   const res = await client.execute({
-    sql: "SELECT wallet FROM users WHERE LOWER(username) = ? LIMIT 1",
+    sql: "SELECT id, google_id as googleId, email, wallet FROM users WHERE LOWER(username) = ? LIMIT 1",
     args: [clean],
   });
 
   if (res.rows.length === 0) return true;
-  const existingWallet = String(res.rows[0].wallet);
-  if (requestingWallet && existingWallet === requestingWallet.trim()) return true;
+  const row = res.rows[0];
+  const matchedId = String(row.id || "");
+  const matchedEmail = String(row.email || "").toLowerCase();
+  const matchedGoogleId = String(row.googleId || "");
+  const matchedWallet = String(row.wallet || "");
+
+  if (
+    requestingUserId &&
+    (matchedId === requestingUserId ||
+      matchedEmail === requestingUserId.toLowerCase() ||
+      matchedGoogleId === requestingUserId ||
+      matchedWallet === requestingUserId)
+  ) {
+    return true;
+  }
   return false;
 }
 
-export async function registerUsername(
-  wallet: string,
+export async function linkWalletToUser(
+  userIdOrEmail: string,
+  walletAddress: string
+): Promise<{ success: boolean; user?: UserRecord; error?: string }> {
+  await ensureInit();
+  const client = getClient();
+  const cleanWallet = walletAddress.trim();
+  const cleanId = userIdOrEmail.trim();
+
+  if (!cleanWallet || !cleanId) {
+    return { success: false, error: "Missing user identifier or wallet address" };
+  }
+
+  try {
+    // 1. Update user record with wallet
+    await client.execute({
+      sql: `UPDATE users SET wallet = ? WHERE id = ? OR LOWER(email) = ? OR google_id = ?`,
+      args: [cleanWallet, cleanId, cleanId.toLowerCase(), cleanId],
+    });
+
+    const updatedUser =
+      (await getUserById(cleanId)) ||
+      (await getUserByEmail(cleanId)) ||
+      (await getUserByWallet(cleanWallet));
+
+    return {
+      success: true,
+      user: updatedUser || undefined,
+    };
+  } catch (err: unknown) {
+    const msg = err instanceof Error ? err.message : String(err);
+    console.error("[Turso DB] linkWallet error:", err);
+    return { success: false, error: msg || "Failed to link wallet." };
+  }
+}
+
+export async function registerOrUpdateGoogleUser(params: {
+  googleId: string;
+  email: string;
+  name?: string;
+  avatarUrl?: string;
+  username?: string;
+}): Promise<{ user: UserRecord; isNew: boolean; needsUsername: boolean }> {
+  await ensureInit();
+  const client = getClient();
+  const cleanEmail = params.email.trim().toLowerCase();
+  const cleanGoogleId = params.googleId.trim();
+  const id = `usr_${cleanGoogleId || Buffer.from(cleanEmail).toString("hex").slice(0, 12)}`;
+  const now = Date.now();
+
+  let existing = await getUserByGoogleId(cleanGoogleId);
+  if (!existing && cleanEmail) {
+    existing = await getUserByEmail(cleanEmail);
+  }
+
+  if (existing) {
+    await client.execute({
+      sql: `UPDATE users SET 
+              name = COALESCE(?, name),
+              avatar_url = COALESCE(?, avatar_url),
+              google_id = COALESCE(?, google_id)
+            WHERE id = ? OR LOWER(email) = ?`,
+      args: [params.name || null, params.avatarUrl || null, cleanGoogleId, existing.id, cleanEmail],
+    });
+    const updated = (await getUserById(existing.id)) || (await getUserByEmail(cleanEmail)) || existing;
+    return {
+      user: updated,
+      isNew: false,
+      needsUsername: !updated.username || updated.username.length < 3,
+    };
+  }
+
+  const initialUsername = params.username ? params.username.trim().toLowerCase() : "";
+  await client.execute({
+    sql: `INSERT INTO users (id, google_id, email, name, avatar_url, username, registered_at)
+          VALUES (?, ?, ?, ?, ?, ?, ?)`,
+    args: [id, cleanGoogleId, cleanEmail, params.name || "", params.avatarUrl || "", initialUsername, now],
+  });
+
+  const newUser: UserRecord = {
+    id,
+    googleId: cleanGoogleId,
+    email: cleanEmail,
+    name: params.name,
+    avatarUrl: params.avatarUrl,
+    username: initialUsername,
+    registeredAt: now,
+  };
+
+  return {
+    user: newUser,
+    isNew: true,
+    needsUsername: !initialUsername || initialUsername.length < 3,
+  };
+}
+
+export async function claimOrUpdateUsername(
+  userIdOrEmail: string,
   username: string
-): Promise<{ success: boolean; error?: string; username?: string }> {
+): Promise<{ success: boolean; error?: string; user?: UserRecord }> {
   await ensureInit();
   const client = getClient();
   const clean = username.trim().toLowerCase();
-  const cleanWallet = wallet.trim();
+  const cleanId = userIdOrEmail.trim();
 
-  // Strict regex: lowercase letters and numbers only, 3 to 15 chars
+  // Strict validation: lowercase letters and numbers only, 3 to 15 chars
   const validRegex = /^[a-z0-9]{3,15}$/;
   if (!validRegex.test(clean)) {
     return {
       success: false,
-      error: "Username must be 3-15 characters, lowercase english letters and numbers only. No dots, dashes, or symbols.",
+      error: "Username must be 3-15 characters, lowercase english letters and numbers only. No spaces, symbols, dots or dashes.",
     };
   }
 
-  // Check if username is taken by another wallet
+  // Check if username taken by another user
   const existingUser = await getUserByUsername(clean);
-  if (existingUser && existingUser.wallet !== cleanWallet) {
+  if (
+    existingUser &&
+    existingUser.id !== cleanId &&
+    existingUser.email?.toLowerCase() !== cleanId.toLowerCase() &&
+    existingUser.googleId !== cleanId
+  ) {
     return {
       success: false,
-      error: `Username "@${clean}" is already taken by another wallet. Please choose a different handle.`,
+      error: `Username "@${clean}" is already claimed by another user. Please choose a different handle.`,
     };
   }
 
   const now = Date.now();
 
   try {
-    await client.execute({
-      sql: `
-        INSERT INTO users (wallet, username, registered_at)
-        VALUES (?, ?, ?)
-        ON CONFLICT(wallet) DO UPDATE SET
-          username = excluded.username,
-          registered_at = excluded.registered_at;
-      `,
-      args: [cleanWallet, clean, now],
+    // If user already exists in DB, update their username
+    const res = await client.execute({
+      sql: `UPDATE users SET username = ? WHERE id = ? OR LOWER(email) = ? OR google_id = ?`,
+      args: [clean, cleanId, cleanId.toLowerCase(), cleanId],
     });
+
+    if (res.rowsAffected === 0) {
+      // Create record if not existed yet
+      const id = `usr_${Buffer.from(cleanId).toString("hex").slice(0, 12)}`;
+      const isEmail = cleanId.includes("@");
+      await client.execute({
+        sql: `INSERT INTO users (id, google_id, email, username, registered_at)
+              VALUES (?, ?, ?, ?, ?)`,
+        args: [id, isEmail ? null : cleanId, isEmail ? cleanId.toLowerCase() : null, clean, now],
+      });
+    }
+
+    let user = (await getUserById(cleanId)) || (await getUserByEmail(cleanId)) || (await getUserByUsername(clean));
 
     return {
       success: true,
-      username: clean,
+      user: user || undefined,
     };
   } catch (err: unknown) {
     const msg = err instanceof Error ? err.message : String(err);

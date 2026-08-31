@@ -22,12 +22,22 @@ export interface TrendingTokenItem {
   mcapFormatted: string;
   volume24h: number;
   volumeFormatted: string;
+  volume6h?: number;
+  volume6hFormatted?: string;
   priceChange24h: number;
   priceChangeFormatted: string;
+  priceChange6h?: number;
+  priceChange6hFormatted?: string;
+  txns6h?: number;
+  txns24h?: number;
+  age?: string;
+  liquidityUsd?: number;
+  liquidityFormatted?: string;
   bondingCurveProgress: number;
-  badge: "Hot" | "Graduating" | "New" | "Top Volume";
+  badge: string;
   iconUrl?: string;
   dexScreenerUrl?: string;
+  dexId?: string;
 }
 
 export interface CalloutItem {
@@ -49,6 +59,7 @@ export interface CalloutItem {
   timeAgo: string;
   upvotes: number;
   batonBurned: number;
+  burnRank?: number;
   thesis: string;
 }
 

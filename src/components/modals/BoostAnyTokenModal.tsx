@@ -77,14 +77,14 @@ export function BoostAnyTokenModal({
       return;
     }
 
-    if (trimmed.length >= 32 && trimmed.length <= 44 && !/\s/.test(trimmed)) {
+    if (trimmed.length >= 2) {
       let active = true;
       setIsSearching(true);
       setErrorMessage(null);
 
       const ctrl = new AbortController();
 
-      fetch(`/api/token-lookup?mint=${encodeURIComponent(trimmed)}`, {
+      fetch(`/api/token-lookup?q=${encodeURIComponent(trimmed)}`, {
         signal: ctrl.signal,
       })
         .then(async (res) => {
@@ -92,21 +92,27 @@ export function BoostAnyTokenModal({
           const data = await res.json();
           if (!active) return;
 
-          if (data && data.mint) {
+          const match = Array.isArray(data.results) && data.results.length > 0
+            ? data.results[0]
+            : data.mint
+            ? data
+            : null;
+
+          if (match && match.mint) {
             setSelectedToken({
-              mint: data.mint,
-              name: data.name || "Solana Token",
-              symbol: (data.symbol || "TOKEN").toUpperCase(),
-              iconUrl: data.iconUrl || undefined,
-              priceUsd: data.priceUsd || 0,
-              marketCap: data.marketCap || 0,
-              volume24h: data.volume24h || 0,
-              liquidityUsd: data.liquidityUsd || 0,
+              mint: match.mint,
+              name: match.name || "Solana Token",
+              symbol: (match.symbol || "TOKEN").toUpperCase(),
+              iconUrl: match.iconUrl || undefined,
+              priceUsd: match.priceUsd || 0,
+              marketCap: match.marketCap || 0,
+              volume24h: match.volume24h || 0,
+              liquidityUsd: match.liquidityUsd || 0,
             });
           }
         })
         .catch(() => {
-          if (active) {
+          if (active && trimmed.length >= 32) {
             setSelectedToken({
               mint: trimmed,
               name: "Solana Token",

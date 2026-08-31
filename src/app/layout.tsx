@@ -27,11 +27,12 @@ const jetbrainsMono = JetBrains_Mono({
 });
 
 export const viewport: Viewport = {
-  themeColor: "#09090b",
+  themeColor: "#0B0E14",
   width: "device-width",
   initialScale: 1,
   maximumScale: 1,
   userScalable: false,
+  viewportFit: "cover",
 };
 
 export const metadata: Metadata = {
@@ -60,9 +61,22 @@ export const metadata: Metadata = {
     statusBarStyle: "black-translucent",
     title: "Outbid",
   },
+  other: {
+    "apple-mobile-web-app-capable": "yes",
+    "apple-mobile-web-app-status-bar-style": "black-translucent",
+    "apple-mobile-web-app-title": "Outbid",
+    "mobile-web-app-capable": "yes",
+    "format-detection": "telephone=no",
+  },
   icons: {
-    icon: "/icons/icon-192x192.png",
-    apple: "/icons/icon-192x192.png",
+    icon: [
+      { url: "/icon", type: "image/png" },
+      { url: "/icons/icon.svg", type: "image/svg+xml" },
+    ],
+    apple: [
+      { url: "/images/baton-logo.png", sizes: "180x180", type: "image/png" },
+      { url: "/apple-icon", sizes: "180x180", type: "image/png" },
+    ],
   },
 };
 
@@ -79,15 +93,17 @@ export default function RootLayout({
     >
       <head>
         <link rel="manifest" href="/manifest.json" />
+        <link rel="apple-touch-icon" sizes="180x180" href="/apple-icon" />
+        <link rel="icon" href="/icon" sizes="any" />
         <meta name="mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
         <meta name="apple-mobile-web-app-title" content="Outbid" />
+        <script src="https://accounts.google.com/gsi/client" async defer></script>
       </head>
       <body className="bg-[#0B0E14] text-zinc-100 antialiased min-h-screen overflow-x-hidden selection:bg-[#14F195] selection:text-black font-mono">
         <ThemeProvider attribute="class" defaultTheme="dark" enableSystem={false}>
           <WalletContextProvider>
-            <Ticker />
             {children}
             <LiveBurnToast />
           </WalletContextProvider>

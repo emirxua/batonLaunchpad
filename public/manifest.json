@@ -1,15 +1,21 @@
 {
-  "name": "Outbid Bond Terminal",
+  "name": "Outbid Terminal",
   "short_name": "Outbid",
-  "description": "High-Performance Solana Attention Market & Terminal",
+  "description": "High-Performance Solana Alpha Signals & DEX Burn Terminal",
   "start_url": "/",
   "id": "/",
   "display": "standalone",
-  "background_color": "#09090b",
-  "theme_color": "#09090b",
+  "background_color": "#0B0E14",
+  "theme_color": "#0B0E14",
   "orientation": "portrait-primary",
   "scope": "/",
   "icons": [
+    {
+      "src": "/images/baton-logo.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
     {
       "src": "/icons/icon-192x192.png",
       "sizes": "192x192",

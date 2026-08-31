@@ -2,109 +2,214 @@
 
 import React from "react";
 import useSWR from "swr";
-import { useMarketStats } from "@/hooks/useMarketData";
-import { Flame, Zap } from "lucide-react";
+import { TrendingUp, TrendingDown, ExternalLink } from "lucide-react";
 
 const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
-export const Ticker: React.FC = React.memo(() => {
-  const { markets } = useMarketStats();
+interface TickerToken {
+  mint: string;
+  symbol: string;
+  name: string;
+  priceFormatted: string;
+  changeFormatted: string;
+  isPositive: boolean;
+  iconUrl: string;
+  pumpUrl: string;
+}
 
+export const Ticker: React.FC = React.memo(() => {
   const { data: trendingData } = useSWR("/api/trending", fetcher, {
-    refreshInterval: 10_000,
-    revalidateOnFocus: false,
-    dedupingInterval: 5_000,
+    refreshInterval: 4_000,
+    revalidateOnFocus: true,
+    dedupingInterval: 2_500,
   });
 
-  const trendingItems = React.useMemo(() => {
+  const { data: statsData } = useSWR("/api/stats/active-users", fetcher, {
+    refreshInterval: 15_000,
+    revalidateOnFocus: false,
+    dedupingInterval: 10_000,
+  });
+
+  const activeOnlineUsers = statsData?.activeUsers ?? 1;
+
+  const tokens: TickerToken[] = React.useMemo(() => {
     const raw: any[] = trendingData?.tokens || trendingData?.data || [];
-    return raw.slice(0, 8).map((t: any) => {
+    if (!raw || raw.length === 0) return [];
+
+    return raw.map((t: any) => {
+      const mint = t.mint || t.address || t.pairAddress || "2vdc4owf1MPz54jJCN61y3QSKqjcPpr32wJ9qKkmpump";
+      const symbol = (t.symbol || "TOKEN").toUpperCase();
       const price = t.priceUsd ?? t.price ?? 0;
       const change = t.priceChange24h ?? 0;
       const isPos = change >= 0;
+
+      // Pump.fun direct url
+      const pumpUrl = mint === "So11111111111111111111111111111111111111112"
+        ? "https://dexscreener.com/solana/sol"
+        : `https://pump.fun/coin/${mint}`;
+
+      const iconUrl =
+        t.iconUrl ||
+        t.imageUrl ||
+        (mint === "2vdc4owf1MPz54jJCN61y3QSKqjcPpr32wJ9qKkmpump"
+          ? "/images/baton-logo.png"
+          : "");
+
       return {
-        symbol: (t.symbol || "TOKEN").toUpperCase(),
+        mint,
+        symbol,
+        name: t.name || symbol,
         priceFormatted:
-          price < 0.0001
-            ? `$${price.toFixed(6)}`
+          price < 0.00001
+            ? `$${price.toFixed(7)}`
+            : price < 0.01
+            ? `$${price.toFixed(5)}`
             : price < 1
             ? `$${price.toFixed(4)}`
             : `$${price.toFixed(2)}`,
         changeFormatted: `${isPos ? "+" : ""}${change.toFixed(1)}%`,
         isPositive: isPos,
+        iconUrl,
+        pumpUrl,
       };
     });
   }, [trendingData]);
 
-  // Combine top macro crypto markets (SOL, BTC, ETH, BNB) with top trending Solana tokens
-  const combinedStream = React.useMemo(() => {
-    const list = [...markets, ...trendingItems];
-    return list;
-  }, [markets, trendingItems]);
+  if (tokens.length === 0) return null;
 
   return (
-    <div className="w-full bg-zinc-100 dark:bg-[#07080A] text-zinc-700 dark:text-zinc-300 border-b border-zinc-200 dark:border-white/10 h-8 flex items-center overflow-hidden select-none z-50 relative font-mono text-[11px] font-bold">
-      {/* ── Left Indicator: Green Live Terminal Pulsating Dot ──────────── */}
-      <div className="flex items-center gap-2 px-3 h-full bg-white dark:bg-black text-zinc-900 dark:text-white uppercase tracking-wider text-[10px] font-black z-10 shrink-0 border-r border-zinc-200 dark:border-white/10">
-        <span className="relative flex h-2 w-2">
-          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
-          <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500 shadow-[0_0_8px_#10b981]" />
-        </span>
-        <span className="hidden sm:inline">LIVE TERMINAL</span>
+    <div className="w-full bg-[#08090C] text-zinc-300 border-b border-white/[0.06] h-8 sm:h-8.5 flex items-center overflow-hidden select-none z-50 relative font-mono text-[11px]">
+      {/* ── Top-Leftmost Clean Online Indicator (Frameless & Sleek) ──────── */}
+      <div
+        className="flex items-center gap-1.5 px-3 h-full shrink-0 bg-[#08090C] z-20 border-r border-white/[0.08] text-[11px] font-mono select-none"
+        title="Live traders online"
+      >
+        <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse shadow-[0_0_6px_#10b981]" />
+        <span className="text-white font-extrabold">{activeOnlineUsers}</span>
+        <span className="text-[10px] text-zinc-500 uppercase tracking-wider font-bold">ONLINE</span>
       </div>
 
-      {/* ── Left Fuel Badge: Ecosystem Fuel: $BATON Burn-to-Rank ─────────── */}
-      <div className="hidden lg:flex items-center gap-1.5 px-3 h-full bg-amber-500/10 text-amber-500 dark:text-amber-400 uppercase tracking-wider text-[10px] font-bold z-10 shrink-0 border-r border-zinc-200 dark:border-white/10">
-        <Flame className="w-3.5 h-3.5 fill-current text-orange-500" />
-        <span>Ecosystem Fuel: $BATON Burn-to-Rank</span>
-      </div>
-
-      {/* ── Continuous Marquee Feed ──────────────────────────────────────── */}
+      {/* ── Seamless Full-Width Continuous Marquee ──────────────────────── */}
       <div className="flex overflow-hidden w-full group">
-        {combinedStream.length === 0 ? (
-          <div className="px-4 text-xs text-zinc-500 flex items-center gap-2 animate-pulse">
-            <Zap className="w-3 h-3 text-amber-400" />
-            <span>Connecting to live Solana &amp; Crypto price streams…</span>
-          </div>
-        ) : (
-          <div className="animate-marquee-gpu items-center flex">
-            {/* Loop 1 */}
-            {combinedStream.map((m, idx) => (
-              <div key={`m1-${m.symbol}-${idx}`} className="flex items-center gap-1.5 px-4 whitespace-nowrap">
-                <span className="text-zinc-500 uppercase text-[10px]">${m.symbol}:</span>
-                <span className="font-black text-zinc-950 dark:text-zinc-100">{m.priceFormatted}</span>
-                <span
-                  className={`text-[10px] px-1 py-0.5 rounded font-bold ${
-                    m.isPositive
-                      ? "text-emerald-500 bg-emerald-500/10 border border-emerald-500/20"
-                      : "text-rose-500 bg-rose-500/10 border border-rose-500/20"
-                  }`}
-                >
-                  {m.changeFormatted}
-                </span>
-                <span className="text-zinc-400 dark:text-zinc-700 ml-2">/</span>
+        <div className="animate-marquee-gpu items-center flex hover:[animation-play-state:paused] py-1">
+          {/* Loop 1 */}
+          {tokens.map((t, idx) => (
+            <a
+              key={`t1-${t.mint}-${idx}`}
+              href={t.pumpUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-2 px-3.5 py-1 mx-0.5 rounded-lg hover:bg-white/[0.06] hover:border-amber-500/30 transition-all group/item shrink-0 cursor-pointer"
+              title={`View ${t.symbol} on Pump.fun`}
+            >
+              {/* Token Image from Pump.fun / DexScreener */}
+              <div className="w-4 h-4 rounded-full overflow-hidden shrink-0 bg-zinc-800 ring-1 ring-white/10 flex items-center justify-center">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={t.iconUrl}
+                  alt={t.symbol}
+                  className="w-full h-full object-cover"
+                  loading="lazy"
+                  onError={(e) => {
+                    (e.target as HTMLElement).style.display = "none";
+                  }}
+                />
               </div>
-            ))}
 
-            {/* Loop 2 */}
-            {combinedStream.map((m, idx) => (
-              <div key={`m2-${m.symbol}-${idx}`} className="flex items-center gap-1.5 px-4 whitespace-nowrap">
-                <span className="text-zinc-500 uppercase text-[10px]">${m.symbol}:</span>
-                <span className="font-black text-zinc-950 dark:text-zinc-100">{m.priceFormatted}</span>
-                <span
-                  className={`text-[10px] px-1 py-0.5 rounded font-bold ${
-                    m.isPositive
-                      ? "text-emerald-500 bg-emerald-500/10 border border-emerald-500/20"
-                      : "text-rose-500 bg-rose-500/10 border border-rose-500/20"
-                  }`}
-                >
-                  {m.changeFormatted}
-                </span>
-                <span className="text-zinc-400 dark:text-zinc-700 ml-2">/</span>
+              {/* Symbol */}
+              <span className="font-extrabold text-white text-[11px] group-hover/item:text-amber-400 transition-colors">
+                ${t.symbol}
+              </span>
+
+              {/* Price */}
+              <span className="font-bold text-zinc-200 text-[11px] tracking-tight">
+                {t.priceFormatted}
+              </span>
+
+              {/* 24h Change Badge */}
+              <span
+                className={`text-[10px] px-1.5 py-0.2 rounded-md font-extrabold flex items-center gap-0.5 ${
+                  t.isPositive
+                    ? "text-emerald-400 bg-emerald-500/15 border border-emerald-500/25"
+                    : "text-rose-400 bg-rose-500/15 border border-rose-500/25"
+                }`}
+              >
+                {t.isPositive ? (
+                  <TrendingUp className="w-2.5 h-2.5 stroke-[2.5]" />
+                ) : (
+                  <TrendingDown className="w-2.5 h-2.5 stroke-[2.5]" />
+                )}
+                <span>{t.changeFormatted}</span>
+              </span>
+
+              {/* Mini Pump Pill */}
+              <span className="text-[9px] px-1 py-0.2 rounded bg-emerald-500/10 text-emerald-400 font-extrabold flex items-center gap-0.5 opacity-80 group-hover/item:opacity-100">
+                <span>💊</span>
+              </span>
+
+              <span className="text-zinc-700 ml-1.5">•</span>
+            </a>
+          ))}
+
+          {/* Loop 2 (Seamless Infinite Scrolling) */}
+          {tokens.map((t, idx) => (
+            <a
+              key={`t2-${t.mint}-${idx}`}
+              href={t.pumpUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-2 px-3.5 py-1 mx-0.5 rounded-lg hover:bg-white/[0.06] hover:border-amber-500/30 transition-all group/item shrink-0 cursor-pointer"
+              title={`View ${t.symbol} on Pump.fun`}
+            >
+              {/* Token Image from Pump.fun / DexScreener */}
+              <div className="w-4 h-4 rounded-full overflow-hidden shrink-0 bg-zinc-800 ring-1 ring-white/10 flex items-center justify-center">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={t.iconUrl}
+                  alt={t.symbol}
+                  className="w-full h-full object-cover"
+                  loading="lazy"
+                  onError={(e) => {
+                    (e.target as HTMLElement).style.display = "none";
+                  }}
+                />
               </div>
-            ))}
-          </div>
-        )}
+
+              {/* Symbol */}
+              <span className="font-extrabold text-white text-[11px] group-hover/item:text-amber-400 transition-colors">
+                ${t.symbol}
+              </span>
+
+              {/* Price */}
+              <span className="font-bold text-zinc-200 text-[11px] tracking-tight">
+                {t.priceFormatted}
+              </span>
+
+              {/* 24h Change Badge */}
+              <span
+                className={`text-[10px] px-1.5 py-0.2 rounded-md font-extrabold flex items-center gap-0.5 ${
+                  t.isPositive
+                    ? "text-emerald-400 bg-emerald-500/15 border border-emerald-500/25"
+                    : "text-rose-400 bg-rose-500/15 border border-rose-500/25"
+                }`}
+              >
+                {t.isPositive ? (
+                  <TrendingUp className="w-2.5 h-2.5 stroke-[2.5]" />
+                ) : (
+                  <TrendingDown className="w-2.5 h-2.5 stroke-[2.5]" />
+                )}
+                <span>{t.changeFormatted}</span>
+              </span>
+
+              {/* Mini Pump Pill */}
+              <span className="text-[9px] px-1 py-0.2 rounded bg-emerald-500/10 text-emerald-400 font-extrabold flex items-center gap-0.5 opacity-80 group-hover/item:opacity-100">
+                <span>💊</span>
+              </span>
+
+              <span className="text-zinc-700 ml-1.5">•</span>
+            </a>
+          ))}
+        </div>
       </div>
     </div>
   );

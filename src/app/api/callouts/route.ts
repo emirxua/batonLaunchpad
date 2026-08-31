@@ -48,8 +48,8 @@ async function fetchCallerCalloutsSafe(
 
     return callouts.map((c: any) => ({
       ...c,
-      coinSymbol: c.coinSymbol || (c.coinMint ? c.coinMint.slice(0, 4).toUpperCase() : "TOKEN"),
-      coinName: c.coinName || "Solana Token",
+      coinSymbol: c.coinSymbol || c.symbol || "",
+      coinName: c.coinName || c.name || "",
       callerWallet: wallet,
       callerLabel: label,
     }));
@@ -59,7 +59,7 @@ async function fetchCallerCalloutsSafe(
 }
 
 /**
- * Real-time Solana Alpha Breakout Signals from Pump.fun & DexScreener
+ * Real-time Solana Alpha Breakout Signals from Pump.fun
  */
 async function fetchLiveSolanaBreakoutSignals(): Promise<CalloutCard[]> {
   const cards: CalloutCard[] = [];
@@ -82,7 +82,7 @@ async function fetchLiveSolanaBreakoutSignals(): Promise<CalloutCard[]> {
     if (pumpRes.ok) {
       const pumpCoins: any[] = await pumpRes.json();
       if (Array.isArray(pumpCoins)) {
-        pumpCoins.slice(0, 20).forEach((c, idx) => {
+        pumpCoins.slice(0, 25).forEach((c, idx) => {
           if (!c.mint) return;
           const caller = callerAliases[idx % callerAliases.length];
           const mcap = Number(c.usd_market_cap) || 12000;
@@ -96,7 +96,7 @@ async function fetchLiveSolanaBreakoutSignals(): Promise<CalloutCard[]> {
             callerWallet: caller.wallet,
             callerLabel: caller.label,
             coinMint: c.mint,
-            coinName: c.name || "Solana Token",
+            coinName: c.name || "Solana Project",
             coinSymbol: (c.symbol || "TOKEN").toUpperCase(),
             marketCap: Math.round(mcap / mult),
             calloutPrice: calloutPriceSol,
@@ -107,16 +107,16 @@ async function fetchLiveSolanaBreakoutSignals(): Promise<CalloutCard[]> {
             maxPriceUsd: (mcap / 1_000_000_000) * mult,
             thesis: c.description ? c.description.slice(0, 140) : "Rapid on-chain volume & momentum breakout on Solana.",
             user_uuid: `user-${caller.wallet.slice(0, 6)}`,
-            likes: Math.floor(Math.abs(Math.cos(idx)) * 40 + 5),
+            likes: 0,
             hasLiked: false,
             hasReposted: false,
-            repostCount: Math.floor(idx * 2 + 1),
+            repostCount: 0,
             quoteCount: 0,
-            commentCount: Math.floor(idx + 2),
+            commentCount: 0,
             replyCount: 0,
             maxMultiplier: mult,
             maxMultiplierAt: new Date().toISOString(),
-            viewCount: Math.floor(idx * 150 + 200),
+            viewCount: 0,
             mediaUrl: c.image_uri || null,
             quotedCalloutId: null,
             quotedCallout: null,
@@ -127,59 +127,111 @@ async function fetchLiveSolanaBreakoutSignals(): Promise<CalloutCard[]> {
       }
     }
   } catch (err) {
-    console.warn("[callouts] Signal generation error:", err);
+    console.warn("[callouts] Signal generation notice:", err);
   }
 
   return cards;
 }
 
 /**
- * Enriches all callouts with DexScreener metadata and fast CDN images
+ * Enriches all callouts with real DexScreener & Pump.fun metadata (symbols, names, icons)
  */
 async function enrichCalloutMetadata(cards: CalloutCard[]): Promise<CalloutCard[]> {
-  const mints = cards.map((c) => c.coinMint).filter(Boolean);
-  if (mints.length === 0) return cards;
+  const uniqueMints = Array.from(new Set(cards.map((c) => c.coinMint).filter(Boolean)));
+  if (uniqueMints.length === 0) return cards;
 
-  try {
-    const chunk = mints.slice(0, 30);
-    const res = await fetchWithTimeout(`${DEX_BASE}/latest/dex/tokens/${chunk.join(",")}`, 3500);
-    if (res.ok) {
-      const data = await res.json();
-      const pairs: any[] = Array.isArray(data.pairs) ? data.pairs : [];
-      const pairMap = new Map<string, any>();
-      for (const p of pairs) {
-        if (p.baseToken?.address) {
-          const existing = pairMap.get(p.baseToken.address);
-          if (!existing || (p.info?.imageUrl && !existing.info?.imageUrl)) {
-            pairMap.set(p.baseToken.address, p);
+  const metadataMap = new Map<
+    string,
+    { symbol?: string; name?: string; imageUrl?: string; priceUsd?: number; mcap?: number }
+  >();
+
+  // 1. Fetch from DexScreener in chunks of 30 for ALL mints
+  const chunkSize = 30;
+  for (let i = 0; i < uniqueMints.length; i += chunkSize) {
+    const chunk = uniqueMints.slice(i, i + chunkSize);
+    try {
+      const res = await fetchWithTimeout(`${DEX_BASE}/latest/dex/tokens/${chunk.join(",")}`, 3500);
+      if (res.ok) {
+        const data = await res.json();
+        const pairs: any[] = Array.isArray(data?.pairs) ? data.pairs : [];
+        for (const p of pairs) {
+          if (p.chainId === "solana" && p.baseToken?.address) {
+            const addr = p.baseToken.address;
+            const existing = metadataMap.get(addr);
+            if (!existing || (p.info?.imageUrl && !existing.imageUrl) || (p.liquidity?.usd ?? 0) > 0) {
+              metadataMap.set(addr, {
+                symbol: p.baseToken.symbol,
+                name: p.baseToken.name,
+                imageUrl: p.info?.imageUrl,
+                priceUsd: p.priceUsd ? parseFloat(p.priceUsd) : undefined,
+                mcap: p.marketCap || p.fdv,
+              });
+            }
           }
         }
       }
-
-      return cards.map((c) => {
-        const p = pairMap.get(c.coinMint);
-        const dexImg = p?.info?.imageUrl;
-        let img = dexImg || c.mediaUrl || null;
-        if (img && img.includes("ipfs.io")) {
-          img = img.replace("https://ipfs.io/ipfs/", "https://cf-ipfs.com/ipfs/");
-        }
-        if (c.coinMint === "2vdc4owf1MPz54jJCN61y3QSKqjcPpr32wJ9qKkmpump") {
-          img = "/images/baton-logo.png";
-        }
-
-        return {
-          ...c,
-          coinSymbol: p?.baseToken?.symbol || c.coinSymbol,
-          coinName: p?.baseToken?.name || c.coinName,
-          mediaUrl: img,
-        };
-      });
+    } catch {
+      /* continue */
     }
-  } catch {
-    // Ignore error
   }
 
-  return cards;
+  // 2. For mints still missing real metadata, query pump.fun coin endpoint directly
+  const missingMints = uniqueMints.filter((m) => {
+    const meta = metadataMap.get(m);
+    return !meta || !meta.symbol || !meta.name;
+  });
+
+  if (missingMints.length > 0) {
+    const pumpPromises = missingMints.slice(0, 40).map(async (mint) => {
+      try {
+        const res = await fetchWithTimeout(`${PUMP_BASE}/coins/${mint}`, 2500);
+        if (res.ok) {
+          const coin = await res.json();
+          if (coin && coin.symbol) {
+            metadataMap.set(mint, {
+              symbol: String(coin.symbol).toUpperCase(),
+              name: coin.name || coin.symbol,
+              imageUrl: coin.image_uri,
+              priceUsd: coin.usd_market_cap ? Number(coin.usd_market_cap) / 1_000_000_000 : undefined,
+              mcap: Number(coin.usd_market_cap) || undefined,
+            });
+          }
+        }
+      } catch {
+        /* continue */
+      }
+    });
+    await Promise.allSettled(pumpPromises);
+  }
+
+  return cards
+    .map((c) => {
+      const meta = metadataMap.get(c.coinMint);
+      const isBadSymbol = (s?: string) => !s || s.startsWith("0x") || s.length < 2 || s.toLowerCase() === c.coinMint.slice(0, 4).toLowerCase();
+      
+      const realSymbol = meta?.symbol || (!isBadSymbol(c.coinSymbol) ? c.coinSymbol : undefined);
+      const realName = meta?.name || (c.coinName && c.coinName !== "Solana Token" ? c.coinName : realSymbol || "Solana Project");
+
+      let img = meta?.imageUrl || c.mediaUrl || null;
+      if (img && img.includes("ipfs.io")) {
+        img = img.replace("https://ipfs.io/ipfs/", "https://cf-ipfs.com/ipfs/");
+      }
+      if (c.coinMint === "2vdc4owf1MPz54jJCN61y3QSKqjcPpr32wJ9qKkmpump") {
+        img = "/images/baton-logo.png";
+      }
+
+      return {
+        ...c,
+        coinSymbol: realSymbol || c.coinSymbol || (meta?.name ? meta.name.slice(0, 6).toUpperCase() : "TOKEN"),
+        coinName: realName,
+        mediaUrl: img,
+      };
+    })
+    .filter((c) => {
+      // Filter out invalid/unresolved address artifacts
+      if (!c.coinSymbol || c.coinSymbol.startsWith("0x")) return false;
+      return true;
+    });
 }
 
 export async function GET() {

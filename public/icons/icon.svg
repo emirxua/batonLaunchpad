@@ -1,10 +1,10 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
   <rect width="512" height="512" rx="128" fill="#09090B"/>
-  <circle cx="256" cy="256" r="210" fill="#13151B" stroke="#F59E0B" stroke-width="8"/>
-  <g transform="translate(100, 160)">
-    <!-- Baton 3 horizontal bars logo -->
-    <rect x="0" y="0" width="312" height="40" rx="20" fill="#FFFFFF"/>
-    <rect x="0" y="70" width="250" height="40" rx="20" fill="#F97316"/>
-    <rect x="0" y="140" width="180" height="40" rx="20" fill="#FFFFFF"/>
+  <circle cx="256" cy="256" r="210" fill="#0D0E12" stroke="#F59E0B" stroke-width="8" stroke-opacity="0.4"/>
+  <g transform="translate(116, 176)">
+    <!-- 3 horizontal orange/amber bars matching the site -->
+    <rect x="0" y="0" width="280" height="36" rx="18" fill="#F59E0B"/>
+    <rect x="0" y="62" width="210" height="36" rx="18" fill="#F59E0B"/>
+    <rect x="0" y="124" width="280" height="36" rx="18" fill="#F59E0B"/>
   </g>
 </svg>

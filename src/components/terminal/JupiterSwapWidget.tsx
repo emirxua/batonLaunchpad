@@ -25,8 +25,10 @@ import { SolanaLogo } from "@/components/common/SolanaLogo";
 interface JupiterSwapWidgetProps {
   outputMint?: string;
   outputSymbol?: string;
+  outputIconUrl?: string;
   targetMint?: string;
   targetSymbol?: string;
+  targetIconUrl?: string;
   defaultOutputMint?: string;
 }
 
@@ -55,8 +57,10 @@ function base64ToBytes(base64: string): Uint8Array {
 export function JupiterSwapWidget({
   outputMint,
   outputSymbol,
+  outputIconUrl,
   targetMint,
   targetSymbol,
+  targetIconUrl,
   defaultOutputMint,
 }: JupiterSwapWidgetProps) {
   const initialMint =
@@ -108,13 +112,14 @@ export function JupiterSwapWidget({
     mint: initialMint,
     symbol: initialSymbol,
     name: initialSymbol,
-    iconUrl: initialMint === BATON_MINT ? BATON_DEFAULT_ICON : undefined,
+    iconUrl: outputIconUrl || targetIconUrl || (initialMint === BATON_MINT ? BATON_DEFAULT_ICON : undefined),
     priceUsd: 0,
   });
 
   // Sync with incoming prop changes
   useEffect(() => {
     const mintToSync = outputMint || targetMint || defaultOutputMint;
+    const iconToSync = outputIconUrl || targetIconUrl;
     if (mintToSync) {
       const match = liveTokenList.find(
         (t) => t.mint.toLowerCase() === mintToSync.toLowerCase()
@@ -122,19 +127,21 @@ export function JupiterSwapWidget({
       if (match) {
         setSelectedToken({
           ...match,
-          iconUrl: match.iconUrl || (match.mint === BATON_MINT ? BATON_DEFAULT_ICON : undefined),
+          symbol: outputSymbol || targetSymbol || match.symbol,
+          name: outputSymbol || targetSymbol || match.name,
+          iconUrl: iconToSync !== undefined ? iconToSync : (match.iconUrl || (match.mint === BATON_MINT ? BATON_DEFAULT_ICON : undefined)),
         });
       } else {
         setSelectedToken((prev) => ({
           mint: mintToSync,
           symbol: outputSymbol || targetSymbol || prev.symbol,
           name: outputSymbol || targetSymbol || prev.name,
-          iconUrl: mintToSync === BATON_MINT ? BATON_DEFAULT_ICON : prev.iconUrl,
+          iconUrl: iconToSync !== undefined ? iconToSync : (mintToSync === BATON_MINT ? BATON_DEFAULT_ICON : undefined),
           priceUsd: prev.mint.toLowerCase() === mintToSync.toLowerCase() ? prev.priceUsd : 0,
         }));
       }
     }
-  }, [outputMint, targetMint, defaultOutputMint, outputSymbol, targetSymbol, liveTokenList]);
+  }, [outputMint, targetMint, defaultOutputMint, outputSymbol, targetSymbol, outputIconUrl, targetIconUrl, liveTokenList]);
 
   // Continuously sync selectedToken price whenever trendingData updates live
   useEffect(() => {
@@ -242,18 +249,53 @@ export function JupiterSwapWidget({
     };
   }, [connected, publicKey, selectedToken.mint, connection]);
 
+  // Live Target Token DEX Price Tracker
+  const { data: targetDexData } = useSWR(
+    selectedToken.mint && selectedToken.mint !== "So11111111111111111111111111111111111111112"
+      ? `https://api.dexscreener.com/latest/dex/tokens/${selectedToken.mint}`
+      : null,
+    fetcher,
+    {
+      refreshInterval: 4_000,
+      revalidateOnFocus: true,
+      dedupingInterval: 2_000,
+    }
+  );
+
   const solPrice = liveSolPrice || 106.5;
-
   const parsedPayAmount = parseFloat(inputAmount) || 0;
-  const tokenPrice = selectedToken.priceUsd && selectedToken.priceUsd > 0 ? selectedToken.priceUsd : 0.00001148;
 
-  const estimatedOut = !isReverse
-    ? parsedPayAmount > 0 && tokenPrice > 0
-      ? (parsedPayAmount * solPrice) / tokenPrice
-      : 0
-    : parsedPayAmount > 0 && solPrice > 0
-    ? (parsedPayAmount * tokenPrice) / solPrice
-    : 0;
+  const targetPair = targetDexData?.pairs?.[0];
+  const liveTargetPrice =
+    (targetPair?.priceUsd ? parseFloat(targetPair.priceUsd) : selectedToken.priceUsd) || 0.00001148;
+  const tokenPrice = liveTargetPrice > 0 ? liveTargetPrice : 0.00001148;
+
+  // Real-time on-chain Jupiter Swap Quote
+  const quoteUrl =
+    parsedPayAmount > 0 && selectedToken.mint
+      ? `/api/swap-quote?inputMint=${!isReverse ? "So11111111111111111111111111111111111111112" : selectedToken.mint}&outputMint=${!isReverse ? selectedToken.mint : "So11111111111111111111111111111111111111112"}&amount=${parsedPayAmount}&slippageBps=${Math.round(effectiveSlippage * 100)}`
+      : null;
+
+  const { data: quoteApiResponse, isLoading: isQuoteLoading } = useSWR(
+    quoteUrl,
+    fetcher,
+    {
+      refreshInterval: 5_000,
+      revalidateOnFocus: false,
+      dedupingInterval: 2_000,
+    }
+  );
+
+  const estimatedOut =
+    quoteApiResponse?.success && quoteApiResponse?.outAmountHuman > 0
+      ? quoteApiResponse.outAmountHuman
+      : !isReverse
+      ? parsedPayAmount > 0 && tokenPrice > 0
+        ? (parsedPayAmount * solPrice) / tokenPrice
+        : 0
+      : parsedPayAmount > 0 && solPrice > 0
+      ? (parsedPayAmount * tokenPrice) / solPrice
+      : 0;
 
   const estimatedOutFormatted = !isReverse
     ? estimatedOut >= 1_000_000
@@ -562,14 +604,13 @@ export function JupiterSwapWidget({
       <div className="bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-white/10 rounded-2xl overflow-hidden shadow-2xl relative font-mono select-none">
       <div className="p-4 border-b border-zinc-200 dark:border-white/10 flex items-center justify-between bg-zinc-50 dark:bg-zinc-900/50">
         <div className="flex items-center gap-2">
-          <span className="w-2.5 h-2.5 rounded-full bg-amber-400 animate-pulse" />
-          <h3 className="text-xs font-black tracking-wider text-zinc-950 dark:text-white uppercase flex items-center gap-1.5">
-            <Zap className="w-3.5 h-3.5 text-amber-500 fill-current" />
-            <span>Terminal Swap Engine</span>
+          <Zap className="w-4 h-4 text-amber-500 fill-current" />
+          <h3 className="text-xs font-black tracking-wider text-zinc-950 dark:text-white uppercase">
+            Swap Engine
           </h3>
         </div>
         <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-zinc-200 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 uppercase tracking-wider">
-          LIVE JUPITER V6
+          Jupiter V6
         </span>
       </div>
 
@@ -579,15 +620,52 @@ export function JupiterSwapWidget({
             <span className="font-bold">YOU PAY ({!isReverse ? "SOL" : selectedToken.symbol})</span>
             <div className="flex items-center gap-1 font-bold">
               <span>Balance:</span>
-              <span className="text-amber-500 dark:text-amber-400">
-                {!isReverse
-                  ? userBalance !== null
-                    ? `${userBalance.toFixed(3)} SOL`
-                    : "—"
-                  : tokenBalance !== null
-                  ? `${tokenBalance.toLocaleString("en-US", { maximumFractionDigits: 2 })} ${selectedToken.symbol}`
-                  : "0"}
-              </span>
+              {!isReverse ? (
+                connected ? (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (userBalance !== null && userBalance > 0.005) {
+                        setInputAmount((userBalance - 0.005).toFixed(3));
+                      }
+                    }}
+                    className="text-amber-500 hover:text-amber-400 hover:underline cursor-pointer transition-colors"
+                    title="Click to fill MAX balance"
+                  >
+                    {userBalance !== null ? `${userBalance.toFixed(3)} SOL` : "0.000 SOL"}
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => setVisible(true)}
+                    className="text-amber-500 hover:text-amber-400 underline cursor-pointer text-[10px]"
+                  >
+                    Connect
+                  </button>
+                )
+              ) : connected ? (
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (tokenBalance !== null) {
+                      setInputAmount(tokenBalance.toFixed(2));
+                    }
+                  }}
+                  className="text-amber-500 hover:text-amber-400 hover:underline cursor-pointer transition-colors"
+                >
+                  {tokenBalance !== null
+                    ? `${tokenBalance.toLocaleString("en-US", { maximumFractionDigits: 2 })} $${selectedToken.symbol}`
+                    : `0 $${selectedToken.symbol}`}
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => setVisible(true)}
+                  className="text-amber-500 hover:text-amber-400 underline cursor-pointer text-[10px]"
+                >
+                  Connect
+                </button>
+              )}
             </div>
           </div>
 
@@ -683,15 +761,25 @@ export function JupiterSwapWidget({
             <span className="font-bold">YOU RECEIVE (ESTIMATED)</span>
             <div className="flex items-center gap-1 font-bold">
               <span>Balance:</span>
-              <span className="text-amber-500 dark:text-amber-400">
-                {!isReverse
-                  ? tokenBalance !== null
+              {!isReverse ? (
+                <span className="text-amber-500 dark:text-amber-400">
+                  {tokenBalance !== null
                     ? `${tokenBalance.toLocaleString("en-US", { maximumFractionDigits: 2 })} $${selectedToken.symbol}`
-                    : "0.00"
-                  : userBalance !== null
-                  ? `${userBalance.toFixed(3)} SOL`
-                  : "0.000 SOL"}
-              </span>
+                    : `0 $${selectedToken.symbol}`}
+                </span>
+              ) : connected ? (
+                <span className="text-amber-500 dark:text-amber-400">
+                  {userBalance !== null ? `${userBalance.toFixed(3)} SOL` : "0.000 SOL"}
+                </span>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => setVisible(true)}
+                  className="text-amber-500 hover:text-amber-400 underline cursor-pointer text-[10px]"
+                >
+                  Connect
+                </button>
+              )}
             </div>
           </div>
 

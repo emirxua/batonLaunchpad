@@ -5,19 +5,14 @@ import { Navbar } from "@/components/layout/Navbar";
 import { Footer } from "@/components/layout/Footer";
 import { MobileBottomNav } from "@/components/layout/MobileBottomNav";
 import { TerminalHero } from "@/components/home/TerminalHero";
-import { HomeStatsBar } from "@/components/home/HomeStatsBar";
 import { TrendingGrid } from "@/components/TrendingGrid";
 import { CalloutFeed } from "@/components/CalloutFeed";
 import { BurnLeaderboard } from "@/components/BurnLeaderboard";
-import { QuickSwapCard } from "@/components/home/QuickSwapCard";
-import { HomeTrendingMini } from "@/components/home/HomeTrendingMini";
-import { AboutSection } from "@/components/AboutSection";
 import { BurnModal } from "@/components/BurnModal";
+import { JupiterSwapModal } from "@/components/modals/JupiterSwapModal";
 import { LeaderboardItem } from "@/types/token";
 import { Coin } from "@/types/coin";
 import { Flame, Radio, Trophy, Zap } from "lucide-react";
-
-import { SubmitCalloutModal } from "@/components/modals/SubmitCalloutModal";
 import { useCoinsData } from "@/hooks/useCoinsData";
 import { useTokenStats } from "@/hooks/useTokenStats";
 
@@ -25,9 +20,19 @@ type MainTab = "callouts" | "trending" | "leaderboard";
 
 export default function OutbidHomePage() {
   const [activeTab, setActiveTab] = useState<MainTab>("callouts");
-  const [isSubmitCalloutOpen, setIsSubmitCalloutOpen] = useState(false);
   const { featuredCoin } = useCoinsData();
   const { totalBurned } = useTokenStats();
+
+  // Listen for navigation events (e.g. clicking logo switches to Callouts Feed instantly)
+  React.useEffect(() => {
+    const handleSetTab = (e: any) => {
+      if (e?.detail) {
+        setActiveTab(e.detail);
+      }
+    };
+    window.addEventListener("outbid:set-tab", handleSetTab);
+    return () => window.removeEventListener("outbid:set-tab", handleSetTab);
+  }, []);
 
   // Dynamic Swap target token state (synchronized when clicking ANY token on the left)
   const [selectedSwapToken, setSelectedSwapToken] = useState<{
@@ -97,6 +102,8 @@ export default function OutbidHomePage() {
     setIsBurnModalOpen(true);
   };
 
+  const [isJupiterSwapModalOpen, setIsJupiterSwapModalOpen] = useState(false);
+
   return (
     <div className="min-h-screen flex flex-col bg-zinc-50 dark:bg-[#08090C] text-zinc-800 dark:text-zinc-200 selection:bg-amber-500 selection:text-black font-space">
       {/* 1. Navbar */}
@@ -108,106 +115,77 @@ export default function OutbidHomePage() {
         <TerminalHero
           onExploreCallouts={() => {
             setActiveTab("callouts");
-            const el = document.getElementById("callout-feed-section");
-            if (el) {
-              el.scrollIntoView({ behavior: "smooth", block: "start" });
-            }
           }}
-          onPostCallout={() => setIsSubmitCalloutOpen(true)}
-          onQuickSwapClick={() => {
-            const el = document.getElementById("quick-swap-container");
-            if (el) el.scrollIntoView({ behavior: "smooth" });
-          }}
+          onQuickSwapClick={() => setIsJupiterSwapModalOpen(true)}
         />
 
-        {/* ── Main Split View (Left 65% Tabs, Right 35% Sticky Swap) ───── */}
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-          {/* ── Left Column (65% / col-span-8): Terminal Tabs ──────────── */}
-          <section id="callout-feed-section" className="lg:col-span-8 space-y-5 scroll-mt-20">
-            {/* Terminal Main Tabs Navigation */}
-            <div className="bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-white/10 rounded-2xl p-1.5 flex items-center gap-1 font-mono text-xs shadow-md">
-              <button
-                type="button"
-                onClick={() => setActiveTab("callouts")}
-                className={`flex-1 py-2 sm:py-2.5 px-2 sm:px-3 rounded-xl font-bold uppercase tracking-wider transition-all flex items-center justify-center gap-1.5 sm:gap-2 cursor-pointer text-[11px] sm:text-xs ${
-                  activeTab === "callouts"
-                    ? "bg-amber-500 text-zinc-950 shadow-md font-extrabold"
-                    : "text-zinc-600 dark:text-zinc-400 hover:text-zinc-950 dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-white/5"
-                }`}
-              >
-                <Radio className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-                <span>📢 Live Callouts</span>
-              </button>
+        {/* ── Main Full-Width Terminal View (Callout-First Focus) ───── */}
+        <div className="w-full space-y-4">
+          {/* Terminal Main Tabs Navigation */}
+          <div className="bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-white/10 rounded-2xl p-1.5 flex items-center gap-1.5 font-mono text-xs shadow-md">
+            <button
+              type="button"
+              onClick={() => setActiveTab("callouts")}
+              className={`flex-1 py-2 sm:py-2.5 px-3 rounded-xl font-bold uppercase tracking-wider transition-all flex items-center justify-center gap-2 cursor-pointer text-xs ${
+                activeTab === "callouts"
+                  ? "bg-amber-500 text-zinc-950 shadow-md font-black"
+                  : "text-zinc-600 dark:text-zinc-400 hover:text-zinc-950 dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-white/5"
+              }`}
+            >
+              <Radio className="w-3.5 h-3.5" />
+              <span>Callouts Feed</span>
+            </button>
 
-              <button
-                type="button"
-                onClick={() => setActiveTab("trending")}
-                className={`flex-1 py-2 sm:py-2.5 px-2 sm:px-3 rounded-xl font-bold uppercase tracking-wider transition-all flex items-center justify-center gap-1.5 sm:gap-2 cursor-pointer text-[11px] sm:text-xs ${
-                  activeTab === "trending"
-                    ? "bg-amber-500 text-zinc-950 shadow-md font-extrabold"
-                    : "text-zinc-600 dark:text-zinc-400 hover:text-zinc-950 dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-white/5"
-                }`}
-              >
-                <Zap className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-                <span>🔥 Trending</span>
-              </button>
+            <button
+              type="button"
+              onClick={() => setActiveTab("trending")}
+              className={`flex-1 py-2 sm:py-2.5 px-3 rounded-xl font-bold uppercase tracking-wider transition-all flex items-center justify-center gap-2 cursor-pointer text-xs ${
+                activeTab === "trending"
+                  ? "bg-amber-500 text-zinc-950 shadow-md font-black"
+                  : "text-zinc-600 dark:text-zinc-400 hover:text-zinc-950 dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-white/5"
+              }`}
+            >
+              <Zap className="w-3.5 h-3.5" />
+              <span>Trending</span>
+            </button>
 
-              <button
-                type="button"
-                onClick={() => setActiveTab("leaderboard")}
-                className={`flex-1 py-2 sm:py-2.5 px-2 sm:px-3 rounded-xl font-bold uppercase tracking-wider transition-all flex items-center justify-center gap-1.5 sm:gap-2 cursor-pointer text-[11px] sm:text-xs ${
-                  activeTab === "leaderboard"
-                    ? "bg-amber-500 text-zinc-950 shadow-md font-extrabold"
-                    : "text-zinc-600 dark:text-zinc-400 hover:text-zinc-950 dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-white/5"
-                }`}
-              >
-                <Trophy className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-                <span>🏆 Leaderboard</span>
-              </button>
+            <button
+              type="button"
+              onClick={() => setActiveTab("leaderboard")}
+              className={`flex-1 py-2 sm:py-2.5 px-3 rounded-xl font-bold uppercase tracking-wider transition-all flex items-center justify-center gap-2 cursor-pointer text-xs ${
+                activeTab === "leaderboard"
+                  ? "bg-amber-500 text-zinc-950 shadow-md font-black"
+                  : "text-zinc-600 dark:text-zinc-400 hover:text-zinc-950 dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-white/5"
+              }`}
+            >
+              <Trophy className="w-3.5 h-3.5" />
+              <span>Leaderboard</span>
+            </button>
+          </div>
+
+          {/* Tab 1: Live Alpha Callouts Feed (Default & Primary Focus) */}
+          {activeTab === "callouts" && (
+            <div className="animate-in fade-in duration-150">
+              <CalloutFeed onSelectToken={handleSelectSwapToken} />
             </div>
+          )}
 
-            {/* Tab 1: Live Alpha Callouts Feed (Default) */}
-            {activeTab === "callouts" && (
-              <div className="animate-in fade-in duration-150">
-                <CalloutFeed onSelectToken={handleSelectSwapToken} />
-              </div>
-            )}
+          {/* Tab 2: Trending & Bonding Curves */}
+          {activeTab === "trending" && (
+            <div className="animate-in fade-in duration-150">
+              <TrendingGrid onSelectToken={handleSelectSwapToken} />
+            </div>
+          )}
 
-            {/* Tab 2: Trending & Bonding Curves */}
-            {activeTab === "trending" && (
-              <div className="animate-in fade-in duration-150">
-                <TrendingGrid onSelectToken={handleSelectSwapToken} />
-              </div>
-            )}
-
-            {/* Tab 3: Burn-to-Rank Standings */}
-            {activeTab === "leaderboard" && (
-              <div className="animate-in fade-in duration-150">
-                <BurnLeaderboard onBoostToken={handleBoostFromLeaderboard} />
-              </div>
-            )}
-          </section>
-
-          {/* ── Right Column (35% / col-span-4 - Sticky Swap Terminal) ── */}
-          <aside id="quick-swap-container" className="lg:col-span-4 space-y-6 lg:sticky lg:top-20">
-            {/* Quick Swap Card with Live Selected Token Sync */}
-            <QuickSwapCard
-              targetMint={selectedSwapToken.mint}
-              targetSymbol={selectedSwapToken.symbol}
-              targetName={selectedSwapToken.name}
-              targetIconUrl={selectedSwapToken.imageUrl}
-              onTokenChange={(mint, symbol) => handleSelectSwapToken(mint, symbol)}
-            />
-
-            {/* Top Trending Alpha Movers Widget */}
-            <HomeTrendingMini onSelectSwapToken={handleSelectSwapToken} />
-          </aside>
+          {/* Tab 3: Burn-to-Rank Standings */}
+          {activeTab === "leaderboard" && (
+            <div className="animate-in fade-in duration-150">
+              <BurnLeaderboard onBoostToken={handleBoostFromLeaderboard} />
+            </div>
+          )}
         </div>
 
-        {/* ── Bottom Section: About & How It Works ─────────────────────── */}
-        <div className="pt-6 sm:pt-8 border-t border-zinc-200 dark:border-white/10">
-          <AboutSection />
-        </div>
+        {/* ── Callout / Community Quick Strip (Ultra-Minimal) ─────────── */}
       </main>
 
       {/* 3. Footer */}
@@ -235,15 +213,15 @@ export default function OutbidHomePage() {
         />
       )}
 
-      {/* 6. Submit Callout Modal */}
-      {isSubmitCalloutOpen && (
-        <SubmitCalloutModal
-          isOpen={isSubmitCalloutOpen}
-          onClose={() => setIsSubmitCalloutOpen(false)}
-          onSubmitSuccess={() => {
-            setActiveTab("callouts");
-            setIsSubmitCalloutOpen(false);
-          }}
+      {/* 6. Quick Terminal Jupiter Swap Modal */}
+      {isJupiterSwapModalOpen && (
+        <JupiterSwapModal
+          isOpen={isJupiterSwapModalOpen}
+          onClose={() => setIsJupiterSwapModalOpen(false)}
+          targetMint={selectedSwapToken.mint}
+          targetSymbol={selectedSwapToken.symbol}
+          targetName={selectedSwapToken.name}
+          targetIconUrl={selectedSwapToken.imageUrl}
         />
       )}
     </div>

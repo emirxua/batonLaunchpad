@@ -38,27 +38,21 @@ export const RecentBurns: React.FC<RecentBurnsProps> = ({
       {/* Header bar */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-4 border-b border-zinc-200/80 dark:border-line">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-rose-50 dark:bg-magenta/15 border border-rose-200 dark:border-magenta/30 text-rose-500 dark:text-magenta flex items-center justify-center shadow-[0_0_15px_rgba(255,61,122,0.2)]">
-            <Flame className="w-5 h-5 fill-current animate-pulse" />
+          <div className="w-9 h-9 rounded-xl bg-orange-500/10 border border-orange-500/20 text-orange-500 flex items-center justify-center">
+            <Flame className="w-4 h-4 fill-current" />
           </div>
           <div>
-            <div className="flex items-center gap-2">
-              <h3 className="font-archivo text-lg sm:text-xl text-zinc-900 dark:text-text uppercase tracking-wide">
-                Recent Burn <span className="text-rose-500 dark:text-magenta">Transactions</span>
-              </h3>
-              <span className="text-[10px] font-mono text-emerald-600 dark:text-acid bg-emerald-50 dark:bg-acid/10 border border-emerald-200 dark:border-acid/30 px-2 py-0.5 rounded uppercase font-bold">
-                Live On-Chain
-              </span>
-            </div>
-            <p className="text-xs text-zinc-500 dark:text-text-dim">
-              Verified SPL token burn transactions with cryptographic Solscan records
+            <h3 className="font-archivo text-base sm:text-lg text-zinc-900 dark:text-white uppercase tracking-wide font-black">
+              Recent Burns
+            </h3>
+            <p className="text-xs text-zinc-500 dark:text-zinc-400">
+              Verified SPL token burn transactions confirmed on Solana
             </p>
           </div>
         </div>
 
-        <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-50 dark:bg-up/10 border border-emerald-200 dark:border-up/30 text-emerald-600 dark:text-up text-[11px] font-bold select-none w-max">
-          <span className="w-2 h-2 rounded-full bg-emerald-500 dark:bg-up animate-ping" />
-          <span>Real-time Solana Log</span>
+        <div className="text-[11px] text-zinc-500 font-mono">
+          Solscan Verified Logs
         </div>
       </div>
 

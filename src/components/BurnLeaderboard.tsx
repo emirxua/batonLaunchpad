@@ -49,41 +49,6 @@ export function BurnLeaderboard({ onBoostToken }: BurnLeaderboardProps) {
 
   return (
     <div className="w-full space-y-4 font-mono select-none">
-      {/* ── Full Readable Explanation Strip (No cutoffs) ──────────────── */}
-      <div className="px-4 py-3 rounded-xl bg-amber-500/10 border border-amber-500/30 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-md text-xs">
-        <div className="flex items-start sm:items-center gap-2.5 text-zinc-700 dark:text-zinc-300">
-          <Zap className="w-4 h-4 text-amber-400 shrink-0 mt-0.5 sm:mt-0" />
-          <div>
-            <span className="font-black text-amber-400 uppercase tracking-wider mr-1.5">
-              100% APP-VERIFIED ON-CHAIN BURNS:
-            </span>
-            <span className="text-zinc-600 dark:text-zinc-400">
-              Standings are determined strictly by verified SPL token burns executed directly through Outbid and confirmed on the Solana blockchain.
-            </span>
-          </div>
-        </div>
-
-        <div className="flex items-center gap-2 shrink-0 self-end sm:self-auto">
-          <button
-            type="button"
-            onClick={() => setIsBoostAnyOpen(true)}
-            className="px-3 py-1.5 rounded-lg bg-amber-500 hover:bg-amber-400 text-zinc-950 font-extrabold text-[11px] flex items-center gap-1.5 shadow-sm transition-all uppercase tracking-wider cursor-pointer active:scale-95"
-          >
-            <Flame className="w-3.5 h-3.5 fill-current" />
-            <span>Boost Any Token</span>
-          </button>
-
-          <button
-            type="button"
-            onClick={handleManualRefresh}
-            className="p-1.5 rounded-lg bg-zinc-900/60 hover:bg-amber-500/20 text-zinc-400 hover:text-amber-400 border border-zinc-700 hover:border-amber-500/30 transition-all cursor-pointer"
-            title="Refresh Standings"
-          >
-            <RefreshCw className={`w-3.5 h-3.5 ${isRefreshing ? "animate-spin text-amber-400" : ""}`} />
-          </button>
-        </div>
-      </div>
-
       {/* ── Main Burn-to-Rank Table Card ─────────────────────────────── */}
       <div className="bg-white dark:bg-zinc-950 rounded-2xl border border-zinc-200 dark:border-white/10 overflow-hidden shadow-2xl">
         {/* Table Header Row */}
@@ -91,10 +56,10 @@ export function BurnLeaderboard({ onBoostToken }: BurnLeaderboardProps) {
           <div className="flex items-center gap-2.5">
             <Flame className="w-4 h-4 text-orange-500 fill-current" />
             <h2 className="text-sm sm:text-base font-bold text-zinc-950 dark:text-white uppercase tracking-wider">
-              Solana Burn-to-Rank Standings
+              Ranked Projects
             </h2>
             <span className="text-[10px] text-zinc-500 bg-zinc-200 dark:bg-zinc-800 px-2 py-0.5 rounded font-bold">
-              {leaderboard.length} Ranked
+              {leaderboard.length} Projects
             </span>
           </div>
 

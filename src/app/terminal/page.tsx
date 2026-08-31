@@ -56,72 +56,87 @@ export default function TerminalPage() {
     }
   }, []);
 
-  // Dynamic Fast CA Lookup when user pastes or types a Solana Mint
+  // Dynamic Fast Name, Symbol & CA Lookup when user searches
   useEffect(() => {
     const q = searchQuery.trim();
-    if (q.length >= 32 && q.length <= 44 && !q.includes(" ")) {
-      let isMounted = true;
-      const ctrl = new AbortController();
+    if (!q || q.length < 2) return;
 
-      const lookupTokenCA = async () => {
-        setIsSearchingCA(true);
-        try {
-          const res = await fetch(`/api/token-lookup?mint=${encodeURIComponent(q)}`, {
-            signal: ctrl.signal,
-          });
-          if (!res.ok) return;
-          const data = await res.json();
+    let isMounted = true;
+    const ctrl = new AbortController();
 
-          if (data && data.mint && isMounted) {
-            const price = data.priceUsd || 0;
-            const mcap = data.marketCap || 0;
-            const vol = data.volume24h || 0;
-            const change = data.priceChange24h || 0;
+    const lookupTokens = async () => {
+      setIsSearchingCA(true);
+      try {
+        const res = await fetch(`/api/token-lookup?q=${encodeURIComponent(q)}`, {
+          signal: ctrl.signal,
+        });
+        if (!res.ok) return;
+        const data = await res.json();
 
-            const customItem: any = {
-              id: `token-${data.mint}`,
-              name: data.name || "Custom Token",
-              symbol: data.symbol || "TOKEN",
-              ca: data.mint,
-              price,
-              priceFormatted:
-                price < 0.001 ? `$${price.toFixed(6)}` : `$${price.toFixed(4)}`,
-              mcap,
-              mcapFormatted:
-                mcap >= 1e6 ? `$${(mcap / 1e6).toFixed(1)}M` : `$${(mcap / 1e3).toFixed(0)}K`,
-              volume24h: vol,
-              volumeFormatted:
-                vol >= 1e6 ? `$${(vol / 1e6).toFixed(1)}M` : `$${(vol / 1e3).toFixed(0)}K`,
-              priceChange24h: change,
-              priceChangeFormatted: `${change >= 0 ? "+" : ""}${change.toFixed(1)}%`,
-              dexId: "DEX",
-              badge: "Custom",
-              iconUrl: data.iconUrl || undefined,
-              dexScreenerUrl: data.pairAddress
-                ? `https://dexscreener.com/solana/${data.pairAddress}`
-                : `https://dexscreener.com/solana/${data.mint}`,
-            };
+        if (isMounted) {
+          const items: any[] = Array.isArray(data.results)
+            ? data.results
+            : data.mint
+            ? [data]
+            : [];
 
-            setCustomTokens((prev) => {
-              const exists = prev.some((t) => t.ca.toLowerCase() === customItem.ca.toLowerCase());
-              return exists ? prev : [customItem, ...prev];
+          if (items.length > 0) {
+            const parsedItems = items.map((item: any) => {
+              const price = item.priceUsd || 0;
+              const mcap = item.marketCap || 0;
+              const vol = item.volume24h || 0;
+              const change = item.priceChange24h || 0;
+
+              return {
+                id: `token-${item.mint}`,
+                name: item.name || "Solana Token",
+                symbol: (item.symbol || "TOKEN").toUpperCase(),
+                ca: item.mint,
+                price,
+                priceFormatted:
+                  price < 0.001 ? `$${price.toFixed(6)}` : `$${price.toFixed(4)}`,
+                mcap,
+                mcapFormatted:
+                  mcap >= 1e6 ? `$${(mcap / 1e6).toFixed(1)}M` : `$${(mcap / 1e3).toFixed(0)}K`,
+                volume24h: vol,
+                volumeFormatted:
+                  vol >= 1e6 ? `$${(vol / 1e6).toFixed(1)}M` : `$${(vol / 1e3).toFixed(0)}K`,
+                priceChange24h: change,
+                priceChangeFormatted: `${change >= 0 ? "+" : ""}${change.toFixed(1)}%`,
+                dexId: "DEX",
+                badge: "Found",
+                iconUrl: item.iconUrl || undefined,
+                dexScreenerUrl: item.pairAddress
+                  ? `https://dexscreener.com/solana/${item.pairAddress}`
+                  : `https://dexscreener.com/solana/${item.mint}`,
+              };
             });
 
-            setSelectedTokenMint(customItem.ca);
+            setCustomTokens((prev) => {
+              const newItems = [...prev];
+              for (const pi of parsedItems) {
+                if (!newItems.some((ex) => ex.ca.toLowerCase() === pi.ca.toLowerCase())) {
+                  newItems.unshift(pi);
+                }
+              }
+              return newItems;
+            });
           }
-        } catch {
-          // Ignore aborted requests
-        } finally {
-          if (isMounted) setIsSearchingCA(false);
         }
-      };
+      } catch {
+        // Ignore aborted requests
+      } finally {
+        if (isMounted) setIsSearchingCA(false);
+      }
+    };
 
-      lookupTokenCA();
-      return () => {
-        isMounted = false;
-        ctrl.abort();
-      };
-    }
+    // Debounce text searches by 250ms
+    const timer = setTimeout(lookupTokens, 250);
+    return () => {
+      isMounted = false;
+      clearTimeout(timer);
+      ctrl.abort();
+    };
   }, [searchQuery]);
 
   const rawTokens: any[] = data?.tokens || data?.data || [];
@@ -176,13 +191,34 @@ export default function TerminalPage() {
   }, [selectedTokenMint, tokensList]);
 
   const filteredTokens = useMemo(() => {
-    if (!searchQuery.trim()) return tokensList;
-    return tokensList.filter(
-      (t) =>
-        t.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        t.symbol.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        t.ca.toLowerCase().includes(searchQuery.toLowerCase())
-    );
+    let list = tokensList;
+    if (searchQuery.trim()) {
+      const q = searchQuery.toLowerCase();
+      list = tokensList.filter(
+        (t) =>
+          t.name.toLowerCase().includes(q) ||
+          t.symbol.toLowerCase().includes(q) ||
+          t.ca.toLowerCase().includes(q)
+      );
+    }
+
+    return [...list].sort((a, b) => {
+      // 1. Verified / Image present first
+      const aHasImg = Boolean(a.iconUrl && !a.iconUrl.includes("dicebear"));
+      const bHasImg = Boolean(b.iconUrl && !b.iconUrl.includes("dicebear"));
+      if (aHasImg && !bHasImg) return -1;
+      if (!aHasImg && bHasImg) return 1;
+
+      // 2. Highest Volume 24H
+      const aVol = a.volume24h || 0;
+      const bVol = b.volume24h || 0;
+      if (bVol !== aVol) return bVol - aVol;
+
+      // 3. Highest Market Cap
+      const aMcap = a.mcap || 0;
+      const bMcap = b.mcap || 0;
+      return bMcap - aMcap;
+    });
   }, [searchQuery, tokensList]);
 
   const isPositive = (selectedToken?.priceChange24h ?? 0) >= 0;
@@ -491,6 +527,7 @@ export default function TerminalPage() {
               defaultOutputMint={selectedToken?.ca}
               outputMint={selectedToken?.ca}
               outputSymbol={selectedToken?.symbol}
+              outputIconUrl={selectedToken?.iconUrl}
             />
           </div>
         </div>

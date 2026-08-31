@@ -3,9 +3,10 @@ import { TRACKED_COINS } from "@/lib/tracked-coins";
 import { getBurnLevel } from "@/lib/burn-levels";
 import { Coin } from "@/types/coin";
 
-import { getAllBurns } from "@/lib/turso-db";
+import { getAllBurns, getBurnTotalsByCoin } from "@/lib/turso-db";
 
 export const dynamic = "force-dynamic";
+export const revalidate = 0;
 
 const DEX = "https://api.dexscreener.com";
 const FETCH_MS = 6000;
@@ -43,15 +44,37 @@ interface DexPair {
 
 export async function GET() {
   const burnsMap: Record<string, { amount: number; coinName?: string; coinTicker?: string; userAddress?: string }> = {};
+  let totalBurnedAllCoins = 0;
+
   try {
-    const recentBurns = await getAllBurns();
+    const [totalsByCoin, recentBurns] = await Promise.all([
+      getBurnTotalsByCoin(),
+      getAllBurns(),
+    ]);
+
+    for (const [coinId, total] of Object.entries(totalsByCoin)) {
+      const key = coinId.toLowerCase();
+      const match = recentBurns.find((b) => b.coinId.toLowerCase() === key);
+      burnsMap[key] = {
+        amount: Number(total) || 0,
+        coinName: match?.coinName || "Solana Project",
+        coinTicker: match?.coinTicker || "TOKEN",
+        userAddress: match?.userAddress,
+      };
+      totalBurnedAllCoins += Number(total) || 0;
+    }
+
+    // Fallback: If any burn wasn't grouped
     for (const b of recentBurns) {
       const key = b.coinId?.toLowerCase();
-      if (key) {
-        if (!burnsMap[key]) {
-          burnsMap[key] = { amount: 0, coinName: b.coinName, coinTicker: b.coinTicker, userAddress: b.userAddress };
-        }
-        burnsMap[key].amount += b.amount || 0;
+      if (key && !burnsMap[key]) {
+        burnsMap[key] = {
+          amount: b.amount || 0,
+          coinName: b.coinName,
+          coinTicker: b.coinTicker,
+          userAddress: b.userAddress,
+        };
+        totalBurnedAllCoins += b.amount || 0;
       }
     }
   } catch (err) {
@@ -133,17 +156,11 @@ export async function GET() {
   // Sort strictly by totalBurnedBaton descending
   coins.sort((a, b) => (b.totalBurnedBaton || 0) - (a.totalBurnedBaton || 0));
 
-  return NextResponse.json(
-    {
-      success: true,
-      updatedAt: Date.now(),
-      count: coins.length,
-      coins,
-    },
-    {
-      headers: {
-        "Cache-Control": "public, s-maxage=5, stale-while-revalidate=10",
-      },
-    }
-  );
+  return NextResponse.json({
+    success: true,
+    updatedAt: Date.now(),
+    count: coins.length,
+    totalBurned: totalBurnedAllCoins,
+    coins,
+  });
 }
