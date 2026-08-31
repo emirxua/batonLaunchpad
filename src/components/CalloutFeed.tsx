@@ -700,14 +700,13 @@ export function CalloutFeed({ onSelectToken, filterSymbol }: CalloutFeedProps) {
                 onClick={() => {
                   if (onSelectToken) {
                     onSelectToken(item.tokenCA, item.tokenSymbol, item.tokenName, item.tokenIconUrl);
-                  }
-                  if (typeof window !== "undefined") {
-                    const isPump = item.tokenCA.toLowerCase().endsWith("pump");
-                    if (isPump) {
-                      window.open(`https://pump.fun/coin/${item.tokenCA}`, "_blank", "noopener,noreferrer");
-                    } else {
-                      window.open(`https://dexscreener.com/solana/${item.tokenCA}`, "_blank", "noopener,noreferrer");
-                    }
+                  } else {
+                    setSwapModalToken({
+                      mint: item.tokenCA,
+                      symbol: item.tokenSymbol,
+                      name: item.tokenName,
+                      iconUrl: item.tokenIconUrl,
+                    });
                   }
                 }}
                 className="group bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-white/10 hover:border-amber-500/50 rounded-2xl p-4 sm:p-5 flex flex-col justify-between gap-4 shadow-lg hover:shadow-xl hover:shadow-amber-500/5 transition-all cursor-pointer relative overflow-hidden"
@@ -924,13 +923,14 @@ export function CalloutFeed({ onSelectToken, filterSymbol }: CalloutFeedProps) {
                         e.stopPropagation();
                         if (onSelectToken) {
                           onSelectToken(item.tokenCA, item.tokenSymbol, item.tokenName, item.tokenIconUrl);
+                        } else {
+                          setSwapModalToken({
+                            mint: item.tokenCA,
+                            symbol: item.tokenSymbol,
+                            name: item.tokenName,
+                            iconUrl: item.tokenIconUrl,
+                          });
                         }
-                        setSwapModalToken({
-                          mint: item.tokenCA,
-                          symbol: item.tokenSymbol,
-                          name: item.tokenName,
-                          iconUrl: item.tokenIconUrl,
-                        });
                       }}
                       className="px-3 py-1 rounded-lg bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-zinc-950 font-black text-xs flex items-center gap-1 shadow-md shadow-amber-500/20 transition-all uppercase tracking-wider cursor-pointer active:scale-95"
                     >

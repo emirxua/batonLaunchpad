@@ -104,7 +104,7 @@ export default function RootLayout({
         <script src="https://accounts.google.com/gsi/client" async defer></script>
       </head>
       <body className="bg-white dark:bg-[#0B0E14] text-zinc-900 dark:text-zinc-100 antialiased min-h-screen overflow-x-hidden selection:bg-amber-500 selection:text-black font-mono">
-        <ThemeProvider attribute="class" defaultTheme="dark" enableSystem={false}>
+        <ThemeProvider attribute="class" defaultTheme="system" enableSystem={true}>
           <WalletContextProvider>
             {children}
             <LiveBurnToast />

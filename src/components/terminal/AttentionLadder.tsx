@@ -298,6 +298,17 @@ export function AttentionLadder({
                                 <Copy className="w-2.5 h-2.5" />
                               )}
                             </button>
+                            <a
+                              href={`https://pump.fun/coin/${coin.mintAddress}`}
+                              target="_blank"
+                              rel="noreferrer"
+                              onClick={(e) => e.stopPropagation()}
+                              className="hover:text-emerald-400 transition-colors p-0.5 text-[10px] text-emerald-500 font-bold flex items-center gap-0.5"
+                              title="Trade on Pump.fun"
+                            >
+                              <span>💊</span>
+                              <ExternalLink className="w-2.5 h-2.5" />
+                            </a>
                             {coin.pairAddress && (
                               <a
                                 href={`https://dexscreener.com/solana/${coin.pairAddress}`}

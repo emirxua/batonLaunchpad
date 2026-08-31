@@ -68,6 +68,10 @@ export function TrendingGrid({ onSelectToken }: TrendingGridProps) {
   };
 
   const handleCardClick = (token: any) => {
+    if (onSelectToken) {
+      onSelectToken(token.ca, token.symbol, token.name, token.iconUrl);
+      return;
+    }
     const isPumpCoin =
       token.ca.toLowerCase().endsWith("pump") &&
       !token.dexId.toLowerCase().includes("meteora");
@@ -330,13 +334,16 @@ export function TrendingGrid({ onSelectToken }: TrendingGridProps) {
                   type="button"
                   onClick={(e) => {
                     e.stopPropagation();
-                    setSwapModalToken({
-                      mint: token.ca,
-                      symbol: token.symbol,
-                      name: token.name,
-                      iconUrl: token.iconUrl,
-                    });
-                    onSelectToken?.(token.ca, token.symbol, token.name, token.iconUrl);
+                    if (onSelectToken) {
+                      onSelectToken(token.ca, token.symbol, token.name, token.iconUrl);
+                    } else {
+                      setSwapModalToken({
+                        mint: token.ca,
+                        symbol: token.symbol,
+                        name: token.name,
+                        iconUrl: token.iconUrl,
+                      });
+                    }
                   }}
                   className="flex-1 py-1.5 px-2.5 rounded-lg bg-amber-500 hover:bg-amber-400 text-zinc-950 font-black text-[11px] flex items-center justify-center gap-1 shadow-sm transition-all uppercase tracking-wider cursor-pointer active:scale-95"
                 >

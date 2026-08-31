@@ -161,12 +161,25 @@ export function BurnLeaderboard({ onBoostToken }: BurnLeaderboardProps) {
                         </div>
                       </div>
 
-                      {/* Copy CA */}
+                      {/* Pump.fun & Copy CA */}
                       <div className="flex items-center gap-1.5 shrink-0">
+                        <a
+                          href={`https://pump.fun/coin/${item.ca}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          onClick={(e) => e.stopPropagation()}
+                          className="px-2 py-1 rounded-lg bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 text-[10px] font-extrabold flex items-center gap-1 transition-all"
+                          title="View & Trade on Pump.fun"
+                        >
+                          <span>💊 Pump.fun</span>
+                          <ExternalLink className="w-2.5 h-2.5" />
+                        </a>
+
                         <button
                           type="button"
                           onClick={(e) => handleCopy(item.ca, e)}
                           className="px-2 py-1 rounded-lg bg-zinc-100 dark:bg-zinc-900 text-zinc-500 hover:text-amber-400 border border-zinc-200 dark:border-white/10 text-[10px] flex items-center gap-1 font-mono cursor-pointer"
+                          title="Copy CA"
                         >
                           <span>{item.ca.slice(0, 4)}…{item.ca.slice(-3)}</span>
                           {copiedCA === item.ca ? (
@@ -286,7 +299,7 @@ export function BurnLeaderboard({ onBoostToken }: BurnLeaderboardProps) {
                           </div>
                         </td>
 
-                        {/* CA */}
+                        {/* CA & Links */}
                         <td className="py-3.5 px-4">
                           <div className="flex items-center gap-2 text-zinc-500">
                             <span className="text-[11px] text-zinc-600 dark:text-zinc-400 font-mono">
@@ -304,6 +317,17 @@ export function BurnLeaderboard({ onBoostToken }: BurnLeaderboardProps) {
                                 <Copy className="w-3.5 h-3.5" />
                               )}
                             </button>
+                            <a
+                              href={`https://pump.fun/coin/${item.ca}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              onClick={(e) => e.stopPropagation()}
+                              className="px-2 py-0.5 rounded-lg bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 text-[10px] font-extrabold flex items-center gap-1 transition-all shrink-0"
+                              title="View & Trade on Pump.fun"
+                            >
+                              <span>💊 Pump.fun</span>
+                              <ExternalLink className="w-2.5 h-2.5" />
+                            </a>
                             <a
                               href={`https://solscan.io/token/${item.ca}`}
                               target="_blank"
