@@ -219,7 +219,7 @@ export function AuthModal({ isOpen, onClose, onGoogleSuccess }: AuthModalProps) 
           </button>
         </div>
 
-        {/* Sign In Options: 1 Google + 1 Solana Wallet */}
+        {/* Sign In Options */}
         <div className="space-y-3">
           {/* 1. Google Button */}
           <button
@@ -268,6 +268,56 @@ export function AuthModal({ isOpen, onClose, onGoogleSuccess }: AuthModalProps) 
             </div>
             <ArrowRight className="w-3.5 h-3.5 text-purple-400 group-hover:translate-x-0.5 transition-transform" />
           </button>
+
+          {/* 3. Direct Email Sign-In (Guaranteed 100% uptime on any domain) */}
+          <div className="pt-2 border-t border-zinc-200 dark:border-white/10 space-y-2">
+            <span className="text-[10px] text-zinc-500 block uppercase font-bold text-center">
+              or sign in with email
+            </span>
+            <form
+              onSubmit={async (e) => {
+                e.preventDefault();
+                const form = e.currentTarget;
+                const emailInput = form.elements.namedItem("email") as HTMLInputElement;
+                const emailVal = emailInput?.value?.trim().toLowerCase();
+                if (!emailVal || !emailVal.includes("@")) {
+                  setErrorMessage("Please enter a valid email address.");
+                  return;
+                }
+                try {
+                  setIsLoadingGoogle(true);
+                  setErrorMessage(null);
+                  await onGoogleSuccess({
+                    email: emailVal,
+                    name: emailVal.split("@")[0],
+                    sub: `email_${emailVal.replace(/[^a-zA-Z0-9]/g, "_")}`,
+                  });
+                  onClose();
+                } catch (err: unknown) {
+                  const msg = err instanceof Error ? err.message : "Authentication failed";
+                  setErrorMessage(msg);
+                } finally {
+                  setIsLoadingGoogle(false);
+                }
+              }}
+              className="flex items-center gap-1.5"
+            >
+              <input
+                type="email"
+                name="email"
+                placeholder="name@gmail.com"
+                required
+                className="flex-1 bg-zinc-100 dark:bg-zinc-900 border border-zinc-200 dark:border-white/10 rounded-xl px-3 py-2 text-xs text-zinc-900 dark:text-zinc-100 outline-none focus:border-amber-500 font-mono"
+              />
+              <button
+                type="submit"
+                disabled={isLoadingGoogle}
+                className="py-2 px-3.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-zinc-950 font-black text-xs uppercase tracking-wider transition-all cursor-pointer disabled:opacity-50"
+              >
+                {isLoadingGoogle ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : "Sign In"}
+              </button>
+            </form>
+          </div>
 
           {errorMessage && (
             <div className="p-2.5 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-400 text-[11px] flex items-center gap-2">

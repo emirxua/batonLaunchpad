@@ -1,8 +1,7 @@
-"use client";
-
 import React, { useState, useMemo } from "react";
 import useSWR from "swr";
 import { TrendingTokenItem } from "@/types/token";
+import { JupiterSwapModal } from "@/components/modals/JupiterSwapModal";
 import {
   Zap,
   Copy,
@@ -41,6 +40,12 @@ export function TrendingGrid({ onSelectToken }: TrendingGridProps) {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [confirmNonPumpToken, setConfirmNonPumpToken] = useState<any | null>(null);
+  const [swapModalToken, setSwapModalToken] = useState<{
+    mint: string;
+    symbol: string;
+    name?: string;
+    iconUrl?: string;
+  } | null>(null);
 
   const showToast = (msg: string) => {
     setToastMessage(msg);
@@ -326,6 +331,12 @@ export function TrendingGrid({ onSelectToken }: TrendingGridProps) {
                   type="button"
                   onClick={(e) => {
                     e.stopPropagation();
+                    setSwapModalToken({
+                      mint: token.ca,
+                      symbol: token.symbol,
+                      name: token.name,
+                      iconUrl: token.iconUrl,
+                    });
                     onSelectToken?.(token.ca, token.symbol, token.name, token.iconUrl);
                   }}
                   className="flex-1 py-1.5 px-2.5 rounded-lg bg-amber-500 hover:bg-amber-400 text-zinc-950 font-black text-[11px] flex items-center justify-center gap-1 shadow-sm transition-all uppercase tracking-wider cursor-pointer active:scale-95"
@@ -461,6 +472,18 @@ export function TrendingGrid({ onSelectToken }: TrendingGridProps) {
             </div>
           </div>
         </div>
+      )}
+
+      {/* ── Instant Jupiter Swap Modal ─────────────────────────────── */}
+      {swapModalToken && (
+        <JupiterSwapModal
+          isOpen={Boolean(swapModalToken)}
+          onClose={() => setSwapModalToken(null)}
+          targetMint={swapModalToken.mint}
+          targetSymbol={swapModalToken.symbol}
+          targetName={swapModalToken.name}
+          targetIconUrl={swapModalToken.iconUrl}
+        />
       )}
     </section>
   );

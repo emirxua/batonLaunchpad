@@ -220,33 +220,25 @@ export function QuickSwapCard({
   const solPrice = liveSolPrice || 106.5;
 
   // Reactive Instant DexScreener CA Search via Internal Proxy
+  // Search results for name / symbol / CA lookups
+  const [searchResults, setSearchResults] = useState<TrendingTokenItem[]>([]);
+
   useEffect(() => {
     const trimmed = modalSearch.trim();
     if (!trimmed) {
       setCustomTokenFound(null);
+      setSearchResults([]);
       setIsSearchingCa(false);
       return;
     }
 
-    const symbolMatch = liveTokensList.find(
-      (t) =>
-        t.ca.toLowerCase() === trimmed.toLowerCase() ||
-        t.symbol.toLowerCase() === trimmed.toLowerCase() ||
-        t.name.toLowerCase().includes(trimmed.toLowerCase())
-    );
-    if (symbolMatch) {
-      setCustomTokenFound(symbolMatch);
-      setIsSearchingCa(false);
-      return;
-    }
+    let isCurrent = true;
+    setIsSearchingCa(true);
 
-    if (trimmed.length >= 32 && trimmed.length <= 44 && !/\s/.test(trimmed)) {
-      let isCurrent = true;
-      setIsSearchingCa(true);
-
+    const timer = setTimeout(() => {
       const ctrl = new AbortController();
 
-      fetch(`/api/token-lookup?mint=${encodeURIComponent(trimmed)}`, {
+      fetch(`/api/token-lookup?q=${encodeURIComponent(trimmed)}`, {
         signal: ctrl.signal,
       })
         .then(async (res) => {
@@ -254,64 +246,62 @@ export function QuickSwapCard({
           const data = await res.json();
           if (!isCurrent) return;
 
-          if (data && data.mint) {
-            const price = data.priceUsd || 0;
-            const mcap = data.marketCap || 0;
-            const vol = data.volume24h || 0;
-            const change = data.priceChange24h || 0;
-
-            setCustomTokenFound({
-              id: `token-${data.mint}`,
-              ca: data.mint,
-              symbol: data.symbol || "TOKEN",
-              name: data.name || "Solana Token",
-              iconUrl: data.iconUrl || undefined,
-              price,
-              priceFormatted: price < 0.001 ? `$${price.toFixed(6)}` : `$${price.toFixed(4)}`,
-              mcap,
-              mcapFormatted: mcap >= 1e6 ? `$${(mcap / 1e6).toFixed(1)}M` : `$${(mcap / 1e3).toFixed(0)}K`,
-              volume24h: vol,
-              volumeFormatted: vol >= 1e6 ? `$${(vol / 1e6).toFixed(1)}M` : `$${(vol / 1e3).toFixed(0)}K`,
-              priceChange24h: change,
-              priceChangeFormatted: `${change >= 0 ? "+" : ""}${change.toFixed(1)}%`,
-              bondingCurveProgress: 90,
+          if (data && Array.isArray(data.results) && data.results.length > 0) {
+            const mapped: TrendingTokenItem[] = data.results.map((r: any) => ({
+              id: `token-${r.mint}`,
+              ca: r.mint,
+              symbol: r.symbol || "TOKEN",
+              name: r.name || "Solana Token",
+              iconUrl: r.iconUrl || undefined,
+              price: r.priceUsd || 0,
+              priceFormatted: r.priceUsd < 0.001 ? `$${r.priceUsd.toFixed(6)}` : `$${r.priceUsd.toFixed(4)}`,
+              mcap: r.marketCap || 0,
+              mcapFormatted: r.marketCap >= 1e6 ? `$${(r.marketCap / 1e6).toFixed(1)}M` : `$${(r.marketCap / 1e3).toFixed(0)}K`,
+              volume24h: r.volume24h || 0,
+              volumeFormatted: r.volume24h >= 1e6 ? `$${(r.volume24h / 1e6).toFixed(1)}M` : `$${(r.volume24h / 1e3).toFixed(0)}K`,
+              priceChange24h: r.priceChange24h || 0,
+              priceChangeFormatted: `${r.priceChange24h >= 0 ? "+" : ""}${r.priceChange24h.toFixed(1)}%`,
+              bondingCurveProgress: 100,
               badge: "Hot",
-            });
+            }));
+            setSearchResults(mapped);
+          } else if (data && data.mint) {
+            setSearchResults([
+              {
+                id: `token-${data.mint}`,
+                ca: data.mint,
+                symbol: data.symbol || "TOKEN",
+                name: data.name || "Solana Token",
+                iconUrl: data.iconUrl || undefined,
+                price: data.priceUsd || 0,
+                priceFormatted: data.priceUsd < 0.001 ? `$${data.priceUsd.toFixed(6)}` : `$${data.priceUsd.toFixed(4)}`,
+                mcap: data.marketCap || 0,
+                mcapFormatted: data.marketCap >= 1e6 ? `$${(data.marketCap / 1e6).toFixed(1)}M` : `$${(data.marketCap / 1e3).toFixed(0)}K`,
+                volume24h: data.volume24h || 0,
+                volumeFormatted: data.volume24h >= 1e6 ? `$${(data.volume24h / 1e6).toFixed(1)}M` : `$${(data.volume24h / 1e3).toFixed(0)}K`,
+                priceChange24h: data.priceChange24h || 0,
+                priceChangeFormatted: `${data.priceChange24h >= 0 ? "+" : ""}${data.priceChange24h.toFixed(1)}%`,
+                bondingCurveProgress: 100,
+                badge: "Hot",
+              },
+            ]);
+          } else {
+            setSearchResults([]);
           }
         })
         .catch(() => {
-          if (isCurrent) {
-            setCustomTokenFound({
-              id: `token-${trimmed}`,
-              ca: trimmed,
-              symbol: `${trimmed.slice(0, 4)}…${trimmed.slice(-4)}`,
-              name: "Solana Token",
-              price: 0,
-              priceFormatted: "$0.00",
-              mcap: 0,
-              mcapFormatted: "$0",
-              volume24h: 0,
-              volumeFormatted: "$0",
-              priceChange24h: 0,
-              priceChangeFormatted: "0%",
-              bondingCurveProgress: 50,
-              badge: "New",
-            });
-          }
+          if (isCurrent) setSearchResults([]);
         })
         .finally(() => {
           if (isCurrent) setIsSearchingCa(false);
         });
+    }, 150);
 
-      return () => {
-        isCurrent = false;
-        ctrl.abort();
-      };
-    } else {
-      setCustomTokenFound(null);
-      setIsSearchingCa(false);
-    }
-  }, [modalSearch, liveTokensList]);
+    return () => {
+      isCurrent = false;
+      clearTimeout(timer);
+    };
+  }, [modalSearch]);
 
   // Live DexScreener polling for whatever token is currently selected
   const { data: selectedPairData } = useSWR(
@@ -974,97 +964,91 @@ export function QuickSwapCard({
               />
             </div>
 
-            {/* Loading state during CA lookup */}
-            {isSearchingCa && (
-              <div className="p-3 bg-zinc-100 dark:bg-zinc-900 border border-amber-500/30 rounded-xl flex items-center justify-center gap-2 text-xs text-amber-500">
-                <span className="w-3.5 h-3.5 border-2 border-amber-500 border-t-transparent rounded-full animate-spin" />
-                <span>Fetching live DexScreener token metadata…</span>
-              </div>
-            )}
+            {/* Search results or Live list */}
+            {(() => {
+              const trimmed = modalSearch.trim();
+              const tokenMap = new Map<string, TrendingTokenItem>();
+              if (trimmed) {
+                searchResults.forEach((t) => tokenMap.set(t.ca, t));
+                filteredModalTokens.forEach((t) => {
+                  if (!tokenMap.has(t.ca)) tokenMap.set(t.ca, t);
+                });
+              } else {
+                liveTokensList.forEach((t) => tokenMap.set(t.ca, t));
+              }
+              const displayTokens = Array.from(tokenMap.values());
 
-            {/* Custom token search result */}
-            {!isSearchingCa && customTokenFound && (
-              <button
-                type="button"
-                onClick={() => handleSelectToken(customTokenFound)}
-                className="w-full p-3 bg-amber-500/15 border border-amber-500/40 hover:bg-amber-500/25 rounded-xl flex items-center justify-between cursor-pointer transition-all text-left group"
-              >
-                <div className="flex items-center gap-2.5 min-w-0">
-                  <div className="w-8 h-8 rounded-xl bg-zinc-800 border border-white/10 flex items-center justify-center overflow-hidden shrink-0 text-xs font-bold text-amber-400">
-                    {customTokenFound.iconUrl ? (
-                      <img
-                        src={customTokenFound.iconUrl}
-                        alt={customTokenFound.symbol}
-                        className="w-full h-full object-cover"
-                      />
-                    ) : (
-                      <span>${customTokenFound.symbol.slice(0, 2)}</span>
+              return (
+                <div className="space-y-1.5">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[10px] text-zinc-500 uppercase tracking-wider font-bold block">
+                      {trimmed ? `Search Results (${displayTokens.length})` : `Live Solana Tokens (${displayTokens.length})`}
+                    </span>
+                    {trimmed && (
+                      <span className="text-[9px] text-amber-500 font-bold uppercase">
+                        Sorted by Quality &amp; Volume
+                      </span>
                     )}
                   </div>
-                  <div className="min-w-0">
-                    <span className="font-extrabold text-xs text-zinc-950 dark:text-white block group-hover:text-amber-400 transition-colors truncate">
-                      ${customTokenFound.symbol}
-                    </span>
-                    <span className="text-[10px] text-zinc-400 block truncate">
-                      {customTokenFound.name}
-                    </span>
-                    <span className="text-[9px] text-zinc-500 block font-mono">
-                      {customTokenFound.ca.slice(0, 6)}…{customTokenFound.ca.slice(-6)}
-                    </span>
+
+                  <div className="max-h-64 overflow-y-auto space-y-1 pr-1">
+                    {isSearchingCa && displayTokens.length === 0 ? (
+                      <div className="py-8 text-center text-xs text-amber-500 flex flex-col items-center justify-center gap-2 font-mono">
+                        <span className="w-5 h-5 border-2 border-amber-500 border-t-transparent rounded-full animate-spin" />
+                        <span>Searching Solana tokens on DexScreener…</span>
+                      </div>
+                    ) : displayTokens.length === 0 ? (
+                      <div className="py-8 text-center text-xs text-zinc-500 font-mono">
+                        {trimmed ? `No Solana token found matching "${trimmed}"` : "Loading live Solana tokens…"}
+                      </div>
+                    ) : (
+                      displayTokens.map((t) => {
+                        const isSelected = t.ca.toLowerCase() === currentMint.toLowerCase();
+                        return (
+                          <div
+                            key={t.ca}
+                            onClick={() => handleSelectToken(t)}
+                            className={`p-2.5 rounded-xl flex items-center justify-between cursor-pointer transition-colors ${
+                              isSelected
+                                ? "bg-amber-500/20 border border-amber-500/40"
+                                : "hover:bg-zinc-100 dark:hover:bg-zinc-800/60"
+                            }`}
+                          >
+                            <div className="flex items-center gap-2.5">
+                              <div className="w-7 h-7 rounded-lg bg-zinc-800 text-amber-400 font-bold text-xs flex items-center justify-center overflow-hidden shrink-0 border border-white/10">
+                                {t.iconUrl ? (
+                                  <img src={t.iconUrl} alt={t.symbol} className="w-full h-full object-cover" />
+                                ) : (
+                                  <span>${t.symbol.slice(0, 2)}</span>
+                                )}
+                              </div>
+                              <div>
+                                <span className="text-xs font-bold text-zinc-950 dark:text-white block">
+                                  ${t.symbol}
+                                </span>
+                                <span className="text-[10px] text-zinc-500 block truncate max-w-[150px]">
+                                  {t.name}
+                                </span>
+                              </div>
+                            </div>
+
+                            <div className="text-right flex items-center gap-2">
+                              <div>
+                                <span className="text-xs font-bold text-zinc-900 dark:text-zinc-100 block">
+                                  {t.priceFormatted}
+                                </span>
+                                <span className="text-[10px] text-zinc-500 block">{t.mcapFormatted}</span>
+                              </div>
+                              {isSelected && <Check className="w-4 h-4 text-amber-400" />}
+                            </div>
+                          </div>
+                        );
+                      })
+                    )}
                   </div>
                 </div>
-                <div className="flex items-center gap-2 shrink-0">
-                  <span className="text-[11px] font-extrabold px-3 py-1.5 rounded-lg bg-amber-500 text-zinc-950 uppercase tracking-wider shadow-sm group-hover:scale-105 transition-transform">
-                    Select
-                  </span>
-                </div>
-              </button>
-            )}
-
-            <div className="max-h-60 overflow-y-auto space-y-1 pr-1">
-              {filteredModalTokens.map((t) => {
-                const isSelected = t.ca.toLowerCase() === currentMint.toLowerCase();
-                return (
-                  <div
-                    key={t.ca}
-                    onClick={() => handleSelectToken(t)}
-                    className={`p-2.5 rounded-xl flex items-center justify-between cursor-pointer transition-colors ${
-                      isSelected
-                        ? "bg-amber-500/20 border border-amber-500/40"
-                        : "hover:bg-zinc-100 dark:hover:bg-zinc-800/60"
-                    }`}
-                  >
-                    <div className="flex items-center gap-2.5">
-                      <div className="w-7 h-7 rounded-lg bg-zinc-800 text-amber-400 font-bold text-xs flex items-center justify-center overflow-hidden shrink-0">
-                        {t.iconUrl ? (
-                          <img src={t.iconUrl} alt={t.symbol} className="w-full h-full object-cover" />
-                        ) : (
-                          <span>${t.symbol.slice(0, 2)}</span>
-                        )}
-                      </div>
-                      <div>
-                        <span className="text-xs font-bold text-zinc-950 dark:text-white block">
-                          ${t.symbol}
-                        </span>
-                        <span className="text-[10px] text-zinc-500 block truncate max-w-[150px]">
-                          {t.name}
-                        </span>
-                      </div>
-                    </div>
-
-                    <div className="text-right flex items-center gap-2">
-                      <div>
-                        <span className="text-xs font-bold text-zinc-900 dark:text-zinc-100 block">
-                          {t.priceFormatted}
-                        </span>
-                        <span className="text-[10px] text-zinc-500 block">{t.mcapFormatted}</span>
-                      </div>
-                      {isSelected && <Check className="w-4 h-4 text-amber-400" />}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
+              );
+            })()}
           </div>
         </div>
       )}

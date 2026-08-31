@@ -58,6 +58,7 @@ export default function OutbidHomePage() {
       name: name || symbol,
       imageUrl: imageUrl || (mint === "2vdc4owf1MPz54jJCN61y3QSKqjcPpr32wJ9qKkmpump" ? "/images/baton-logo.png" : undefined),
     });
+    setIsJupiterSwapModalOpen(true);
   };
 
   const handleBoostFromLeaderboard = (item: LeaderboardItem) => {

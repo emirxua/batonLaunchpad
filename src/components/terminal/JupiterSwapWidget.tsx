@@ -30,6 +30,7 @@ interface JupiterSwapWidgetProps {
   targetSymbol?: string;
   targetIconUrl?: string;
   defaultOutputMint?: string;
+  isModal?: boolean;
 }
 
 interface TokenInfo {
@@ -62,6 +63,7 @@ export function JupiterSwapWidget({
   targetSymbol,
   targetIconUrl,
   defaultOutputMint,
+  isModal = false,
 }: JupiterSwapWidgetProps) {
   const initialMint =
     outputMint || targetMint || defaultOutputMint || "2vdc4owf1MPz54jJCN61y3QSKqjcPpr32wJ9qKkmpump";
@@ -305,33 +307,37 @@ export function JupiterSwapWidget({
       : estimatedOut.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 4 })
     : estimatedOut.toFixed(4);
 
+  // Search results for name / symbol / CA lookups
+  const [searchResults, setSearchResults] = useState<TokenInfo[]>([]);
+
+  // Filter local live tokens by search query
+  const filteredLiveTokens = useMemo(() => {
+    const q = searchQuery.trim().toLowerCase();
+    if (!q) return liveTokenList;
+    return liveTokenList.filter(
+      (t) =>
+        t.symbol.toLowerCase().includes(q) ||
+        t.name.toLowerCase().includes(q) ||
+        t.mint.toLowerCase().includes(q)
+    );
+  }, [searchQuery, liveTokenList]);
+
   useEffect(() => {
     const trimmed = searchQuery.trim();
     if (!trimmed) {
       setCustomTokenFound(null);
+      setSearchResults([]);
       setIsSearchingCa(false);
       return;
     }
 
-    const symbolMatch = liveTokenList.find(
-      (t) =>
-        t.mint.toLowerCase() === trimmed.toLowerCase() ||
-        t.symbol.toLowerCase() === trimmed.toLowerCase() ||
-        t.name.toLowerCase().includes(trimmed.toLowerCase())
-    );
-    if (symbolMatch) {
-      setCustomTokenFound(symbolMatch);
-      setIsSearchingCa(false);
-      return;
-    }
+    let isCurrent = true;
+    setIsSearchingCa(true);
 
-    if (trimmed.length >= 32 && trimmed.length <= 44 && !/\s/.test(trimmed)) {
-      let isCurrent = true;
-      setIsSearchingCa(true);
-
+    const timer = setTimeout(() => {
       const ctrl = new AbortController();
 
-      fetch(`/api/token-lookup?mint=${encodeURIComponent(trimmed)}`, {
+      fetch(`/api/token-lookup?q=${encodeURIComponent(trimmed)}`, {
         signal: ctrl.signal,
       })
         .then(async (res) => {
@@ -339,39 +345,42 @@ export function JupiterSwapWidget({
           const data = await res.json();
           if (!isCurrent) return;
 
-          if (data && data.mint) {
-            setCustomTokenFound({
-              mint: data.mint,
-              symbol: data.symbol || "TOKEN",
-              name: data.name || "Solana Token",
-              iconUrl: data.iconUrl || (data.mint === BATON_MINT ? BATON_DEFAULT_ICON : undefined),
-              priceUsd: data.priceUsd || 0,
-            });
+          if (data && Array.isArray(data.results) && data.results.length > 0) {
+            const mapped: TokenInfo[] = data.results.map((r: any) => ({
+              mint: r.mint,
+              symbol: r.symbol,
+              name: r.name,
+              iconUrl: r.iconUrl || (r.mint === BATON_MINT ? BATON_DEFAULT_ICON : undefined),
+              priceUsd: r.priceUsd || 0,
+            }));
+            setSearchResults(mapped);
+          } else if (data && data.mint) {
+            setSearchResults([
+              {
+                mint: data.mint,
+                symbol: data.symbol || "TOKEN",
+                name: data.name || "Solana Token",
+                iconUrl: data.iconUrl || (data.mint === BATON_MINT ? BATON_DEFAULT_ICON : undefined),
+                priceUsd: data.priceUsd || 0,
+              },
+            ]);
+          } else {
+            setSearchResults([]);
           }
         })
         .catch(() => {
-          if (isCurrent) {
-            setCustomTokenFound({
-              mint: trimmed,
-              symbol: `${trimmed.slice(0, 4)}…${trimmed.slice(-4)}`,
-              name: "Solana Token",
-              priceUsd: 0,
-            });
-          }
+          if (isCurrent) setSearchResults([]);
         })
         .finally(() => {
           if (isCurrent) setIsSearchingCa(false);
         });
+    }, 150);
 
-      return () => {
-        isCurrent = false;
-        ctrl.abort();
-      };
-    } else {
-      setCustomTokenFound(null);
-      setIsSearchingCa(false);
-    }
-  }, [searchQuery, liveTokenList]);
+    return () => {
+      isCurrent = false;
+      clearTimeout(timer);
+    };
+  }, [searchQuery]);
 
   const selectTargetToken = (token: TokenInfo) => {
     setSelectedToken({
@@ -601,21 +610,23 @@ export function JupiterSwapWidget({
 
   return (
     <>
-      <div className="bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-white/10 rounded-2xl overflow-hidden shadow-2xl relative font-mono select-none">
-      <div className="p-4 border-b border-zinc-200 dark:border-white/10 flex items-center justify-between bg-zinc-50 dark:bg-zinc-900/50">
-        <div className="flex items-center gap-2">
-          <Zap className="w-4 h-4 text-amber-500 fill-current" />
-          <h3 className="text-xs font-black tracking-wider text-zinc-950 dark:text-white uppercase">
-            Swap Engine
-          </h3>
+      <div className={`${isModal ? "" : "bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-white/10 rounded-2xl shadow-2xl overflow-hidden"} relative font-mono select-none`}>
+      {!isModal && (
+        <div className="p-4 border-b border-zinc-200 dark:border-white/10 flex items-center justify-between bg-zinc-50 dark:bg-zinc-900/50">
+          <div className="flex items-center gap-2">
+            <Zap className="w-4 h-4 text-amber-500 fill-current" />
+            <h3 className="text-xs font-black tracking-wider text-zinc-950 dark:text-white uppercase">
+              Swap Engine
+            </h3>
+          </div>
+          <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-zinc-200 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 uppercase tracking-wider">
+            Jupiter V6
+          </span>
         </div>
-        <span className="text-[10px] font-bold px-2 py-0.5 rounded bg-zinc-200 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 uppercase tracking-wider">
-          Jupiter V6
-        </span>
-      </div>
+      )}
 
-      <div className="p-4 space-y-3.5">
-        <div className="bg-zinc-50 dark:bg-zinc-900/60 border border-zinc-200 dark:border-white/5 rounded-2xl p-3.5 space-y-2">
+      <div className={`${isModal ? "p-0" : "p-4"} space-y-3`}>
+        <div className="bg-zinc-50 dark:bg-zinc-900/60 border border-zinc-200 dark:border-white/5 rounded-2xl p-3 sm:p-3.5 space-y-2">
           <div className="flex justify-between items-center text-[10px] text-zinc-500 dark:text-zinc-400">
             <span className="font-bold">YOU PAY ({!isReverse ? "SOL" : selectedToken.symbol})</span>
             <div className="flex items-center gap-1 font-bold">
@@ -691,20 +702,20 @@ export function JupiterSwapWidget({
               <button
                 type="button"
                 onClick={() => setSelectorOpen(true)}
-                className="flex items-center gap-1.5 bg-white dark:bg-zinc-800 hover:bg-zinc-100 dark:hover:bg-zinc-700 border border-zinc-200 dark:border-white/10 px-2.5 py-1.5 rounded-xl shrink-0 cursor-pointer shadow-sm"
+                className="flex items-center gap-1.5 bg-white dark:bg-zinc-800 hover:bg-zinc-100 dark:hover:bg-zinc-700/80 border border-zinc-200 dark:border-white/10 px-2.5 py-1.5 rounded-xl shrink-0 cursor-pointer shadow-sm transition-colors"
               >
-                <div className="w-5 h-5 rounded-full bg-zinc-700 overflow-hidden flex items-center justify-center text-[10px] font-bold text-amber-400 shrink-0">
-                  {selectedToken.iconUrl ? (
-                    <img
-                      src={selectedToken.iconUrl}
-                      alt={selectedToken.symbol}
-                      className="w-full h-full object-cover"
-                    />
-                  ) : (
-                    <span>${selectedToken.symbol.slice(0, 2)}</span>
-                  )}
-                </div>
-                <span className="text-xs font-bold text-zinc-900 dark:text-zinc-100">
+                {selectedToken.iconUrl ? (
+                  <img
+                    src={selectedToken.iconUrl}
+                    alt={selectedToken.symbol}
+                    className="w-4 h-4 rounded-full object-cover"
+                  />
+                ) : (
+                  <span className="w-4 h-4 rounded-full bg-amber-500/20 text-amber-400 text-[10px] font-bold flex items-center justify-center">
+                    $
+                  </span>
+                )}
+                <span className="text-xs font-bold text-zinc-950 dark:text-white">
                   ${selectedToken.symbol}
                 </span>
                 <ChevronDown className="w-3.5 h-3.5 text-zinc-400" />
@@ -712,32 +723,34 @@ export function JupiterSwapWidget({
             )}
           </div>
 
-          <div className="flex gap-1.5 mt-2.5 flex-wrap">
-            {(!isReverse
-              ? [
-                  { label: "0.1 SOL", act: "0.1" as const },
-                  { label: "0.5 SOL", act: "0.5" as const },
-                  { label: "1.0 SOL", act: "1" as const },
-                  { label: "HALF", act: "half" as const },
-                  { label: "MAX", act: "max" as const },
-                ]
-              : [
-                  { label: "25%", act: "25%" as const },
-                  { label: "50%", act: "50%" as const },
-                  { label: "75%", act: "75%" as const },
-                  { label: "MAX", act: "max" as const },
-                ]
-            ).map((btn) => (
-              <button
-                key={btn.label}
-                type="button"
-                onClick={() => handleQuickAmount(btn.act)}
-                className="text-[10px] px-2.5 py-1 rounded-lg border border-zinc-200 dark:border-white/5 bg-white dark:bg-zinc-900 text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-200 transition-colors cursor-pointer font-bold"
-              >
-                {btn.label}
-              </button>
-            ))}
-          </div>
+          {/* Quick Amount Presets for Mobile */}
+          {!isReverse && (
+            <div className="flex items-center gap-1.5 pt-1">
+              {(["0.1", "0.5", "1.0"] as const).map((amt) => (
+                <button
+                  key={amt}
+                  type="button"
+                  onClick={() => setInputAmount(amt)}
+                  className={`flex-1 py-1 px-2 rounded-lg text-[10px] font-bold transition-all cursor-pointer ${
+                    inputAmount === amt
+                      ? "bg-amber-500/25 border border-amber-500/40 text-amber-400 font-black"
+                      : "bg-zinc-100 dark:bg-zinc-800/80 hover:bg-amber-500/15 text-zinc-600 dark:text-zinc-400 hover:text-amber-400"
+                  }`}
+                >
+                  {amt} SOL
+                </button>
+              ))}
+              {connected && userBalance !== null && userBalance > 0.005 && (
+                <button
+                  type="button"
+                  onClick={() => setInputAmount((userBalance - 0.005).toFixed(3))}
+                  className="flex-1 py-1 px-2 rounded-lg bg-amber-500/20 hover:bg-amber-500/30 text-amber-400 text-[10px] font-black uppercase transition-all cursor-pointer"
+                >
+                  MAX
+                </button>
+              )}
+            </div>
+          )}
         </div>
 
         {/* ── Swap Direction Flip Divider ────────────────────────────── */}
@@ -1034,99 +1047,97 @@ export function JupiterSwapWidget({
               />
             </div>
 
-            {/* Loading state during CA lookup */}
-            {isSearchingCa && (
-              <div className="p-3 bg-zinc-100 dark:bg-zinc-900 border border-amber-500/30 rounded-xl flex items-center justify-center gap-2 text-xs text-amber-500">
-                <span className="w-3.5 h-3.5 border-2 border-amber-500 border-t-transparent rounded-full animate-spin" />
-                <span>Fetching live DexScreener token metadata…</span>
-              </div>
-            )}
+            {/* Search results or Live list */}
+            {(() => {
+              const trimmed = searchQuery.trim();
+              // Combine online search results with local filtered tokens
+              const tokenMap = new Map<string, TokenInfo>();
+              if (trimmed) {
+                searchResults.forEach((t) => tokenMap.set(t.mint, t));
+                filteredLiveTokens.forEach((t) => {
+                  if (!tokenMap.has(t.mint)) tokenMap.set(t.mint, t);
+                });
+              } else {
+                liveTokenList.forEach((t) => tokenMap.set(t.mint, t));
+              }
+              const displayTokens = Array.from(tokenMap.values());
 
-            {/* Custom token search result */}
-            {!isSearchingCa && customTokenFound && (
-              <button
-                type="button"
-                onClick={() => selectTargetToken(customTokenFound)}
-                className="w-full p-3 bg-amber-500/15 border border-amber-500/40 hover:bg-amber-500/25 rounded-xl flex items-center justify-between cursor-pointer transition-all text-left group"
-              >
-                <div className="flex items-center gap-2.5 min-w-0">
-                  <div className="w-8 h-8 rounded-xl bg-zinc-800 border border-white/10 flex items-center justify-center overflow-hidden shrink-0 text-xs font-bold text-amber-400">
-                    {customTokenFound.iconUrl ? (
-                      <img
-                        src={customTokenFound.iconUrl}
-                        alt={customTokenFound.symbol}
-                        className="w-full h-full object-cover"
-                      />
-                    ) : (
-                      <span>${customTokenFound.symbol.slice(0, 2)}</span>
+              return (
+                <div className="space-y-1.5">
+                  <div className="flex items-center justify-between">
+                    <span className="text-[10px] text-zinc-500 uppercase tracking-wider font-bold block">
+                      {trimmed ? `Search Results (${displayTokens.length})` : `Live Solana Tokens (${displayTokens.length})`}
+                    </span>
+                    {trimmed && (
+                      <span className="text-[9px] text-amber-500 font-bold uppercase">
+                        Sorted by Quality &amp; Volume
+                      </span>
                     )}
                   </div>
-                  <div className="min-w-0">
-                    <span className="font-extrabold text-xs text-zinc-950 dark:text-white block group-hover:text-amber-400 transition-colors truncate">
-                      ${customTokenFound.symbol}
-                    </span>
-                    <span className="text-[10px] text-zinc-400 block truncate">
-                      {customTokenFound.name}
-                    </span>
-                    <span className="text-[9px] text-zinc-500 block font-mono">
-                      {customTokenFound.mint.slice(0, 6)}…{customTokenFound.mint.slice(-6)}
-                    </span>
-                  </div>
-                </div>
-                <div className="flex items-center gap-2 shrink-0">
-                  <span className="text-[11px] font-extrabold px-3 py-1.5 rounded-lg bg-amber-500 text-zinc-950 uppercase tracking-wider shadow-sm group-hover:scale-105 transition-transform">
-                    Select
-                  </span>
-                </div>
-              </button>
-            )}
 
-            <div className="space-y-1.5">
-              <span className="text-[10px] text-zinc-500 uppercase tracking-wider font-bold block">
-                Live Solana Tokens ({liveTokenList.length})
-              </span>
-              <div className="max-h-60 overflow-y-auto space-y-1 pr-1">
-                {liveTokenList.length === 0 ? (
-                  <div className="py-6 text-center text-xs text-zinc-500">
-                    Loading live Solana tokens from DexScreener…
-                  </div>
-                ) : (
-                  liveTokenList.map((token) => (
-                    <div
-                      key={token.mint}
-                      onClick={() => selectTargetToken(token)}
-                      className="flex items-center justify-between p-2.5 rounded-xl hover:bg-zinc-100 dark:hover:bg-zinc-900/80 cursor-pointer transition-colors border border-transparent hover:border-zinc-200 dark:hover:border-white/5"
-                    >
-                      <div className="flex items-center gap-2.5 min-w-0">
-                        {token.iconUrl ? (
-                          <img
-                            src={token.iconUrl}
-                            alt={token.symbol}
-                            className="w-6 h-6 rounded-full object-cover shrink-0"
-                          />
-                        ) : (
-                          <div className="w-6 h-6 rounded-full bg-zinc-800 text-amber-400 font-bold flex items-center justify-center text-[10px] shrink-0">
-                            $
-                          </div>
-                        )}
-                        <div className="min-w-0">
-                          <span className="font-bold text-xs text-zinc-900 dark:text-zinc-100 block truncate">
-                            ${token.symbol}
-                          </span>
-                          <span className="text-[10px] text-zinc-500 truncate block">
-                            {token.name}
-                          </span>
-                        </div>
+                  <div className="max-h-64 overflow-y-auto space-y-1 pr-1">
+                    {isSearchingCa && displayTokens.length === 0 ? (
+                      <div className="py-8 text-center text-xs text-amber-500 flex flex-col items-center justify-center gap-2 font-mono">
+                        <span className="w-5 h-5 border-2 border-amber-500 border-t-transparent rounded-full animate-spin" />
+                        <span>Searching Solana tokens on DexScreener…</span>
                       </div>
+                    ) : displayTokens.length === 0 ? (
+                      <div className="py-8 text-center text-xs text-zinc-500 font-mono">
+                        {trimmed ? `No Solana token found matching "${trimmed}"` : "Loading live Solana tokens…"}
+                      </div>
+                    ) : (
+                      displayTokens.map((token) => (
+                        <div
+                          key={token.mint}
+                          onClick={() => selectTargetToken(token)}
+                          className="flex items-center justify-between p-2.5 rounded-xl hover:bg-zinc-100 dark:hover:bg-zinc-900/90 cursor-pointer transition-colors border border-transparent hover:border-amber-500/30 group"
+                        >
+                          <div className="flex items-center gap-2.5 min-w-0">
+                            {token.iconUrl ? (
+                              <img
+                                src={token.iconUrl}
+                                alt={token.symbol}
+                                className="w-7 h-7 rounded-full object-cover shrink-0 border border-white/10"
+                              />
+                            ) : (
+                              <div className="w-7 h-7 rounded-full bg-zinc-800 text-amber-400 font-bold flex items-center justify-center text-[11px] shrink-0 border border-white/10">
+                                $
+                              </div>
+                            )}
+                            <div className="min-w-0">
+                              <div className="flex items-center gap-1.5">
+                                <span className="font-extrabold text-xs text-zinc-900 dark:text-white block truncate group-hover:text-amber-400 transition-colors">
+                                  ${token.symbol}
+                                </span>
+                                {token.mint === BATON_MINT && (
+                                  <span className="text-[8px] font-black px-1.5 py-0.5 rounded bg-amber-500/20 text-amber-400 border border-amber-500/40 uppercase">
+                                    Core
+                                  </span>
+                                )}
+                              </div>
+                              <span className="text-[10px] text-zinc-500 truncate block">
+                                {token.name}
+                              </span>
+                            </div>
+                          </div>
 
-                      <span className="text-[10px] text-zinc-500 font-mono">
-                        {token.mint.slice(0, 4)}…{token.mint.slice(-4)}
-                      </span>
-                    </div>
-                  ))
-                )}
-              </div>
-            </div>
+                          <div className="text-right shrink-0">
+                            {token.priceUsd ? (
+                              <span className="text-[11px] font-bold text-zinc-300 block font-mono">
+                                ${token.priceUsd < 0.01 ? token.priceUsd.toFixed(6) : token.priceUsd.toFixed(3)}
+                              </span>
+                            ) : null}
+                            <span className="text-[9px] text-zinc-500 font-mono block">
+                              {token.mint.slice(0, 4)}…{token.mint.slice(-4)}
+                            </span>
+                          </div>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </div>
+              );
+            })()}
           </div>
         </div>
       )}

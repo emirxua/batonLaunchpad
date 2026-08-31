@@ -72,11 +72,12 @@ export function JupiterSwapModal({
         </div>
 
         {/* Swap Widget Content Body */}
-        <div className="p-3 sm:p-5 overflow-y-auto max-h-[calc(92vh-75px)]">
+        <div className="p-3.5 sm:p-5 overflow-y-auto max-h-[calc(92vh-75px)]">
           <JupiterSwapWidget
             targetMint={targetMint || "2vdc4owf1MPz54jJCN61y3QSKqjcPpr32wJ9qKkmpump"}
             targetSymbol={targetSymbol || "BATON"}
             targetIconUrl={targetIconUrl}
+            isModal={true}
           />
         </div>
       </div>

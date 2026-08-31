@@ -31,20 +31,20 @@ export function TerminalHero() {
   const activeCalloutsCount = calloutData?.count ?? calloutData?.callouts?.length ?? 58;
 
   return (
-    <div className="w-full flex items-center justify-between gap-2 px-3 py-1.5 rounded-xl border border-zinc-200 dark:border-white/5 bg-zinc-50 dark:bg-zinc-950/80 text-xs font-mono select-none overflow-x-auto no-scrollbar shadow-sm">
+    <div className="w-full flex items-center justify-between gap-3 px-3 sm:px-4 py-1.5 rounded-xl border border-zinc-200 dark:border-white/5 bg-zinc-50/80 dark:bg-[#0c0d12]/80 backdrop-blur-md text-xs font-mono select-none overflow-x-auto no-scrollbar shadow-sm">
       {/* Left: Minimal Indicator */}
-      <div className="flex items-center gap-2 shrink-0">
-        <span className="w-2 h-2 rounded-full bg-emerald-400" />
-        <span className="font-extrabold text-[11px] text-zinc-900 dark:text-white uppercase tracking-wider">
-          OUTBID OVERVIEW
+      <div className="flex items-center gap-1.5 shrink-0">
+        <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+        <span className="font-black text-[10px] sm:text-[11px] text-zinc-900 dark:text-zinc-200 uppercase tracking-wider">
+          LIVE METRICS
         </span>
       </div>
 
       {/* Right: Razor-Thin Metrics Strip */}
-      <div className="flex items-center gap-2 sm:gap-3 text-[11px] shrink-0 font-mono">
+      <div className="flex items-center gap-2.5 sm:gap-4 text-[10px] sm:text-[11px] shrink-0 font-mono">
         <div className="flex items-center gap-1 text-zinc-500">
-          <Activity className="w-3 h-3 text-amber-500" />
-          <span className="text-[10px] text-zinc-400 uppercase">24H Vol:</span>
+          <Activity className="w-3 h-3 text-amber-500 shrink-0" />
+          <span className="text-zinc-400 uppercase hidden xs:inline">24H Vol:</span>
           <span className="font-bold text-zinc-900 dark:text-zinc-200">
             {formatCurrency(totalVolume24h)}
           </span>
@@ -53,8 +53,8 @@ export function TerminalHero() {
         <span className="text-zinc-300 dark:text-zinc-800">•</span>
 
         <div className="flex items-center gap-1 text-zinc-500">
-          <Radio className="w-3 h-3 text-rose-500" />
-          <span className="text-[10px] text-zinc-400 uppercase">Signals:</span>
+          <Radio className="w-3 h-3 text-rose-500 shrink-0" />
+          <span className="text-zinc-400 uppercase hidden xs:inline">Signals:</span>
           <span className="font-bold text-zinc-900 dark:text-zinc-200">
             {activeCalloutsCount}
           </span>
@@ -63,8 +63,8 @@ export function TerminalHero() {
         <span className="text-zinc-300 dark:text-zinc-800">•</span>
 
         <div className="flex items-center gap-1 text-zinc-500">
-          <Flame className="w-3 h-3 text-orange-500 fill-current" />
-          <span className="text-[10px] text-zinc-400 uppercase">Burned:</span>
+          <Flame className="w-3 h-3 text-orange-500 fill-current shrink-0" />
+          <span className="text-zinc-400 uppercase hidden xs:inline">Burned:</span>
           <span className="font-bold text-amber-500 dark:text-amber-400">
             {totalBurned >= 1_000_000
               ? `${(totalBurned / 1_000_000).toFixed(2)}M`
