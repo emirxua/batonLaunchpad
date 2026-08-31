@@ -8,21 +8,29 @@ export const ThemeToggle: React.FC = () => {
   const { theme, setTheme, resolvedTheme } = useTheme();
   const [mounted, setMounted] = useState(false);
 
+  const isDark = theme === "dark" || resolvedTheme === "dark";
+
   useEffect(() => {
     setMounted(true);
   }, []);
+
+  useEffect(() => {
+    if (!mounted) return;
+    const metaTheme = document.querySelector('meta[name="theme-color"]');
+    if (metaTheme) {
+      metaTheme.setAttribute("content", isDark ? "#0B0E14" : "#ffffff");
+    }
+  }, [isDark, mounted]);
+
+  const handleToggle = () => {
+    setTheme(isDark ? "light" : "dark");
+  };
 
   if (!mounted) {
     return (
       <div className="w-9 h-9 rounded-xl border border-line bg-bg-raised" />
     );
   }
-
-  const isDark = theme === "dark" || resolvedTheme === "dark";
-
-  const handleToggle = () => {
-    setTheme(isDark ? "light" : "dark");
-  };
 
   return (
     <button

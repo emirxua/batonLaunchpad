@@ -45,7 +45,7 @@ export default function Icon() {
           />
           <div
             style={{
-              width: "27px",
+              width: "36px",
               height: "5px",
               background: "#F59E0B",
               borderRadius: "3px",

@@ -4,17 +4,17 @@
 @tailwind utilities;
 
 :root {
-  --bg: #0B0E14;
-  --bg-raised: #111620;
-  --bg-card: #151B26;
-  --line: #1E2638;
-  --text: #F3F4F6;
-  --text-dim: #9CA3AF;
-  --text-faint: #6B7280;
-  --solana-green: #14F195;
-  --solana-purple: #9945FF;
+  --bg: #FFFFFF;
+  --bg-raised: #F4F4F5;
+  --bg-card: #FFFFFF;
+  --line: #E4E4E7;
+  --text: #09090B;
+  --text-dim: #71717A;
+  --text-faint: #A1A1AA;
+  --solana-green: #10B981;
+  --solana-purple: #8B5CF6;
   --amber: #F59E0B;
-  --up: #14F195;
+  --up: #10B981;
   --down: #F43F5E;
 }
 
@@ -138,7 +138,6 @@ html {
 }
 
 body {
-  padding-top: env(safe-area-inset-top, 0px);
   padding-bottom: env(safe-area-inset-bottom, 0px);
   padding-left: env(safe-area-inset-left, 0px);
   padding-right: env(safe-area-inset-right, 0px);

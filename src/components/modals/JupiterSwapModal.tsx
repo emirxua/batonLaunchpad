@@ -42,17 +42,17 @@ export function JupiterSwapModal({
       {/* Modal / Mobile Bottom Sheet Container */}
       <div
         onClick={(e) => e.stopPropagation()}
-        className="relative z-10 w-full max-w-lg bg-[#0B0D13] border border-amber-500/30 sm:rounded-3xl rounded-t-3xl shadow-2xl shadow-amber-500/10 overflow-hidden flex flex-col max-h-[92dvh] animate-in slide-in-from-bottom-4 sm:zoom-in-95 duration-200 cursor-default"
+        className="relative z-10 w-full max-w-lg bg-white dark:bg-[#0B0D13] border border-zinc-200 dark:border-amber-500/30 sm:rounded-3xl rounded-t-3xl shadow-2xl shadow-zinc-950/10 dark:shadow-amber-500/10 overflow-hidden flex flex-col max-h-[92dvh] animate-in slide-in-from-bottom-4 sm:zoom-in-95 duration-200 cursor-default text-zinc-900 dark:text-zinc-100"
       >
         {/* Mobile Drag Handle */}
         <div className="sm:hidden pt-2.5 pb-1 flex justify-center cursor-grab active:cursor-grabbing">
-          <div className="w-12 h-1 rounded-full bg-zinc-700/80" />
+          <div className="w-12 h-1 rounded-full bg-zinc-300 dark:bg-zinc-700/80" />
         </div>
 
         {/* Minimal Header Strip */}
-        <div className="px-4 sm:px-6 py-3 sm:py-4 border-b border-zinc-200/10 dark:border-white/10 flex items-center justify-between bg-zinc-950/60">
+        <div className="px-4 sm:px-6 py-3 sm:py-4 border-b border-zinc-200 dark:border-white/10 flex items-center justify-between bg-zinc-50 dark:bg-zinc-950/60">
           <div className="flex items-center gap-2.5 min-w-0">
-            <div className="w-8 h-8 rounded-xl bg-amber-500/15 border border-amber-500/30 flex items-center justify-center text-amber-400 shrink-0 overflow-hidden">
+            <div className="w-8 h-8 rounded-xl bg-amber-500/15 border border-amber-500/30 flex items-center justify-center text-amber-500 dark:text-amber-400 shrink-0 overflow-hidden">
               {targetIconUrl ? (
                 <img src={targetIconUrl} alt={targetSymbol || "Token"} className="w-full h-full object-cover" />
               ) : (
@@ -61,14 +61,14 @@ export function JupiterSwapModal({
             </div>
             <div className="min-w-0">
               <div className="flex items-center gap-1.5">
-                <h3 className="text-xs sm:text-sm font-black text-white uppercase tracking-tight truncate">
+                <h3 className="text-xs sm:text-sm font-black text-zinc-900 dark:text-white uppercase tracking-tight truncate">
                   ${targetSymbol || "TOKEN"} SWAP
                 </h3>
-                <span className="text-[8px] sm:text-[9px] font-extrabold px-1.5 py-0.5 rounded-md bg-emerald-500/10 text-emerald-400 border border-emerald-500/25 shrink-0">
+                <span className="text-[8px] sm:text-[9px] font-extrabold px-1.5 py-0.5 rounded-md bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/25 shrink-0">
                   Jupiter V6
                 </span>
               </div>
-              <p className="text-[10px] text-zinc-400 truncate">
+              <p className="text-[10px] text-zinc-500 dark:text-zinc-400 truncate">
                 {targetName || `Swap SOL for $${targetSymbol || "TOKEN"}`}
               </p>
             </div>
@@ -77,10 +77,10 @@ export function JupiterSwapModal({
           <button
             type="button"
             onClick={onClose}
-            className="w-7 h-7 sm:w-8 sm:h-8 rounded-full bg-white/5 hover:bg-white/10 text-zinc-400 hover:text-white flex items-center justify-center transition-colors cursor-pointer shrink-0"
+            className="hidden sm:flex w-8 h-8 rounded-full bg-zinc-100 hover:bg-zinc-200 dark:bg-white/5 dark:hover:bg-white/10 text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white items-center justify-center transition-colors cursor-pointer shrink-0"
             title="Close modal"
           >
-            <X className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+            <X className="w-4 h-4" />
           </button>
         </div>
 

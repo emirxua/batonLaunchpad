@@ -117,9 +117,9 @@ export const Navbar: React.FC = () => {
             >
               {/* 3 Unified Amber/Orange Outbid Stripes */}
               <div className="flex flex-col gap-1 w-4 sm:w-5 h-3.5 sm:h-4 justify-center shrink-0">
-                <span className="w-full h-0.5 sm:h-1 bg-[#f59e0b] rounded-full shadow-[0_0_8px_rgba(245,158,11,0.5)] transition-all group-hover:w-full" />
-                <span className="w-3/4 h-0.5 sm:h-1 bg-[#f59e0b] rounded-full shadow-[0_0_8px_rgba(245,158,11,0.5)] transition-all group-hover:w-full" />
-                <span className="w-full h-0.5 sm:h-1 bg-[#f59e0b] rounded-full shadow-[0_0_8px_rgba(245,158,11,0.5)] transition-all group-hover:w-full" />
+                <span className="w-full h-0.5 sm:h-1 bg-[#f59e0b] rounded-full shadow-[0_0_8px_rgba(245,158,11,0.5)] transition-all" />
+                <span className="w-full h-0.5 sm:h-1 bg-[#f59e0b] rounded-full shadow-[0_0_8px_rgba(245,158,11,0.5)] transition-all" />
+                <span className="w-full h-0.5 sm:h-1 bg-[#f59e0b] rounded-full shadow-[0_0_8px_rgba(245,158,11,0.5)] transition-all" />
               </div>
 
               {/* Brand Name & Whisper-Quiet Live Count */}
@@ -167,12 +167,12 @@ export const Navbar: React.FC = () => {
 
           {/* ── Right: Twitter, Auth / Profile, Wallet, Theme ─────────── */}
           <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
-            {/* Official Twitter (X) Direct Link */}
+            {/* Official Twitter (X) Direct Link (Desktop only) */}
             <a
               href="https://x.com/batonoutbid"
               target="_blank"
               rel="noopener noreferrer"
-              className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-zinc-400 hover:text-white hover:bg-zinc-100 dark:hover:bg-white/[0.06] border border-transparent hover:border-zinc-200 dark:hover:border-white/10 transition-all text-xs font-medium shrink-0 group cursor-pointer"
+              className="hidden sm:flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-zinc-400 hover:text-white hover:bg-zinc-100 dark:hover:bg-white/[0.06] border border-transparent hover:border-zinc-200 dark:hover:border-white/10 transition-all text-xs font-medium shrink-0 group cursor-pointer"
               title="Official X: @batonoutbid"
             >
               <div className="w-4 h-4 rounded-lg bg-zinc-200/60 dark:bg-white/10 flex items-center justify-center group-hover:bg-black group-hover:text-white dark:group-hover:bg-white dark:group-hover:text-black transition-colors">
@@ -180,7 +180,7 @@ export const Navbar: React.FC = () => {
                   <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
                 </svg>
               </div>
-              <span className="text-[11px] font-mono text-zinc-500 dark:text-zinc-400 group-hover:text-zinc-900 dark:group-hover:text-white transition-colors hidden sm:inline">
+              <span className="text-[11px] font-mono text-zinc-500 dark:text-zinc-400 group-hover:text-zinc-900 dark:group-hover:text-white transition-colors">
                 @batonoutbid
               </span>
             </a>

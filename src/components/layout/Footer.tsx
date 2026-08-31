@@ -35,7 +35,7 @@ export const Footer: React.FC = () => {
             <Link href="/" className="flex items-center gap-2.5 group cursor-pointer shrink-0">
               <div className="flex flex-col justify-center gap-1 w-4 h-3.5">
                 <span className="w-full h-0.5 bg-[#f59e0b] rounded-full" />
-                <span className="w-3/4 h-0.5 bg-[#f59e0b] rounded-full" />
+                <span className="w-full h-0.5 bg-[#f59e0b] rounded-full" />
                 <span className="w-full h-0.5 bg-[#f59e0b] rounded-full" />
               </div>
               <div className="text-base font-black tracking-wider flex items-center font-mono">

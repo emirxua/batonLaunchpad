@@ -27,7 +27,10 @@ const jetbrainsMono = JetBrains_Mono({
 });
 
 export const viewport: Viewport = {
-  themeColor: "#0B0E14",
+  themeColor: [
+    { media: "(prefers-color-scheme: light)", color: "#ffffff" },
+    { media: "(prefers-color-scheme: dark)", color: "#0B0E14" },
+  ],
   width: "device-width",
   initialScale: 1,
   maximumScale: 1,
@@ -58,12 +61,12 @@ export const metadata: Metadata = {
   },
   appleWebApp: {
     capable: true,
-    statusBarStyle: "black-translucent",
+    statusBarStyle: "default",
     title: "Outbid",
   },
   other: {
     "apple-mobile-web-app-capable": "yes",
-    "apple-mobile-web-app-status-bar-style": "black-translucent",
+    "apple-mobile-web-app-status-bar-style": "default",
     "apple-mobile-web-app-title": "Outbid",
     "mobile-web-app-capable": "yes",
     "format-detection": "telephone=no",
@@ -74,7 +77,6 @@ export const metadata: Metadata = {
       { url: "/icons/icon.svg", type: "image/svg+xml" },
     ],
     apple: [
-      { url: "/images/baton-logo.png", sizes: "180x180", type: "image/png" },
       { url: "/apple-icon", sizes: "180x180", type: "image/png" },
     ],
   },
@@ -97,12 +99,12 @@ export default function RootLayout({
         <link rel="icon" href="/icon" sizes="any" />
         <meta name="mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
-        <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+        <meta name="apple-mobile-web-app-status-bar-style" content="default" />
         <meta name="apple-mobile-web-app-title" content="Outbid" />
         <script src="https://accounts.google.com/gsi/client" async defer></script>
       </head>
-      <body className="bg-zinc-50 dark:bg-[#0B0E14] text-zinc-900 dark:text-zinc-100 antialiased min-h-screen overflow-x-hidden selection:bg-amber-500 selection:text-black font-mono">
-        <ThemeProvider attribute="class" defaultTheme="system" enableSystem={true}>
+      <body className="bg-white dark:bg-[#0B0E14] text-zinc-900 dark:text-zinc-100 antialiased min-h-screen overflow-x-hidden selection:bg-amber-500 selection:text-black font-mono">
+        <ThemeProvider attribute="class" defaultTheme="dark" enableSystem={false}>
           <WalletContextProvider>
             {children}
             <LiveBurnToast />

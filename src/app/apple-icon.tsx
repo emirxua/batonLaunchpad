@@ -48,10 +48,10 @@ export default function Icon() {
               borderRadius: "8px",
             }}
           />
-          {/* Bar 2 (3/4 width) */}
+          {/* Bar 2 (Equal full width) */}
           <div
             style={{
-              width: "82px",
+              width: "110px",
               height: "15px",
               background: "#F59E0B",
               borderRadius: "8px",

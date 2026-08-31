@@ -44,7 +44,7 @@ export function MobileBottomNav({
       {/* ── Fixed Bottom Navigation Bar (Mobile Only: hidden on md+) ────── */}
       <nav
         aria-label="Mobile Navigation"
-        className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-[#090B10]/95 backdrop-blur-2xl border-t border-white/10 px-3 pt-2 pb-[max(env(safe-area-inset-bottom,10px),10px)] select-none font-mono shadow-[0_-6px_25px_rgba(0,0,0,0.4)]"
+        className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-white/95 dark:bg-[#090B10]/95 backdrop-blur-2xl border-t border-zinc-200 dark:border-white/10 px-3 pt-2 pb-[max(env(safe-area-inset-bottom,10px),10px)] select-none font-mono shadow-[0_-6px_25px_rgba(0,0,0,0.08)] dark:shadow-[0_-6px_25px_rgba(0,0,0,0.4)]"
       >
         <div className="grid grid-cols-4 gap-1.5 items-center max-w-sm mx-auto">
           {/* Tab 1: Callouts */}
@@ -53,8 +53,8 @@ export function MobileBottomNav({
             onClick={() => handleTabClick("callouts")}
             className={`flex flex-col items-center justify-center gap-1 py-1.5 px-1 rounded-2xl transition-all duration-150 active:scale-90 ${
               activeTab === "callouts" && !isLocalSwapModalOpen
-                ? "text-amber-400 bg-amber-500/15 font-black shadow-sm"
-                : "text-zinc-500 hover:text-white"
+                ? "text-amber-500 dark:text-amber-400 bg-amber-500/15 font-black shadow-sm"
+                : "text-zinc-500 hover:text-zinc-950 dark:hover:text-white"
             }`}
           >
             <Radio className="w-4 h-4" />
@@ -67,8 +67,8 @@ export function MobileBottomNav({
             onClick={() => handleTabClick("trending")}
             className={`flex flex-col items-center justify-center gap-1 py-1.5 px-1 rounded-2xl transition-all duration-150 active:scale-90 ${
               activeTab === "trending" && !isLocalSwapModalOpen
-                ? "text-amber-400 bg-amber-500/15 font-black shadow-sm"
-                : "text-zinc-500 hover:text-white"
+                ? "text-amber-500 dark:text-amber-400 bg-amber-500/15 font-black shadow-sm"
+                : "text-zinc-500 hover:text-zinc-950 dark:hover:text-white"
             }`}
           >
             <Zap className="w-4 h-4" />
@@ -95,7 +95,7 @@ export function MobileBottomNav({
                 <path d="M17 14H3l4 4" />
               </svg>
             </div>
-            <span className="text-[9px] tracking-wider uppercase font-black text-amber-400">
+            <span className="text-[9px] tracking-wider uppercase font-black text-amber-500 dark:text-amber-400">
               Swap
             </span>
           </button>
@@ -106,8 +106,8 @@ export function MobileBottomNav({
             onClick={() => handleTabClick("leaderboard")}
             className={`flex flex-col items-center justify-center gap-1 py-1.5 px-1 rounded-2xl transition-all duration-150 active:scale-90 ${
               activeTab === "leaderboard" && !isLocalSwapModalOpen
-                ? "text-amber-400 bg-amber-500/15 font-black shadow-sm"
-                : "text-zinc-500 hover:text-white"
+                ? "text-amber-500 dark:text-amber-400 bg-amber-500/15 font-black shadow-sm"
+                : "text-zinc-500 hover:text-zinc-950 dark:hover:text-white"
             }`}
           >
             <Trophy className="w-4 h-4" />
