@@ -40,6 +40,8 @@ export interface PumpCalloutListResponse {
 export interface CalloutCard extends PumpCallout {
   callerWallet: string;   // = userId
   callerLabel: string;    // human label from watchlist
+  callerAvatarUrl?: string; // real pump.fun profile avatar
+  callerXUsername?: string; // real pump.fun Twitter/X handle
   coinSymbol?: string;
   coinName?: string;
 }

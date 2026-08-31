@@ -15,6 +15,12 @@ let userSubmittedCallouts: CalloutCard[] = [];
 // In-memory cache for live alpha signals
 let cachedSignals: { data: CalloutCard[]; time: number } | null = null;
 
+// In-memory cache for caller user profiles from pump.fun (5 min TTL)
+const callerProfilesCache = new Map<
+  string,
+  { username?: string; profileImage?: string; xUsername?: string; lastFetched: number }
+>();
+
 async function fetchWithTimeout(url: string, ms = FETCH_TIMEOUT_MS): Promise<Response> {
   const ctrl = new AbortController();
   const id = setTimeout(() => ctrl.abort(), ms);
@@ -160,6 +166,53 @@ async function fetchCallerCalloutsSafe(
 }
 
 /**
+ * Enriches caller profiles with REAL photos and usernames from pump.fun /users/:wallet
+ */
+async function enrichCallerProfiles(cards: CalloutCard[]): Promise<CalloutCard[]> {
+  const uniqueWallets = Array.from(new Set(cards.map((c) => c.callerWallet).filter(Boolean)));
+  const now = Date.now();
+
+  const toFetch = uniqueWallets.filter((w) => {
+    const cached = callerProfilesCache.get(w);
+    return !cached || now - cached.lastFetched > 300_000;
+  });
+
+  if (toFetch.length > 0) {
+    const promises = toFetch.slice(0, 20).map(async (wallet) => {
+      try {
+        const res = await fetchWithTimeout(`${PUMP_BASE}/users/${wallet}`, 3000);
+        if (res.ok) {
+          const user = await res.json();
+          let pImg = user.profile_image || null;
+          if (pImg && pImg.includes("ipfs.io")) {
+            pImg = pImg.replace("https://ipfs.io/ipfs/", "https://pump.mypinata.cloud/ipfs/");
+          }
+          callerProfilesCache.set(wallet, {
+            username: user.username || undefined,
+            profileImage: pImg || undefined,
+            xUsername: user.x_username || undefined,
+            lastFetched: now,
+          });
+        }
+      } catch {
+        /* continue */
+      }
+    });
+    await Promise.allSettled(promises);
+  }
+
+  return cards.map((c) => {
+    const p = callerProfilesCache.get(c.callerWallet);
+    return {
+      ...c,
+      callerLabel: p?.username || c.callerLabel,
+      callerAvatarUrl: p?.profileImage || undefined,
+      callerXUsername: p?.xUsername || undefined,
+    };
+  });
+}
+
+/**
  * Enriches all callouts with real DexScreener & Pump.fun metadata (symbols, names, icons)
  */
 async function enrichCalloutMetadata(cards: CalloutCard[]): Promise<CalloutCard[]> {
@@ -297,7 +350,8 @@ export async function GET() {
   }
 
   const combined = [...realCallouts].sort((a, b) => b.createdAt - a.createdAt);
-  const enriched = await enrichCalloutMetadata(combined);
+  const withProfiles = await enrichCallerProfiles(combined);
+  const enriched = await enrichCalloutMetadata(withProfiles);
 
   if (enriched.length > 0) {
     cachedSignals = { data: enriched, time: now };

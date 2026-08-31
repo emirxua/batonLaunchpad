@@ -46,6 +46,7 @@ export interface CalloutItem {
   callerHandle: string;
   callerAvatar: string;
   callerAvatarUrl?: string;
+  callerXUsername?: string;
   callerBadge?: string;
   tokenName: string;
   tokenSymbol: string;

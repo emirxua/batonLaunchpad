@@ -192,9 +192,8 @@ export function CalloutFeed({ onSelectToken, filterSymbol }: CalloutFeedProps) {
   const rawLiveCallouts: CalloutItem[] = (data?.callouts || []).map((c: any) => {
     const callerWallet = c.callerWallet || c.userId || "";
     const callerName = c.callerLabel || (callerWallet ? `${callerWallet.slice(0, 4)}…${callerWallet.slice(-4)}` : "Verified Caller");
-    const callerHandle = callerWallet ? `${callerWallet.slice(0, 4)}…${callerWallet.slice(-4)}` : "sol_trader";
-    const avatarSeed = encodeURIComponent(callerName || callerHandle);
-    const callerAvatarUrl = `https://api.dicebear.com/7.x/bottts-neutral/svg?seed=${avatarSeed}&backgroundColor=b6e3f4,c0aede,d1d4f9,ffd5dc,ffdfbf`;
+    const callerHandle = c.callerXUsername ? c.callerXUsername : (callerWallet ? `${callerWallet.slice(0, 4)}…${callerWallet.slice(-4)}` : "sol_trader");
+    const callerAvatarUrl = c.callerAvatarUrl || undefined;
     const tokenIconUrl = c.mediaUrl || (c.coinMint === "2vdc4owf1MPz54jJCN61y3QSKqjcPpr32wJ9qKkmpump" ? "/images/baton-logo.png" : undefined);
 
     const mintLower = (c.coinMint || "").toLowerCase();
@@ -210,6 +209,7 @@ export function CalloutFeed({ onSelectToken, filterSymbol }: CalloutFeedProps) {
       callerWallet,
       callerAvatar: (c.coinSymbol || "CA").slice(0, 2).toUpperCase(),
       callerAvatarUrl,
+      callerXUsername: c.callerXUsername,
       callerBadge: ["ansemconzimp", "slingoor", "archelon", "croakie", "cupseyyyyy", "ferre", "sapijiju"].includes(String(c.callerLabel || "").toLowerCase()) ? "Verified Alpha" : "Alpha Caller",
       tokenName: c.coinName && c.coinName !== "Solana Token" ? c.coinName : (c.coinSymbol || "Solana Project"),
       tokenSymbol: c.coinSymbol && !c.coinSymbol.startsWith("0x") ? c.coinSymbol.toUpperCase() : (c.coinName ? c.coinName.slice(0, 5).toUpperCase() : "TOKEN"),
@@ -733,18 +733,22 @@ export function CalloutFeed({ onSelectToken, filterSymbol }: CalloutFeedProps) {
                     className="flex items-center gap-2.5 min-w-0 group/caller hover:opacity-90 transition-opacity cursor-pointer"
                     title={item.callerWallet && item.callerWallet.length > 20 ? `View ${item.callerName} on Pump.fun (${item.callerWallet})` : item.callerName}
                   >
-                    <div className="w-10 h-10 rounded-xl bg-zinc-800 border border-zinc-200 dark:border-white/10 group-hover/caller:border-amber-500/50 overflow-hidden flex items-center justify-center shrink-0 shadow-md transition-colors">
+                    <div className="w-10 h-10 rounded-xl bg-zinc-800 border border-zinc-200 dark:border-white/10 group-hover/caller:border-amber-500/50 overflow-hidden flex items-center justify-center shrink-0 shadow-md transition-colors relative">
                       {item.callerAvatarUrl ? (
                         <img
                           src={item.callerAvatarUrl}
                           alt={item.callerName}
-                          className="w-full h-full object-cover"
+                          onError={(e) => {
+                            (e.currentTarget as HTMLElement).style.display = "none";
+                          }}
+                          className="w-full h-full object-cover z-10 relative"
                         />
-                      ) : item.callerAvatar === "🔥" ? (
+                      ) : null}
+                      {item.callerAvatar === "🔥" ? (
                         <Flame className="w-5 h-5 text-amber-400 fill-current" />
                       ) : (
-                        <span className="font-black text-amber-400 text-xs">
-                          {item.callerAvatar}
+                        <span className="font-black text-amber-400 text-xs uppercase">
+                          {item.callerName.slice(0, 2)}
                         </span>
                       )}
                     </div>
@@ -759,12 +763,26 @@ export function CalloutFeed({ onSelectToken, filterSymbol }: CalloutFeedProps) {
                           </span>
                         )}
                       </div>
-                      <span className="text-[10px] text-zinc-500 group-hover/caller:text-amber-500/80 transition-colors flex items-center gap-1 truncate">
-                        <span>@{item.callerHandle}</span>
-                        {item.callerWallet && item.callerWallet.length > 20 && (
-                          <ExternalLink className="w-2.5 h-2.5 opacity-60 shrink-0" />
+                      <div className="flex items-center gap-2 text-[10px] text-zinc-500">
+                        <span className="group-hover/caller:text-amber-500/80 transition-colors flex items-center gap-0.5 truncate">
+                          <span>@{item.callerHandle}</span>
+                          {item.callerWallet && item.callerWallet.length > 20 && (
+                            <ExternalLink className="w-2.5 h-2.5 opacity-60 shrink-0" />
+                          )}
+                        </span>
+                        {item.callerXUsername && (
+                          <a
+                            href={`https://x.com/${item.callerXUsername}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            onClick={(e) => e.stopPropagation()}
+                            className="text-zinc-400 hover:text-sky-400 font-bold flex items-center gap-0.5 transition-colors"
+                            title={`View @${item.callerXUsername} on X`}
+                          >
+                            <span>𝕏</span>
+                          </a>
                         )}
-                      </span>
+                      </div>
                     </div>
                   </a>
 
@@ -867,6 +885,21 @@ export function CalloutFeed({ onSelectToken, filterSymbol }: CalloutFeedProps) {
                         <span>💊 Pump.fun</span>
                         <ExternalLink className="w-2.5 h-2.5" />
                       </a>
+
+                      {/* Direct Caller Callouts Link */}
+                      {item.callerWallet && (
+                        <a
+                          href={`https://pump.fun/profile/${item.callerWallet}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          onClick={(e) => e.stopPropagation()}
+                          className="px-2 py-0.5 rounded-lg bg-sky-500/10 hover:bg-sky-500/20 text-sky-600 dark:text-sky-400 border border-sky-500/30 text-[10px] font-extrabold flex items-center gap-1 transition-all"
+                          title="View Caller Profile & All Callouts on Pump.fun"
+                        >
+                          <span>📢 Profile</span>
+                          <ExternalLink className="w-2.5 h-2.5" />
+                        </a>
+                      )}
 
                       {/* DexScreener Link */}
                       <a
