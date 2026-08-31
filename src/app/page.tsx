@@ -199,7 +199,8 @@ export default function OutbidHomePage() {
         targetMint={selectedSwapToken.mint}
         targetSymbol={selectedSwapToken.symbol}
         targetName={selectedSwapToken.name}
-        onTokenChange={(mint, symbol) => handleSelectSwapToken(mint, symbol)}
+        targetIconUrl={selectedSwapToken.imageUrl}
+        onOpenSwapModal={() => setIsJupiterSwapModalOpen(true)}
       />
 
       {/* 5. On-Chain Burn Modal */}

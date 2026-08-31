@@ -388,8 +388,8 @@ export const Navbar: React.FC = () => {
               </div>
             )}
 
-            {/* Theme Toggle */}
-            <div className="shrink-0">
+            {/* Theme Toggle (Desktop Only, automatically system on mobile) */}
+            <div className="shrink-0 hidden sm:block">
               <ThemeToggle />
             </div>
 
@@ -412,6 +412,11 @@ export const Navbar: React.FC = () => {
         {/* ── Mobile Navigation Drawer ───────────────────────────────── */}
         {mobileMenuOpen && (
           <div className="lg:hidden border-t border-zinc-200 dark:border-white/10 bg-white/98 dark:bg-[#0D0E12]/98 backdrop-blur-2xl px-4 py-3 space-y-2 animate-in slide-in-from-top-2 duration-150 font-mono shadow-2xl">
+            <div className="flex items-center justify-between pb-2 border-b border-zinc-100 dark:border-white/5">
+              <span className="text-[10px] text-zinc-400 font-bold uppercase">Theme Mode</span>
+              <ThemeToggle />
+            </div>
+
             {navLinks.map((link) => {
               const isActive =
                 pathname === link.href || (link.href !== "/" && pathname?.startsWith(link.href));
