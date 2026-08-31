@@ -110,143 +110,247 @@ export function BurnLeaderboard({ onBoostToken }: BurnLeaderboardProps) {
             </div>
           </div>
         ) : (
-          <div className="overflow-x-auto no-scrollbar">
-            <table className="w-full text-left text-xs border-collapse">
-              <thead>
-                <tr className="border-b border-zinc-200 dark:border-white/10 bg-zinc-50/50 dark:bg-zinc-900/20 text-zinc-500 text-[11px] uppercase tracking-wider">
-                  <th className="py-3.5 px-4 font-bold">Rank</th>
-                  <th className="py-3.5 px-4 font-bold">Project</th>
-                  <th className="py-3.5 px-4 font-bold">Contract Address</th>
-                  <th className="py-3.5 px-4 font-bold text-right">Market Cap</th>
-                  <th className="py-3.5 px-4 font-bold text-right">Burned $BATON</th>
-                  <th className="py-3.5 px-4 font-bold text-center">Action</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-zinc-200 dark:divide-white/5">
-                {leaderboard.map((item: LeaderboardItem) => {
-                  const isGold = item.rank === 1;
-                  const isSilver = item.rank === 2;
-                  const isBronze = item.rank === 3;
+          <>
+            {/* ── Mobile Ranking Cards (Zero Horizontal Scroll) ──────────── */}
+            <div className="sm:hidden divide-y divide-zinc-200 dark:divide-white/5">
+              {leaderboard.map((item: LeaderboardItem) => {
+                const isGold = item.rank === 1;
+                const isSilver = item.rank === 2;
+                const isBronze = item.rank === 3;
 
-                  return (
-                    <tr
-                      key={item.ca}
-                      onClick={() => {
-                        if (onBoostToken) onBoostToken(item);
-                      }}
-                      className="hover:bg-zinc-50 dark:hover:bg-white/[0.02] transition-colors cursor-pointer group"
-                    >
-                      {/* Rank Badge */}
-                      <td className="py-3.5 px-4 font-bold text-sm">
-                        {isGold ? (
-                          <span className="text-amber-400 flex items-center gap-1 font-black">
+                return (
+                  <div
+                    key={item.ca}
+                    onClick={() => {
+                      if (onBoostToken) onBoostToken(item);
+                    }}
+                    className="p-3.5 space-y-2.5 active:bg-zinc-100 dark:active:bg-white/5 transition-colors cursor-pointer"
+                  >
+                    {/* Top: Rank + Project Logo + Symbol + Copy CA */}
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="flex items-center gap-2.5 min-w-0">
+                        {/* Rank badge */}
+                        <div className="w-7 h-7 rounded-xl flex items-center justify-center font-black text-xs shrink-0 bg-zinc-100 dark:bg-zinc-900 border border-zinc-200 dark:border-white/10">
+                          {isGold ? (
                             <Crown className="w-4 h-4 fill-current text-amber-400" />
-                            #1
-                          </span>
-                        ) : isSilver ? (
-                          <span className="text-zinc-300 flex items-center gap-1 font-bold">
-                            <Medal className="w-4 h-4 text-zinc-400" />
-                            #2
-                          </span>
-                        ) : isBronze ? (
-                          <span className="text-orange-400 flex items-center gap-1 font-bold">
-                            <Medal className="w-4 h-4 text-orange-500" />
-                            #3
-                          </span>
-                        ) : (
-                          <span className="text-zinc-500 font-bold">#{item.rank}</span>
-                        )}
-                      </td>
-
-                      {/* Project & Symbol */}
-                      <td className="py-3.5 px-4">
-                        <div className="flex items-center gap-2.5">
-                          <div className="w-8 h-8 rounded-lg bg-zinc-800 border border-zinc-200 dark:border-white/10 flex items-center justify-center overflow-hidden shrink-0 text-xs font-bold text-amber-400">
-                            {item.iconUrl ? (
-                              <img
-                                src={item.iconUrl}
-                                alt={item.symbol}
-                                className="w-full h-full object-cover"
-                              />
-                            ) : (
-                              <span>${item.symbol.slice(0, 3)}</span>
-                            )}
-                          </div>
-                          <div>
-                            <div className="font-bold text-zinc-950 dark:text-white group-hover:text-amber-400 transition-colors">
-                              {item.projectName}
-                            </div>
-                            <div className="text-[10px] text-zinc-500">
-                              ${item.symbol}
-                            </div>
-                          </div>
+                          ) : isSilver ? (
+                            <span className="text-zinc-400 font-black">#2</span>
+                          ) : isBronze ? (
+                            <span className="text-orange-400 font-black">#3</span>
+                          ) : (
+                            <span className="text-zinc-500 font-bold">#{item.rank}</span>
+                          )}
                         </div>
-                      </td>
 
-                      {/* CA */}
-                      <td className="py-3.5 px-4">
-                        <div className="flex items-center gap-2 text-zinc-500">
-                          <span className="text-[11px] text-zinc-600 dark:text-zinc-400 font-mono">
-                            {item.ca.slice(0, 4)}…{item.ca.slice(-4)}
-                          </span>
-                          <button
-                            type="button"
-                            onClick={(e) => handleCopy(item.ca, e)}
-                            className="hover:text-amber-400 transition-colors p-0.5 cursor-pointer"
-                            title="Copy CA"
-                          >
-                            {copiedCA === item.ca ? (
-                              <Check className="w-3.5 h-3.5 text-emerald-400" />
-                            ) : (
-                              <Copy className="w-3.5 h-3.5" />
-                            )}
-                          </button>
-                          <a
-                            href={`https://solscan.io/token/${item.ca}`}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            onClick={(e) => e.stopPropagation()}
-                            className="hover:text-amber-400 transition-colors p-0.5"
-                            title="View on Solscan"
-                          >
-                            <ExternalLink className="w-3.5 h-3.5" />
-                          </a>
+                        {/* Token Logo */}
+                        <div className="w-8 h-8 rounded-xl bg-zinc-800 border border-zinc-200 dark:border-white/10 flex items-center justify-center overflow-hidden shrink-0 text-xs font-bold text-amber-400">
+                          {item.iconUrl ? (
+                            <img src={item.iconUrl} alt={item.symbol} className="w-full h-full object-cover" />
+                          ) : (
+                            <span>${item.symbol.slice(0, 2)}</span>
+                          )}
                         </div>
-                      </td>
 
-                      {/* Market Cap */}
-                      <td className="py-3.5 px-4 text-right font-medium text-zinc-800 dark:text-zinc-200">
-                        {item.mcapFormatted}
-                      </td>
+                        <div className="min-w-0">
+                          <span className="font-black text-sm text-zinc-950 dark:text-white block truncate">
+                            ${item.symbol}
+                          </span>
+                          <span className="text-[11px] text-zinc-500 block truncate">
+                            {item.projectName}
+                          </span>
+                        </div>
+                      </div>
 
-                      {/* Total Burned */}
-                      <td className="py-3.5 px-4 text-right">
-                        <span className="font-extrabold text-amber-400 flex items-center justify-end gap-1">
-                          <Flame className="w-3.5 h-3.5 fill-current text-orange-500" />
-                          {formatNumber(item.totalBatonBurned)} $BATON
-                        </span>
-                      </td>
-
-                      {/* Action Button */}
-                      <td className="py-3.5 px-4 text-center">
+                      {/* Copy CA */}
+                      <div className="flex items-center gap-1.5 shrink-0">
                         <button
                           type="button"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            if (onBoostToken) onBoostToken(item);
-                          }}
-                          className="px-3.5 py-1.5 rounded-lg bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-zinc-950 font-extrabold text-[11px] transition-all uppercase tracking-wider cursor-pointer shadow-md active:scale-95 flex items-center justify-center gap-1 mx-auto"
+                          onClick={(e) => handleCopy(item.ca, e)}
+                          className="px-2 py-1 rounded-lg bg-zinc-100 dark:bg-zinc-900 text-zinc-500 hover:text-amber-400 border border-zinc-200 dark:border-white/10 text-[10px] flex items-center gap-1 font-mono cursor-pointer"
                         >
-                          <Flame className="w-3 h-3 fill-current" />
-                          <span>Boost This Token</span>
+                          <span>{item.ca.slice(0, 4)}…{item.ca.slice(-3)}</span>
+                          {copiedCA === item.ca ? (
+                            <Check className="w-3 h-3 text-emerald-400" />
+                          ) : (
+                            <Copy className="w-3 h-3" />
+                          )}
                         </button>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
+                      </div>
+                    </div>
+
+                    {/* Middle: 2 Key Stats Box (Burned + MCAP) - Clear and Instant */}
+                    <div className="grid grid-cols-2 gap-2 bg-zinc-50 dark:bg-zinc-900/60 border border-zinc-200 dark:border-white/5 rounded-xl p-2.5 text-xs">
+                      <div>
+                        <span className="text-[9px] text-zinc-400 uppercase block font-bold">Burned $BATON</span>
+                        <span className="text-amber-500 dark:text-amber-400 font-black flex items-center gap-1 mt-0.5">
+                          <Flame className="w-3 h-3 fill-current text-orange-500 shrink-0" />
+                          {formatNumber(item.totalBatonBurned)}
+                        </span>
+                      </div>
+                      <div className="text-right">
+                        <span className="text-[9px] text-zinc-400 uppercase block font-bold">Market Cap</span>
+                        <span className="text-zinc-900 dark:text-zinc-200 font-bold font-mono block mt-0.5">
+                          {item.mcapFormatted}
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Bottom: Boost Button */}
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        if (onBoostToken) onBoostToken(item);
+                      }}
+                      className="w-full py-2 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 text-zinc-950 font-black text-xs uppercase tracking-wider shadow-md flex items-center justify-center gap-1.5 active:scale-95 transition-transform cursor-pointer"
+                    >
+                      <Flame className="w-3.5 h-3.5 fill-current" />
+                      <span>Boost / Burn $BATON</span>
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
+
+            {/* ── Desktop Multi-Column Table (Hidden on Mobile) ─────────── */}
+            <div className="hidden sm:block overflow-x-auto no-scrollbar">
+              <table className="w-full text-left text-xs border-collapse">
+                <thead>
+                  <tr className="border-b border-zinc-200 dark:border-white/10 bg-zinc-50/50 dark:bg-zinc-900/20 text-zinc-500 text-[11px] uppercase tracking-wider">
+                    <th className="py-3.5 px-4 font-bold">Rank</th>
+                    <th className="py-3.5 px-4 font-bold">Project</th>
+                    <th className="py-3.5 px-4 font-bold">Contract Address</th>
+                    <th className="py-3.5 px-4 font-bold text-right">Market Cap</th>
+                    <th className="py-3.5 px-4 font-bold text-right">Burned $BATON</th>
+                    <th className="py-3.5 px-4 font-bold text-center">Action</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-zinc-200 dark:divide-white/5">
+                  {leaderboard.map((item: LeaderboardItem) => {
+                    const isGold = item.rank === 1;
+                    const isSilver = item.rank === 2;
+                    const isBronze = item.rank === 3;
+
+                    return (
+                      <tr
+                        key={item.ca}
+                        onClick={() => {
+                          if (onBoostToken) onBoostToken(item);
+                        }}
+                        className="hover:bg-zinc-50 dark:hover:bg-white/[0.02] transition-colors cursor-pointer group"
+                      >
+                        {/* Rank Badge */}
+                        <td className="py-3.5 px-4 font-bold text-sm">
+                          {isGold ? (
+                            <span className="text-amber-400 flex items-center gap-1 font-black">
+                              <Crown className="w-4 h-4 fill-current text-amber-400" />
+                              #1
+                            </span>
+                          ) : isSilver ? (
+                            <span className="text-zinc-300 flex items-center gap-1 font-bold">
+                              <Medal className="w-4 h-4 text-zinc-400" />
+                              #2
+                            </span>
+                          ) : isBronze ? (
+                            <span className="text-orange-400 flex items-center gap-1 font-bold">
+                              <Medal className="w-4 h-4 text-orange-500" />
+                              #3
+                            </span>
+                          ) : (
+                            <span className="text-zinc-500 font-bold">#{item.rank}</span>
+                          )}
+                        </td>
+
+                        {/* Project & Symbol */}
+                        <td className="py-3.5 px-4">
+                          <div className="flex items-center gap-2.5">
+                            <div className="w-8 h-8 rounded-lg bg-zinc-800 border border-zinc-200 dark:border-white/10 flex items-center justify-center overflow-hidden shrink-0 text-xs font-bold text-amber-400">
+                              {item.iconUrl ? (
+                                <img
+                                  src={item.iconUrl}
+                                  alt={item.symbol}
+                                  className="w-full h-full object-cover"
+                                />
+                              ) : (
+                                <span>${item.symbol.slice(0, 3)}</span>
+                              )}
+                            </div>
+                            <div>
+                              <div className="font-bold text-zinc-950 dark:text-white group-hover:text-amber-400 transition-colors">
+                                {item.projectName}
+                              </div>
+                              <div className="text-[10px] text-zinc-500">
+                                ${item.symbol}
+                              </div>
+                            </div>
+                          </div>
+                        </td>
+
+                        {/* CA */}
+                        <td className="py-3.5 px-4">
+                          <div className="flex items-center gap-2 text-zinc-500">
+                            <span className="text-[11px] text-zinc-600 dark:text-zinc-400 font-mono">
+                              {item.ca.slice(0, 4)}…{item.ca.slice(-4)}
+                            </span>
+                            <button
+                              type="button"
+                              onClick={(e) => handleCopy(item.ca, e)}
+                              className="hover:text-amber-400 transition-colors p-0.5 cursor-pointer"
+                              title="Copy CA"
+                            >
+                              {copiedCA === item.ca ? (
+                                <Check className="w-3.5 h-3.5 text-emerald-400" />
+                              ) : (
+                                <Copy className="w-3.5 h-3.5" />
+                              )}
+                            </button>
+                            <a
+                              href={`https://solscan.io/token/${item.ca}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              onClick={(e) => e.stopPropagation()}
+                              className="hover:text-amber-400 transition-colors p-0.5"
+                              title="View on Solscan"
+                            >
+                              <ExternalLink className="w-3.5 h-3.5" />
+                            </a>
+                          </div>
+                        </td>
+
+                        {/* Market Cap */}
+                        <td className="py-3.5 px-4 text-right font-medium text-zinc-800 dark:text-zinc-200">
+                          {item.mcapFormatted}
+                        </td>
+
+                        {/* Total Burned */}
+                        <td className="py-3.5 px-4 text-right">
+                          <span className="font-extrabold text-amber-400 flex items-center justify-end gap-1">
+                            <Flame className="w-3.5 h-3.5 fill-current text-orange-500" />
+                            {formatNumber(item.totalBatonBurned)} $BATON
+                          </span>
+                        </td>
+
+                        {/* Action Button */}
+                        <td className="py-3.5 px-4 text-center">
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              if (onBoostToken) onBoostToken(item);
+                            }}
+                            className="px-3.5 py-1.5 rounded-lg bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-zinc-950 font-extrabold text-[11px] transition-all uppercase tracking-wider cursor-pointer shadow-md active:scale-95 flex items-center justify-center gap-1 mx-auto"
+                          >
+                            <Flame className="w-3 h-3 fill-current" />
+                            <span>Boost This Token</span>
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </>
         )}
       </div>
 

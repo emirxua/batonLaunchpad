@@ -111,7 +111,7 @@ export default function OutbidHomePage() {
       <Navbar />
 
       {/* 2. Main Content */}
-      <main className="flex-1 max-w-7xl w-full mx-auto px-3 sm:px-4 lg:px-8 py-3 sm:py-5 space-y-5 pb-24 md:pb-8">
+      <main className="flex-1 max-w-7xl w-full mx-auto px-3 sm:px-4 lg:px-8 py-3 sm:py-5 space-y-5 pb-36 md:pb-12">
         {/* ── Compact Cyberpunk Terminal Hero ─────────────────────────── */}
         <TerminalHero
           onExploreCallouts={() => {

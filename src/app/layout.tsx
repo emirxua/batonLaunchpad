@@ -101,8 +101,8 @@ export default function RootLayout({
         <meta name="apple-mobile-web-app-title" content="Outbid" />
         <script src="https://accounts.google.com/gsi/client" async defer></script>
       </head>
-      <body className="bg-[#0B0E14] text-zinc-100 antialiased min-h-screen overflow-x-hidden selection:bg-[#14F195] selection:text-black font-mono">
-        <ThemeProvider attribute="class" defaultTheme="dark" enableSystem={false}>
+      <body className="bg-zinc-50 dark:bg-[#0B0E14] text-zinc-900 dark:text-zinc-100 antialiased min-h-screen overflow-x-hidden selection:bg-amber-500 selection:text-black font-mono">
+        <ThemeProvider attribute="class" defaultTheme="system" enableSystem={true}>
           <WalletContextProvider>
             {children}
             <LiveBurnToast />
