@@ -26,7 +26,7 @@ export function MobileBottomNav({
   const handleTabClick = (tab: "trending" | "callouts" | "leaderboard") => {
     setIsSwapDrawerOpen(false);
     onSelectTab(tab);
-    window.scrollTo({ top: 350, behavior: "smooth" });
+    window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
   return (
