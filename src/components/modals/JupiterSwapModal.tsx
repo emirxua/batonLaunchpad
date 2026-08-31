@@ -21,6 +21,24 @@ export function JupiterSwapModal({
   targetName,
   targetIconUrl,
 }: JupiterSwapModalProps) {
+  const [resolvedIcon, setResolvedIcon] = React.useState<string | undefined>(targetIconUrl);
+
+  React.useEffect(() => {
+    setResolvedIcon(targetIconUrl);
+    if (!targetIconUrl && targetMint && targetMint !== "So11111111111111111111111111111111111111112") {
+      if (targetMint === "2vdc4owf1MPz54jJCN61y3QSKqjcPpr32wJ9qKkmpump") {
+        setResolvedIcon("/images/baton-logo.png");
+        return;
+      }
+      fetch(`/api/token-lookup?mint=${encodeURIComponent(targetMint)}`)
+        .then((r) => r.json())
+        .then((d) => {
+          if (d?.iconUrl) setResolvedIcon(d.iconUrl);
+        })
+        .catch(() => {});
+    }
+  }, [targetMint, targetIconUrl]);
+
   // Close on Escape key
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -33,6 +51,8 @@ export function JupiterSwapModal({
   }, [isOpen, onClose]);
 
   if (!isOpen) return null;
+
+  const currentIcon = resolvedIcon || targetIconUrl || (targetMint === "2vdc4owf1MPz54jJCN61y3QSKqjcPpr32wJ9qKkmpump" ? "/images/baton-logo.png" : undefined);
 
   return (
     <div
@@ -53,8 +73,15 @@ export function JupiterSwapModal({
         <div className="px-4 sm:px-6 py-3 sm:py-4 border-b border-zinc-200 dark:border-white/10 flex items-center justify-between bg-zinc-50 dark:bg-zinc-950/60">
           <div className="flex items-center gap-2.5 min-w-0">
             <div className="w-8 h-8 rounded-xl bg-amber-500/15 border border-amber-500/30 flex items-center justify-center text-amber-500 dark:text-amber-400 shrink-0 overflow-hidden">
-              {targetIconUrl ? (
-                <img src={targetIconUrl} alt={targetSymbol || "Token"} className="w-full h-full object-cover" />
+              {currentIcon ? (
+                <img
+                  src={currentIcon}
+                  alt={targetSymbol || "Token"}
+                  className="w-full h-full object-cover"
+                  onError={(e) => {
+                    (e.target as HTMLElement).style.display = "none";
+                  }}
+                />
               ) : (
                 <Zap className="w-4 h-4 fill-current" />
               )}

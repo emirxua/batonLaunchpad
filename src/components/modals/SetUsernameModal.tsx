@@ -7,6 +7,7 @@ interface SetUsernameModalProps {
   isOpen: boolean;
   onClose: () => void;
   userEmail?: string | null;
+  wallet?: string | null;
   currentUsername?: string | null;
   isRequired?: boolean;
   onClaimUsername: (username: string) => Promise<{ success: boolean; error?: string }>;
@@ -16,6 +17,7 @@ export function SetUsernameModal({
   isOpen,
   onClose,
   userEmail,
+  wallet,
   currentUsername,
   isRequired = false,
   onClaimUsername,
@@ -61,10 +63,13 @@ export function SetUsernameModal({
     setIsChecking(true);
 
     const timer = setTimeout(() => {
+      const idParam = userEmail
+        ? `email=${encodeURIComponent(userEmail)}`
+        : wallet
+        ? `wallet=${encodeURIComponent(wallet)}`
+        : "";
       fetch(
-        `/api/user/username?check=${encodeURIComponent(clean)}&email=${encodeURIComponent(
-          userEmail || ""
-        )}`
+        `/api/user/username?check=${encodeURIComponent(clean)}${idParam ? `&${idParam}` : ""}`
       )
         .then((res) => res.json())
         .then((data) => {
@@ -84,7 +89,7 @@ export function SetUsernameModal({
       active = false;
       clearTimeout(timer);
     };
-  }, [handleInput, userEmail, currentUsername]);
+  }, [handleInput, userEmail, wallet, currentUsername]);
 
   if (!isOpen) return null;
 

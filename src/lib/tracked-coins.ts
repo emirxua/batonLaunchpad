@@ -30,7 +30,7 @@ export const TRACKED_COINS: TrackedCoinConfig[] = [
     ticker: "BATON",
     mintAddress: "2vdc4owf1MPz54jJCN61y3QSKqjcPpr32wJ9qKkmpump",
     imageUrl: "/images/baton-logo.png",
-    headerUrl: "https://cdn.dexscreener.com/cms/images/vVNqFVaQ0jWxKguy?width=1500&height=500&quality=95&format=auto",
+    headerUrl: "/images/baton-logo.png",
     iconColor: "#ff3d7a",
     category: "Mascots",
     description: "Official Solana mascot directory and on-chain burn engine. Burn $BATON to overtake #1 rank.",

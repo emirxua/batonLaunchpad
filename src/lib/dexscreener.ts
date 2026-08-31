@@ -159,12 +159,12 @@ export async function getCoinsMarketData(
       const imageUrl =
         pair?.info?.imageUrl ||
         config.imageUrl ||
-        "https://cdn.dexscreener.com/cms/images/B_1EShunz2lCb0jz?width=800&height=800&quality=95&format=auto";
+        "/images/baton-logo.png";
 
       const headerUrl =
         pair?.info?.header ||
         config.headerUrl ||
-        "https://cdn.dexscreener.com/cms/images/vVNqFVaQ0jWxKguy?width=1500&height=500&quality=95&format=auto";
+        "/images/baton-logo.png";
 
       const dexScreenerUrl =
         pair?.url ||

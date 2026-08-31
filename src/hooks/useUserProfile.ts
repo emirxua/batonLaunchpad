@@ -81,39 +81,68 @@ export function useUserProfile() {
     };
   }, []);
 
-  // Auto-link connected Solana wallet to user account in Turso DB
+  // Auto-sync handle/username and link connected Solana wallet to user account in Turso DB
   useEffect(() => {
-    if (!connected || !publicKey || !user) return;
+    if (!connected || !publicKey) return;
 
     const walletStr = publicKey.toBase58();
-    if (user.wallet === walletStr) return;
+    let isMounted = true;
 
-    // Send wallet linking request to Turso DB
-    const identifier = user.id || user.email;
-    if (!identifier) return;
-
-    fetch("/api/user/link-wallet", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        userId: user.id,
-        email: user.email,
-        wallet: walletStr,
-      }),
-    })
+    // 1. Fetch user/handle for this connected wallet from Turso DB
+    fetch(`/api/user/username?wallet=${encodeURIComponent(walletStr)}`)
       .then((res) => res.json())
       .then((data) => {
-        if (data.success && data.user) {
-          const updatedUser: UserProfileData = {
-            ...user,
+        if (!isMounted) return;
+        if (data && data.user && data.user.username) {
+          const freshUser: UserProfileData = {
+            id: data.user.id || user?.id || `usr_wallet_${walletStr.slice(0, 8)}`,
+            googleId: data.user.googleId || user?.googleId,
+            email: data.user.email || user?.email,
+            name: data.user.name || user?.name || `@${data.user.username}`,
+            avatarUrl: data.user.avatarUrl || user?.avatarUrl,
             wallet: walletStr,
+            username: data.user.username,
+            registeredAt: data.user.registeredAt,
           };
-          setUser(updatedUser);
-          localStorage.setItem(STORAGE_KEY, JSON.stringify(updatedUser));
+          setUser(freshUser);
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(freshUser));
+        } else if (user) {
+          // If user exists (Google session) but wallet was not linked yet, link in Turso
+          if (user.wallet !== walletStr) {
+            const identifier = user.id || user.email;
+            if (identifier) {
+              fetch("/api/user/link-wallet", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                  userId: user.id,
+                  email: user.email,
+                  wallet: walletStr,
+                }),
+              })
+                .then((r) => r.json())
+                .then((linkData) => {
+                  if (isMounted && linkData.success) {
+                    const updatedUser: UserProfileData = {
+                      ...user,
+                      wallet: walletStr,
+                      username: linkData.user?.username || user.username,
+                    };
+                    setUser(updatedUser);
+                    localStorage.setItem(STORAGE_KEY, JSON.stringify(updatedUser));
+                  }
+                })
+                .catch(() => {});
+            }
+          }
         }
       })
-      .catch((err) => console.warn("[UserProfile] Wallet link sync error:", err));
-  }, [connected, publicKey, user]);
+      .catch((err) => console.warn("[UserProfile] Wallet profile sync error:", err));
+
+    return () => {
+      isMounted = false;
+    };
+  }, [connected, publicKey]);
 
   // Google Login action
   const loginWithGoogle = useCallback(

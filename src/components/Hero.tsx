@@ -19,7 +19,7 @@ export const Hero: React.FC<HeroProps> = ({
   activeCoinsCount = 1,
   topCommunityTicker = "$BATON",
   topCommunityTier = "DIAMOND",
-  headerUrl = "https://cdn.dexscreener.com/cms/images/vVNqFVaQ0jWxKguy?width=1500&height=500&quality=95&format=auto",
+  headerUrl = "/images/baton-logo.png",
 }) => {
   const { totalBurned: onChainBurned } = useTokenStats(15_000);
   const totalBurnedBaton = propBurned !== undefined && propBurned > 0 ? propBurned : onChainBurned;

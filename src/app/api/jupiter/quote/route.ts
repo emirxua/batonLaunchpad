@@ -12,29 +12,35 @@ export async function GET(req: NextRequest) {
       "2vdc4owf1MPz54jJCN61y3QSKqjcPpr32wJ9qKkpump";
     const amountStr = searchParams.get("amount") || "500000000"; // 0.5 SOL in lamports
 
-    // 1. Jupiter v6 Standart Quote Denemesi
-    try {
-      const jupUrl = `https://quote-api.jup.ag/v6/quote?inputMint=${SOL_MINT}&outputMint=${outputMint}&amount=${amountStr}&slippageBps=100`;
-      const jupRes = await fetch(jupUrl, {
-        headers: {
-          Accept: "application/json",
-          "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)",
-        },
-        cache: "no-store",
-      });
+    // 1. Jupiter Standart Quote Denemesi
+    for (const baseUrl of [
+      "https://api.jup.ag/swap/v1/quote",
+      "https://lite-api.jup.ag/swap/v1/quote",
+      "https://public.jupiterapi.com/quote",
+    ]) {
+      try {
+        const jupUrl = `${baseUrl}?inputMint=${SOL_MINT}&outputMint=${outputMint}&amount=${amountStr}&slippageBps=1500`;
+        const jupRes = await fetch(jupUrl, {
+          headers: {
+            Accept: "application/json",
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)",
+          },
+          cache: "no-store",
+        });
 
-      if (jupRes.ok) {
-        const jupData = await jupRes.json();
-        if (jupData && jupData.outAmount) {
-          return NextResponse.json({
-            success: true,
-            ...jupData,
-            source: "jupiter",
-          });
+        if (jupRes.ok) {
+          const jupData = await jupRes.json();
+          if (jupData && jupData.outAmount) {
+            return NextResponse.json({
+              success: true,
+              ...jupData,
+              source: "jupiter",
+            });
+          }
         }
+      } catch {
+        // Try next
       }
-    } catch {
-      // Jupiter rotası yoksa DexScreener köprüsüne geç
     }
 
     // 2. Fallback: DexScreener üzerinden dinamik SOL/$BATON parite hesabı

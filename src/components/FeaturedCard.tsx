@@ -24,7 +24,7 @@ export const FeaturedCard: React.FC<FeaturedCardProps> = React.memo(({
   ticker = "$BATON",
   description = "The premier community-driven mascot token and deflationary burn engine on Solana.",
   mintAddress = "2vdc4owf1MPz54jJCN61y3QSKqjcPpr32wJ9qKkmpump",
-  imageUrl = "https://cdn.dexscreener.com/cms/images/B_1EShunz2lCb0jz?width=800&height=800&quality=95&format=auto",
+  imageUrl = "/images/baton-logo.png",
   marketCap = 0,
   volume24h = 0,
   change24h = 0,

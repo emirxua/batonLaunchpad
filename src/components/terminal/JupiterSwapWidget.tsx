@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useMemo } from "react";
+import React, { useState, useEffect, useMemo, useCallback } from "react";
 import useSWR from "swr";
 import { useConnection, useWallet } from "@solana/wallet-adapter-react";
 import { useWalletModal } from "@solana/wallet-adapter-react-ui";
@@ -118,11 +118,14 @@ export function JupiterSwapWidget({
     priceUsd: 0,
   });
 
-  // Sync with incoming prop changes
+  const lastSyncedPropMintRef = React.useRef<string | undefined>(outputMint || targetMint);
+
+  // Sync only when external prop mint explicitly changes
   useEffect(() => {
-    const mintToSync = outputMint || targetMint || defaultOutputMint;
+    const mintToSync = outputMint || targetMint;
     const iconToSync = outputIconUrl || targetIconUrl;
-    if (mintToSync) {
+    if (mintToSync && mintToSync !== lastSyncedPropMintRef.current) {
+      lastSyncedPropMintRef.current = mintToSync;
       const match = liveTokenList.find(
         (t) => t.mint.toLowerCase() === mintToSync.toLowerCase()
       );
@@ -143,25 +146,61 @@ export function JupiterSwapWidget({
         }));
       }
     }
-  }, [outputMint, targetMint, defaultOutputMint, outputSymbol, targetSymbol, outputIconUrl, targetIconUrl, liveTokenList]);
+  }, [outputMint, targetMint, outputSymbol, targetSymbol, outputIconUrl, targetIconUrl, liveTokenList]);
 
-  // Continuously sync selectedToken price whenever trendingData updates live
+  // Continuously sync only current selectedToken price whenever trendingData updates live
   useEffect(() => {
     if (selectedToken.mint && liveTokenList.length > 0) {
       const match = liveTokenList.find(
         (t) => t.mint.toLowerCase() === selectedToken.mint.toLowerCase()
       );
       if (match && match.priceUsd && match.priceUsd !== selectedToken.priceUsd) {
-        setSelectedToken((prev) => ({
-          ...prev,
-          priceUsd: match.priceUsd,
-          name: match.name || prev.name,
-          symbol: match.symbol || prev.symbol,
-          iconUrl: match.iconUrl || prev.iconUrl,
-        }));
+        setSelectedToken((prev) => {
+          if (prev.mint.toLowerCase() !== match.mint.toLowerCase()) return prev;
+          return {
+            ...prev,
+            priceUsd: match.priceUsd,
+            name: match.name || prev.name,
+            symbol: match.symbol || prev.symbol,
+            iconUrl: prev.iconUrl || match.iconUrl,
+          };
+        });
       }
     }
-  }, [liveTokenList, selectedToken.mint]);
+  }, [liveTokenList, selectedToken.mint, selectedToken.priceUsd]);
+
+  // Dynamically resolve pump.fun / DexScreener high-res photo if icon is missing or when token changes
+  useEffect(() => {
+    let isMounted = true;
+    if (selectedToken.mint && selectedToken.mint !== "So11111111111111111111111111111111111111112") {
+      if (selectedToken.mint === BATON_MINT && !selectedToken.iconUrl) {
+        setSelectedToken((prev) => ({ ...prev, iconUrl: BATON_DEFAULT_ICON }));
+        return;
+      }
+
+      fetch(`/api/token-lookup?mint=${encodeURIComponent(selectedToken.mint)}`)
+        .then((res) => res.json())
+        .then((data) => {
+          if (!isMounted || !data) return;
+          if (data.iconUrl || data.name || data.symbol) {
+            setSelectedToken((prev) => {
+              if (prev.mint.toLowerCase() !== selectedToken.mint.toLowerCase()) return prev;
+              return {
+                ...prev,
+                name: data.name || prev.name,
+                symbol: data.symbol || prev.symbol,
+                iconUrl: data.iconUrl || prev.iconUrl,
+                priceUsd: data.priceUsd || prev.priceUsd,
+              };
+            });
+          }
+        })
+        .catch(() => {});
+    }
+    return () => {
+      isMounted = false;
+    };
+  }, [selectedToken.mint]);
 
   // Token Modal / Search state
   const [selectorOpen, setSelectorOpen] = useState(false);
@@ -199,57 +238,67 @@ export function JupiterSwapWidget({
     : `${slippageMode}%`;
 
   // Live user SOL & SPL token balance
-  useEffect(() => {
-    let isMounted = true;
-    async function fetchBalances() {
-      if (connected && publicKey) {
-        // 1. SOL Balance
-        try {
-          if (connection) {
-            const lamports = await connection.getBalance(publicKey, "confirmed");
-            if (isMounted && typeof lamports === "number") {
-              setUserBalance(lamports / 1e9);
-            }
-          }
-        } catch {
-          // Ignore
+  const fetchBalances = useCallback(async () => {
+    if (connected && publicKey) {
+      // 1. Primary: High-speed server-side wallet balance API (multi-RPC resilient, no CORS issues)
+      try {
+        const res = await fetch(
+          `/api/wallet-balance?wallet=${encodeURIComponent(publicKey.toBase58())}&mint=${encodeURIComponent(selectedToken.mint || "")}`,
+          { cache: "no-store" }
+        );
+        if (res.ok) {
+          const data = await res.json();
+          if (typeof data.solBalance === "number") setUserBalance(data.solBalance);
+          if (typeof data.tokenBalance === "number") setTokenBalance(data.tokenBalance);
+          return;
         }
-
-        // 2. Token Balance
-        try {
-          if (connection && selectedToken.mint && selectedToken.mint !== "So11111111111111111111111111111111111111112") {
-            const { PublicKey } = await import("@solana/web3.js");
-            const resp = await connection.getParsedTokenAccountsByOwner(publicKey, {
-              mint: new PublicKey(selectedToken.mint),
-            });
-            if (isMounted) {
-              const accounts = resp.value || [];
-              if (accounts.length > 0) {
-                const amt = accounts[0]?.account?.data?.parsed?.info?.tokenAmount?.uiAmount ?? 0;
-                setTokenBalance(amt);
-              } else {
-                setTokenBalance(0);
-              }
-            }
-          }
-        } catch {
-          if (isMounted) setTokenBalance(0);
-        }
-      } else {
-        if (isMounted) {
-          setUserBalance(null);
-          setTokenBalance(null);
-        }
+      } catch {
+        // Fallback to direct client RPC
       }
-    }
 
+      // 2. Direct SOL Balance Fallback
+      try {
+        if (connection) {
+          const lamports = await connection.getBalance(publicKey, "confirmed");
+          if (typeof lamports === "number") {
+            setUserBalance(lamports / 1e9);
+          }
+        }
+      } catch (solErr) {
+        console.warn("Direct SOL balance fetch warning:", solErr);
+      }
+
+      // 3. Direct SPL Token Balance Fallback
+      try {
+        if (connection && selectedToken.mint && selectedToken.mint !== "So11111111111111111111111111111111111111112") {
+          const { PublicKey } = await import("@solana/web3.js");
+          const resp = await connection.getParsedTokenAccountsByOwner(publicKey, {
+            mint: new PublicKey(selectedToken.mint),
+          });
+          const accounts = resp.value || [];
+          if (accounts.length > 0) {
+            const amt = accounts[0]?.account?.data?.parsed?.info?.tokenAmount?.uiAmount ?? 0;
+            setTokenBalance(amt);
+          } else {
+            setTokenBalance(0);
+          }
+        }
+      } catch {
+        setTokenBalance(0);
+      }
+    } else {
+      setUserBalance(null);
+      setTokenBalance(null);
+    }
+  }, [connected, publicKey, selectedToken.mint, connection]);
+
+  useEffect(() => {
     fetchBalances();
-    const interval = setInterval(fetchBalances, 4000);
+    const interval = setInterval(fetchBalances, 3000);
     return () => {
-      isMounted = false;
       clearInterval(interval);
     };
-  }, [connected, publicKey, selectedToken.mint, connection]);
+  }, [fetchBalances]);
 
   // Live Target Token DEX Price Tracker
   const { data: targetDexData } = useSWR(
@@ -383,6 +432,7 @@ export function JupiterSwapWidget({
   }, [searchQuery]);
 
   const selectTargetToken = (token: TokenInfo) => {
+    lastSyncedPropMintRef.current = token.mint;
     setSelectedToken({
       ...token,
       iconUrl: token.iconUrl || (token.mint === BATON_MINT ? BATON_DEFAULT_ICON : undefined),
@@ -416,20 +466,26 @@ export function JupiterSwapWidget({
       if (type === "0.1") setInputAmount("0.1");
       else if (type === "0.5") setInputAmount("0.5");
       else if (type === "1") setInputAmount("1.0");
-      else if (type === "half") {
-        const halfBal = userBalance ? (userBalance / 2).toFixed(3) : "0.5";
+      else if (type === "half" || type === "50%") {
+        const halfBal = userBalance ? Math.max(0, userBalance / 2).toFixed(4) : "0.5";
         setInputAmount(halfBal);
       } else if (type === "max") {
-        const maxBal = userBalance ? Math.max(0, userBalance - 0.005).toFixed(3) : "1.0";
+        const maxBal = userBalance ? Math.max(0, userBalance - 0.005).toFixed(4) : "1.0";
         setInputAmount(maxBal);
+      } else if (type === "25%") {
+        const quarterBal = userBalance ? Math.max(0, userBalance * 0.25).toFixed(4) : "0.1";
+        setInputAmount(quarterBal);
+      } else if (type === "75%") {
+        const p75 = userBalance ? Math.max(0, userBalance * 0.75).toFixed(4) : "0.75";
+        setInputAmount(p75);
       }
     } else {
       const tb = tokenBalance || 0;
-      if (type === "25%") setInputAmount((tb * 0.25).toFixed(2));
-      else if (type === "50%" || type === "half") setInputAmount((tb * 0.5).toFixed(2));
-      else if (type === "75%") setInputAmount((tb * 0.75).toFixed(2));
-      else if (type === "max" || type === "1") setInputAmount(tb.toFixed(2));
-      else setInputAmount("1000");
+      if (type === "25%") setInputAmount((tb * 0.25).toFixed(4));
+      else if (type === "50%" || type === "half") setInputAmount((tb * 0.5).toFixed(4));
+      else if (type === "75%") setInputAmount((tb * 0.75).toFixed(4));
+      else if (type === "max" || type === "1") setInputAmount(tb > 0 ? tb.toString() : "0");
+      else setInputAmount(tb > 0 ? (tb * 0.5).toFixed(4) : "100");
     }
   };
 
@@ -574,9 +630,13 @@ export function JupiterSwapWidget({
         throw new Error("Wallet does not support transaction signing.");
       }
 
+      // 3. Robust on-chain confirmation verification
+      let isConfirmed = false;
+      let txError: string | null = null;
+
       try {
         const latestBlockhash = await connection.getLatestBlockhash("confirmed");
-        await connection.confirmTransaction(
+        const confirmResult = await connection.confirmTransaction(
           {
             signature,
             blockhash: latestBlockhash.blockhash,
@@ -584,9 +644,60 @@ export function JupiterSwapWidget({
           },
           "confirmed"
         );
-      } catch {}
+
+        if (confirmResult?.value?.err) {
+          txError = `Transaction reverted on-chain: ${JSON.stringify(confirmResult.value.err)}`;
+        } else {
+          isConfirmed = true;
+        }
+      } catch {
+        // Fallback to signature status query
+        try {
+          const statusRes = await connection.getSignatureStatus(signature, { searchTransactionHistory: true });
+          if (statusRes?.value?.err) {
+            txError = `Transaction failed: ${JSON.stringify(statusRes.value.err)}`;
+          } else if (
+            statusRes?.value?.confirmationStatus === "confirmed" ||
+            statusRes?.value?.confirmationStatus === "finalized"
+          ) {
+            isConfirmed = true;
+          }
+        } catch {
+          // Timeout
+        }
+      }
+
+      if (txError) {
+        throw new Error(txError);
+      }
+
+      // Poll signature status if still pending
+      if (!isConfirmed) {
+        for (let i = 0; i < 4; i++) {
+          await new Promise((r) => setTimeout(r, 1500));
+          try {
+            const status = await connection.getSignatureStatus(signature, { searchTransactionHistory: true });
+            if (status?.value?.err) {
+              throw new Error(`Transaction reverted: ${JSON.stringify(status.value.err)}`);
+            }
+            if (
+              status?.value?.confirmationStatus === "confirmed" ||
+              status?.value?.confirmationStatus === "finalized"
+            ) {
+              isConfirmed = true;
+              break;
+            }
+          } catch (e: any) {
+            if (e?.message?.includes("Transaction reverted") || e?.message?.includes("Transaction failed")) {
+              throw e;
+            }
+          }
+        }
+      }
 
       setTxSuccess(signature);
+      fetchBalances();
+      setTimeout(() => fetchBalances(), 2500);
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err);
       if (msg.includes("User rejected") || msg.includes("rejected") || msg.includes("cancelled")) {
@@ -723,8 +834,8 @@ export function JupiterSwapWidget({
             )}
           </div>
 
-          {/* Quick Amount Presets for Mobile */}
-          {!isReverse && (
+          {/* Quick Amount Presets */}
+          {!isReverse ? (
             <div className="flex items-center gap-1.5 pt-1">
               {(["0.1", "0.5", "1.0"] as const).map((amt) => (
                 <button
@@ -743,7 +854,29 @@ export function JupiterSwapWidget({
               {connected && userBalance !== null && userBalance > 0.005 && (
                 <button
                   type="button"
-                  onClick={() => setInputAmount((userBalance - 0.005).toFixed(3))}
+                  onClick={() => setInputAmount(Math.max(0, userBalance - 0.005).toFixed(3))}
+                  className="flex-1 py-1 px-2 rounded-lg bg-amber-500/20 hover:bg-amber-500/30 text-amber-400 text-[10px] font-black uppercase transition-all cursor-pointer"
+                >
+                  MAX
+                </button>
+              )}
+            </div>
+          ) : (
+            <div className="flex items-center gap-1.5 pt-1">
+              {(["25%", "50%", "75%"] as const).map((pct) => (
+                <button
+                  key={pct}
+                  type="button"
+                  onClick={() => handleQuickAmount(pct)}
+                  className="flex-1 py-1 px-2 rounded-lg bg-zinc-100 dark:bg-zinc-800/80 hover:bg-amber-500/15 text-zinc-600 dark:text-zinc-400 hover:text-amber-400 text-[10px] font-bold transition-all cursor-pointer"
+                >
+                  {pct}
+                </button>
+              ))}
+              {connected && tokenBalance !== null && tokenBalance > 0 && (
+                <button
+                  type="button"
+                  onClick={() => setInputAmount(tokenBalance.toString())}
                   className="flex-1 py-1 px-2 rounded-lg bg-amber-500/20 hover:bg-amber-500/30 text-amber-400 text-[10px] font-black uppercase transition-all cursor-pointer"
                 >
                   MAX
@@ -758,8 +891,15 @@ export function JupiterSwapWidget({
           <button
             type="button"
             onClick={() => {
-              setIsReverse(!isReverse);
-              setInputAmount(!isReverse ? "1000" : "0.5");
+              const nextReverse = !isReverse;
+              setIsReverse(nextReverse);
+              if (nextReverse) {
+                // Selling token for SOL: fill with available token balance or default
+                setInputAmount(tokenBalance && tokenBalance > 0 ? tokenBalance.toString() : "100");
+              } else {
+                // Buying token with SOL
+                setInputAmount("0.5");
+              }
             }}
             title="Reverse Swap Direction"
             className="w-8 h-8 rounded-full bg-zinc-100 dark:bg-zinc-800 hover:bg-amber-500/20 active:scale-95 border border-zinc-200 dark:border-white/10 flex items-center justify-center text-amber-500 shadow-md cursor-pointer hover:scale-110 transition-all group"

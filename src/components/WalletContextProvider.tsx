@@ -8,7 +8,7 @@ import {
 import { WalletModalProvider } from "@solana/wallet-adapter-react-ui";
 import { clusterApiUrl } from "@solana/web3.js";
 
-export const DEFAULT_RPC = "https://api.mainnet-beta.solana.com";
+export const DEFAULT_RPC = "https://solana-rpc.publicnode.com";
 
 interface WalletContextProviderProps {
   children: ReactNode;
@@ -34,7 +34,7 @@ export const WalletContextProvider: FC<WalletContextProviderProps> = ({
       config={{
         commitment: "confirmed",
         confirmTransactionInitialTimeout: 60000,
-        wsEndpoint: "wss://api.mainnet-beta.solana.com",
+        wsEndpoint: "wss://solana-rpc.publicnode.com",
       }}
     >
       <WalletProvider wallets={wallets} autoConnect>

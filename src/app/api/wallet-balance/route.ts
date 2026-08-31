@@ -10,10 +10,11 @@ export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
 const RPC_ENDPOINTS = [
+  "https://nodes.mewapi.io/rpc/sol",
   "https://api.mainnet-beta.solana.com",
-  "https://rpc.ankr.com/solana",
-  "https://solana.drpc.org",
-];
+  process.env.NEXT_PUBLIC_SOLANA_RPC_URL?.trim(),
+  "https://solana-rpc.publicnode.com",
+].filter((u): u is string => Boolean(u && u.startsWith("http")));
 
 export async function GET(req: NextRequest) {
   try {
@@ -40,41 +41,59 @@ export async function GET(req: NextRequest) {
       try {
         const connection = new Connection(rpcUrl, {
           commitment: "confirmed",
-          confirmTransactionInitialTimeout: 10000,
+          confirmTransactionInitialTimeout: 8000,
         });
 
         // 1. SOL Balance
         const lamports = await connection.getBalance(walletKey, "confirmed");
         solBalance = lamports / LAMPORTS_PER_SOL;
 
-        // 2. Direct SPL Token Balance via Associated Token Account (ATA)
+        // 2. Direct SPL Token Balance (Query all token accounts for this mint)
         if (mintStr && mintStr !== "So11111111111111111111111111111111111111112") {
           const mintKey = new PublicKey(mintStr);
-          let found = false;
+          let foundTotal = 0;
+          let parsedSuccess = false;
 
-          // Standard SPL Token ATA
           try {
-            const ata = getAssociatedTokenAddressSync(mintKey, walletKey, true, TOKEN_PROGRAM_ID);
-            const bal = await connection.getTokenAccountBalance(ata, "confirmed");
-            if (bal?.value?.uiAmount !== undefined && bal?.value?.uiAmount !== null) {
-              tokenBalance = bal.value.uiAmount;
-              found = true;
+            const parsedAccounts = await connection.getParsedTokenAccountsByOwner(
+              walletKey,
+              { mint: mintKey },
+              "confirmed"
+            );
+            if (parsedAccounts && Array.isArray(parsedAccounts.value)) {
+              for (const a of parsedAccounts.value) {
+                const amt = Number(a?.account?.data?.parsed?.info?.tokenAmount?.uiAmount || 0);
+                if (amt > 0) {
+                  foundTotal += amt;
+                }
+              }
+              parsedSuccess = true;
             }
           } catch {
-            // ATA does not exist yet (0 balance) or not Tokenkeg
+            // Fallback to ATA check
           }
 
-          // Token-2022 ATA Fallback
-          if (!found) {
+          if (parsedSuccess) {
+            tokenBalance = foundTotal;
+          } else {
+            // Standard SPL Token ATA Fallback
             try {
-              const ata2022 = getAssociatedTokenAddressSync(mintKey, walletKey, true, TOKEN_2022_PROGRAM_ID);
-              const bal2022 = await connection.getTokenAccountBalance(ata2022, "confirmed");
-              if (bal2022?.value?.uiAmount !== undefined && bal2022?.value?.uiAmount !== null) {
-                tokenBalance = bal2022.value.uiAmount;
-                found = true;
+              const ata = getAssociatedTokenAddressSync(mintKey, walletKey, true, TOKEN_PROGRAM_ID);
+              const bal = await connection.getTokenAccountBalance(ata, "confirmed");
+              if (bal?.value?.uiAmount !== undefined && bal?.value?.uiAmount !== null) {
+                tokenBalance = bal.value.uiAmount;
               }
             } catch {
-              // 0 balance
+              // Token-2022 ATA Fallback
+              try {
+                const ata2022 = getAssociatedTokenAddressSync(mintKey, walletKey, true, TOKEN_2022_PROGRAM_ID);
+                const bal2022 = await connection.getTokenAccountBalance(ata2022, "confirmed");
+                if (bal2022?.value?.uiAmount !== undefined && bal2022?.value?.uiAmount !== null) {
+                  tokenBalance = bal2022.value.uiAmount;
+                }
+              } catch {
+                tokenBalance = 0;
+              }
             }
           }
         }

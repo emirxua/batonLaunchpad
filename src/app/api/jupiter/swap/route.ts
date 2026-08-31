@@ -93,7 +93,6 @@ export async function POST(req: NextRequest) {
       quoteResponse: jupQuote,
       userPublicKey,
       wrapAndUnwrapSol: true,
-      useSharedAccounts: true,
       dynamicComputeUnitLimit: true,
       prioritizationFeeLamports: "auto",
       asLegacyTransaction: false,
@@ -103,9 +102,9 @@ export async function POST(req: NextRequest) {
     let lastError = "";
 
     for (const url of [
-      "https://quote-api.jup.ag/v6/swap",
       "https://api.jup.ag/swap/v1/swap",
       "https://lite-api.jup.ag/swap/v1/swap",
+      "https://public.jupiterapi.com/swap",
     ]) {
       try {
         const swapRes = await fetch(url, {

@@ -5,10 +5,11 @@ export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
 const RPC_ENDPOINTS = [
-  "https://api.mainnet-beta.solana.com",
-  "https://rpc.ankr.com/solana",
+  process.env.NEXT_PUBLIC_SOLANA_RPC_URL?.trim(),
   "https://solana-rpc.publicnode.com",
-];
+  "https://nodes.mewapi.io/rpc/sol",
+  "https://api.mainnet-beta.solana.com",
+].filter((u): u is string => Boolean(u && u.startsWith("http")));
 
 export async function GET() {
   for (const endpoint of RPC_ENDPOINTS) {

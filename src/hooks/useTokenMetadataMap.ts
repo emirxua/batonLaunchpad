@@ -10,8 +10,23 @@ export interface ResolvedTokenMeta {
   priceUsd?: number;
 }
 
+function normalizeUrl(url?: string | null): string | undefined {
+  if (!url) return undefined;
+  const trimmed = url.trim();
+  if (!trimmed) return undefined;
+  if (trimmed.startsWith("ipfs://")) {
+    return `https://pump.mypinata.cloud/ipfs/${trimmed.replace("ipfs://", "")}`;
+  }
+  if (trimmed.includes("/ipfs/")) {
+    const hash = trimmed.split("/ipfs/")[1]?.split("?")[0];
+    if (hash) {
+      return `https://pump.mypinata.cloud/ipfs/${hash}`;
+    }
+  }
+  return trimmed;
+}
+
 // Global in-memory cache — only real, verified tokens are pre-seeded.
-// All other mints (from live callouts) resolve dynamically via DexScreener/pump.fun.
 const globalMetaCache = new Map<string, ResolvedTokenMeta>([
   [
     "2vdc4owf1MPz54jJCN61y3QSKqjcPpr32wJ9qKkpump",
@@ -19,9 +34,8 @@ const globalMetaCache = new Map<string, ResolvedTokenMeta>([
       mint: "2vdc4owf1MPz54jJCN61y3QSKqjcPpr32wJ9qKkpump",
       name: "Baton",
       symbol: "BATON",
-      imageUrl:
-        "https://cdn.dexscreener.com/cms/images/B_1EShunz2lCb0jz?width=800&height=800&quality=95&format=auto",
-      priceUsd: undefined, // resolved dynamically
+      imageUrl: "/images/baton-logo.png",
+      priceUsd: undefined,
     },
   ],
 ]);
@@ -37,7 +51,52 @@ async function fetchTokenMetadata(mint: string): Promise<ResolvedTokenMeta | nul
 
   const promise = (async () => {
     try {
-      // 1. Try DexScreener API
+      // 1. Primary: Server-side token lookup API with pump.fun + DexScreener fallback
+      try {
+        const lookupRes = await fetch(`/api/token-lookup?mint=${encodeURIComponent(mint)}`);
+        if (lookupRes.ok) {
+          const lookupData = await lookupRes.json();
+          if (lookupData?.symbol) {
+            const meta: ResolvedTokenMeta = {
+              mint,
+              name: lookupData.name || lookupData.symbol,
+              symbol: lookupData.symbol,
+              imageUrl: normalizeUrl(lookupData.iconUrl),
+              priceUsd: lookupData.priceUsd || undefined,
+            };
+            globalMetaCache.set(mint, meta);
+            return meta;
+          }
+        }
+      } catch {
+        // Fallback to direct APIs
+      }
+
+      // 2. Direct Pump.fun API
+      if (mint.toLowerCase().endsWith("pump")) {
+        try {
+          const pumpRes = await fetch(`https://frontend-api-v3.pump.fun/coins/${mint}`, {
+            headers: { Accept: "application/json" },
+          });
+          if (pumpRes.ok) {
+            const pumpData = await pumpRes.json();
+            if (pumpData?.symbol) {
+              const meta: ResolvedTokenMeta = {
+                mint,
+                name: pumpData.name || pumpData.symbol,
+                symbol: pumpData.symbol,
+                imageUrl: normalizeUrl(pumpData.image_uri),
+              };
+              globalMetaCache.set(mint, meta);
+              return meta;
+            }
+          }
+        } catch {
+          // ignore
+        }
+      }
+
+      // 3. Direct DexScreener API
       const res = await fetch(`https://api.dexscreener.com/latest/dex/tokens/${mint}`);
       if (res.ok) {
         const data = await res.json();
@@ -47,24 +106,8 @@ async function fetchTokenMetadata(mint: string): Promise<ResolvedTokenMeta | nul
             mint,
             name: pair.baseToken.name || pair.baseToken.symbol,
             symbol: pair.baseToken.symbol,
-            imageUrl: pair.info?.imageUrl,
+            imageUrl: normalizeUrl(pair.info?.imageUrl),
             priceUsd: Number(pair.priceUsd) || undefined,
-          };
-          globalMetaCache.set(mint, meta);
-          return meta;
-        }
-      }
-
-      // 2. Fallback to Pump.fun API
-      const pumpRes = await fetch(`https://frontend-api-v3.pump.fun/coins/${mint}`);
-      if (pumpRes.ok) {
-        const pumpData = await pumpRes.json();
-        if (pumpData?.symbol) {
-          const meta: ResolvedTokenMeta = {
-            mint,
-            name: pumpData.name || pumpData.symbol,
-            symbol: pumpData.symbol,
-            imageUrl: pumpData.image_uri,
           };
           globalMetaCache.set(mint, meta);
           return meta;

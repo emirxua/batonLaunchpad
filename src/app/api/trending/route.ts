@@ -190,8 +190,15 @@ async function fetchTrendingBatch(): Promise<TokenItem[]> {
       const dexId = (p.dexId || "PUMPSWAP").toUpperCase();
       const symbol = (p.baseToken.symbol || "TOKEN").toUpperCase().slice(0, 10);
       const name = (p.baseToken.name || symbol).slice(0, 28);
-
-      const iconUrl = p.info?.imageUrl || "";
+      let iconUrl = p.info?.imageUrl || "";
+      if (mint === "2vdc4owf1MPz54jJCN61y3QSKqjcPpr32wJ9qKkmpump") {
+        iconUrl = "/images/baton-logo.png";
+      } else if (iconUrl.includes("/ipfs/")) {
+        const hash = iconUrl.split("/ipfs/")[1]?.split("?")[0];
+        if (hash) iconUrl = `https://pump.mypinata.cloud/ipfs/${hash}`;
+      } else if (iconUrl.startsWith("ipfs://")) {
+        iconUrl = `https://pump.mypinata.cloud/ipfs/${iconUrl.replace("ipfs://", "")}`;
+      }
 
       tokenMap.set(mint, {
         id: `token-${mint}`,

@@ -150,6 +150,16 @@ export async function fetchDexTrendingTokens(
       const mint = pair.baseToken.address;
       const existing = tokenMap.get(mint);
 
+      let rawIcon = pair.info?.imageUrl || null;
+      if (mint === "2vdc4owf1MPz54jJCN61y3QSKqjcPpr32wJ9qKkmpump") {
+        rawIcon = "/images/baton-logo.png";
+      } else if (rawIcon && rawIcon.includes("/ipfs/")) {
+        const hash = rawIcon.split("/ipfs/")[1]?.split("?")[0];
+        if (hash) rawIcon = `https://pump.mypinata.cloud/ipfs/${hash}`;
+      } else if (rawIcon && rawIcon.startsWith("ipfs://")) {
+        rawIcon = `https://pump.mypinata.cloud/ipfs/${rawIcon.replace("ipfs://", "")}`;
+      }
+
       const tokenObj: DexTrendingToken = {
         mint,
         name: pair.baseToken.name || pair.baseToken.symbol || mint.slice(0, 8),
@@ -160,7 +170,7 @@ export async function fetchDexTrendingTokens(
         priceChange24h,
         liquidityUsd,
         pairAddress: pair.pairAddress,
-        iconUrl: pair.info?.imageUrl || null,
+        iconUrl: rawIcon,
       };
 
       if (!existing || tokenObj.liquidityUsd > existing.liquidityUsd) {

@@ -19,14 +19,33 @@ const lookupCache = new Map<string, { data: LookupResult | LookupResult[]; time:
 
 const BATON_MINT = "2vdc4owf1MPz54jJCN61y3QSKqjcPpr32wJ9qKkmpump";
 
+export function normalizeTokenImageUrl(url?: string | null): string | null {
+  if (!url) return null;
+  const trimmed = url.trim();
+  if (!trimmed) return null;
+  if (trimmed.startsWith("ipfs://")) {
+    return `https://pump.mypinata.cloud/ipfs/${trimmed.replace("ipfs://", "")}`;
+  }
+  if (trimmed.includes("/ipfs/")) {
+    const hash = trimmed.split("/ipfs/")[1]?.split("?")[0];
+    if (hash) {
+      return `https://pump.mypinata.cloud/ipfs/${hash}`;
+    }
+  }
+  return trimmed;
+}
+
 async function fetchFromPumpFun(mint: string): Promise<LookupResult | null> {
   try {
     const ctrl = new AbortController();
-    const tid = setTimeout(() => ctrl.abort(), 2000);
+    const tid = setTimeout(() => ctrl.abort(), 3500);
     const res = await fetch(
       `https://frontend-api-v3.pump.fun/coins/${encodeURIComponent(mint)}`,
       {
-        headers: { Accept: "application/json" },
+        headers: {
+          Accept: "application/json",
+          "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+        },
         signal: ctrl.signal,
         cache: "no-store",
       }
@@ -38,11 +57,12 @@ async function fetchFromPumpFun(mint: string): Promise<LookupResult | null> {
       if (data && (data.name || data.symbol)) {
         const mcap = Number(data.usd_market_cap) || 0;
         const isBaton = mint === BATON_MINT;
+        const rawImg = isBaton ? "/images/baton-logo.png" : (data.image_uri || null);
         return {
           mint,
-          name: data.name || data.symbol || "Baton Corporation Ltd",
-          symbol: (data.symbol || "BATON").toUpperCase(),
-          iconUrl: isBaton ? "/images/baton-logo.png" : (data.image_uri || null),
+          name: data.name || data.symbol || "Solana Token",
+          symbol: (data.symbol || "TOKEN").toUpperCase(),
+          iconUrl: normalizeTokenImageUrl(rawImg),
           priceUsd: mcap > 0 ? mcap / 1_000_000_000 : 0,
           marketCap: mcap,
           volume24h: 0,
@@ -61,13 +81,13 @@ async function fetchFromPumpFun(mint: string): Promise<LookupResult | null> {
 async function fetchFromDexScreener(mint: string): Promise<LookupResult | null> {
   try {
     const ctrl = new AbortController();
-    const tid = setTimeout(() => ctrl.abort(), 2000);
+    const tid = setTimeout(() => ctrl.abort(), 3500);
     const res = await fetch(
       `https://api.dexscreener.com/latest/dex/tokens/${encodeURIComponent(mint)}`,
       {
         headers: {
           Accept: "application/json",
-          "User-Agent": "Mozilla/5.0 (compatible; BatonTerminal/1.0)",
+          "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
         },
         signal: ctrl.signal,
         cache: "no-store",
@@ -89,11 +109,29 @@ async function fetchFromDexScreener(mint: string): Promise<LookupResult | null> 
         const isBase = matchPair.baseToken?.address?.toLowerCase() === mint.toLowerCase();
         const target = isBase ? matchPair.baseToken : matchPair.quoteToken || matchPair.baseToken;
 
+        let iconUrl = matchPair.info?.imageUrl
+          ? normalizeTokenImageUrl(matchPair.info.imageUrl)
+          : mint === BATON_MINT
+          ? "/images/baton-logo.png"
+          : null;
+
+        // If DexScreener has no image, attempt to fetch real image from pump.fun
+        if (!iconUrl && (mint.toLowerCase().endsWith("pump") || isBase)) {
+          try {
+            const pumpData = await fetchFromPumpFun(mint);
+            if (pumpData?.iconUrl) {
+              iconUrl = pumpData.iconUrl;
+            }
+          } catch {
+            // ignore
+          }
+        }
+
         return {
           mint,
           name: target?.name || target?.symbol || "Solana Token",
           symbol: (target?.symbol || "TOKEN").toUpperCase(),
-          iconUrl: matchPair.info?.imageUrl || (mint === BATON_MINT ? "/images/baton-logo.png" : null),
+          iconUrl,
           priceUsd: parseFloat(matchPair.priceUsd || "0") || 0,
           marketCap: matchPair.marketCap ?? matchPair.fdv ?? 0,
           volume24h: matchPair.volume?.h24 || 0,

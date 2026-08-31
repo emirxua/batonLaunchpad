@@ -3,10 +3,12 @@ import { NextRequest, NextResponse } from "next/server";
 export const dynamic = "force-dynamic";
 
 const SOL_MINT = "So11111111111111111111111111111111111111112";
-const JUP_V6 = "https://quote-api.jup.ag/v6/quote";
-const JUP_PRIMARY = "https://api.jup.ag/swap/v1/quote";
-const JUP_FALLBACK = "https://lite-api.jup.ag/swap/v1/quote";
-const FETCH_MS = 6000;
+const JUP_ENDPOINTS = [
+  "https://api.jup.ag/swap/v1/quote",
+  "https://lite-api.jup.ag/swap/v1/quote",
+  "https://public.jupiterapi.com/quote",
+];
+const FETCH_MS = 5000;
 
 async function fetchWithTimeout(url: string, ms = FETCH_MS): Promise<Response> {
   const ctrl = new AbortController();
@@ -63,7 +65,7 @@ export async function GET(request: NextRequest) {
   // Try Jupiter V6 endpoint first, fallback to standard Jupiter endpoints
   let quoteData: Record<string, unknown> | null = null;
 
-  for (const base of [JUP_V6, JUP_PRIMARY, JUP_FALLBACK]) {
+  for (const base of JUP_ENDPOINTS) {
     try {
       const res = await fetchWithTimeout(`${base}?${params.toString()}`);
       if (res.ok) {

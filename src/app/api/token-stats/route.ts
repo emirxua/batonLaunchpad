@@ -32,8 +32,9 @@ const CACHE_DURATION_MS = 10_000;
 
 const RPC_ENDPOINTS = [
   process.env.NEXT_PUBLIC_SOLANA_RPC_URL?.trim(),
+  "https://solana-rpc.publicnode.com",
+  "https://nodes.mewapi.io/rpc/sol",
   "https://api.mainnet-beta.solana.com",
-  "https://solana-mainnet.g.alchemy.com/v2/demo",
 ].filter((url): url is string => Boolean(url && url.startsWith("http")));
 
 const rawMint = process.env.NEXT_PUBLIC_BATON_MINT_ADDRESS?.trim();
