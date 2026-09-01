@@ -109,62 +109,63 @@ async function fetchRealCalloutsFromProxy(): Promise<CalloutCard[]> {
     "https://pump-callout-proxy.emir1903topuz106.workers.dev/";
 
   try {
-    const res = await fetchWithTimeout(proxyUrl, 4500);
+    const res = await fetchWithTimeout(proxyUrl, 5000);
     if (!res.ok) return [];
 
     const data = await res.json();
     const labelMap = getWatchlistMap();
-    const rawResults = Array.isArray(data?.results) ? data.results : [];
+    
+    // Parse both data.callouts (direct proxy response) and data.results
+    const rawList = Array.isArray(data?.callouts)
+      ? data.callouts
+      : Array.isArray(data?.results)
+        ? data.results.flatMap((r: any) => r.callouts || [])
+        : [];
+
     const list: CalloutCard[] = [];
 
-    for (const item of rawResults) {
-      const wallet = item.wallet;
-      if (!wallet) continue;
+    for (const c of rawList) {
+      if (!c || !c.coinMint) continue;
+      const wallet = c.callerWallet || c.userId || "";
       const label =
-        labelMap[wallet] ??
-        DEFAULT_WATCHLIST[wallet] ??
-        `${wallet.slice(0, 4)}…${wallet.slice(-4)}`;
+        c.callerLabel ||
+        labelMap[wallet] ||
+        DEFAULT_WATCHLIST[wallet] ||
+        (wallet.length > 8 ? `${wallet.slice(0, 4)}…${wallet.slice(-4)}` : "Alpha Caller");
 
-      const isOk = item.ok !== false && (!item.status || item.status === 200);
-      if (!isOk) continue;
-
-      const calloutsList = Array.isArray(item.callouts) ? item.callouts : [];
-      for (const c of calloutsList) {
-        if (!c || !c.coinMint) continue;
-        list.push({
-          calloutId: c.calloutId || `callout-${c.coinMint}-${wallet.slice(0, 6)}`,
-          userId: wallet,
-          callerWallet: wallet,
-          callerLabel: label,
-          coinMint: c.coinMint,
-          coinName: c.coinName || c.name || "Solana Project",
-          coinSymbol: (c.coinSymbol || c.symbol || "TOKEN").toUpperCase(),
-          marketCap: c.marketCap || 0,
-          calloutPrice: c.calloutPrice || 0,
-          calloutPriceUsd: c.calloutPriceUsd || 0,
-          multiple: Number(c.multiple) || 1.0,
-          createdAt: c.createdAt || Date.now(),
-          maxPriceSol: c.maxPriceSol || 0,
-          maxPriceUsd: c.maxPriceUsd || 0,
-          thesis: c.thesis || "",
-          user_uuid: c.user_uuid || `user-${wallet.slice(0, 6)}`,
-          likes: c.likes || 0,
-          hasLiked: c.hasLiked || false,
-          hasReposted: c.hasReposted || false,
-          repostCount: c.repostCount || 0,
-          quoteCount: c.quoteCount || 0,
-          commentCount: c.commentCount || 0,
-          replyCount: c.replyCount || 0,
-          maxMultiplier: Number(c.maxMultiplier) || Number(c.multiple) || 1.0,
-          maxMultiplierAt: c.maxMultiplierAt || new Date().toISOString(),
-          viewCount: c.viewCount || 0,
-          mediaUrl: c.mediaUrl || null,
-          quotedCalloutId: c.quotedCalloutId || null,
-          quotedCallout: c.quotedCallout || null,
-          updates: Array.isArray(c.updates) ? c.updates : [],
-          updateCount: c.updateCount || 0,
-        });
-      }
+      list.push({
+        calloutId: c.calloutId || `callout-${c.coinMint}-${wallet.slice(0, 6)}`,
+        userId: wallet,
+        callerWallet: wallet,
+        callerLabel: label,
+        coinMint: c.coinMint,
+        coinName: c.coinName || c.name || "Solana Project",
+        coinSymbol: (c.coinSymbol || c.symbol || "TOKEN").toUpperCase(),
+        marketCap: c.marketCap || 0,
+        calloutPrice: c.calloutPrice || 0,
+        calloutPriceUsd: c.calloutPriceUsd || 0,
+        multiple: Number(c.multiple) || 1.0,
+        createdAt: c.createdAt || Date.now(),
+        maxPriceSol: c.maxPriceSol || 0,
+        maxPriceUsd: c.maxPriceUsd || 0,
+        thesis: c.thesis || "",
+        user_uuid: c.user_uuid || `user-${wallet.slice(0, 6)}`,
+        likes: c.likes || 0,
+        hasLiked: c.hasLiked || false,
+        hasReposted: c.hasReposted || false,
+        repostCount: c.repostCount || 0,
+        quoteCount: c.quoteCount || 0,
+        commentCount: c.commentCount || 0,
+        replyCount: c.replyCount || 0,
+        maxMultiplier: Number(c.maxMultiplier) || Number(c.multiple) || 1.0,
+        maxMultiplierAt: c.maxMultiplierAt || new Date().toISOString(),
+        viewCount: c.viewCount || 0,
+        mediaUrl: c.mediaUrl || null,
+        quotedCalloutId: c.quotedCalloutId || null,
+        quotedCallout: c.quotedCallout || null,
+        updates: Array.isArray(c.updates) ? c.updates : [],
+        updateCount: c.updateCount || 0,
+      });
     }
 
     return list;
