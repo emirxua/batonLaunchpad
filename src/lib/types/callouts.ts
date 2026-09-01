@@ -52,6 +52,8 @@ export interface WatchedSummary {
   wallet: string;
   label: string;
   count: number;
+  avatarUrl?: string;
+  xUsername?: string;
 }
 
 export interface CalloutError {

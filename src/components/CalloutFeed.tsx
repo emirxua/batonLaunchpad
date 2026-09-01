@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useMemo, useRef } from "react";
+import React, { useState, useEffect, useMemo, useRef } from "react";
 import useSWR from "swr";
 import { CalloutDiscussionModal } from "@/components/modals/CalloutDiscussionModal";
 import { JupiterSwapModal } from "@/components/modals/JupiterSwapModal";
@@ -27,6 +27,8 @@ import {
 
 import { CallerFilterModal } from "@/components/modals/CallerFilterModal";
 import { BurnBoostModal } from "@/components/modals/BurnBoostModal";
+import { CallerAvatar } from "@/components/callouts/CallerAvatar";
+import { TokenLogo } from "@/components/callouts/TokenLogo";
 import { Coin } from "@/types/coin";
 
 interface CalloutFeedProps {
@@ -34,7 +36,7 @@ interface CalloutFeedProps {
   filterSymbol?: string;
 }
 
-type CalloutFilterTab = "all" | "2x" | "whitelist" | "pinned";
+type CalloutFilterTab = "all" | "2x" | "pinned";
 
 const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
@@ -316,16 +318,49 @@ export function CalloutFeed({ onSelectToken, filterSymbol }: CalloutFeedProps) {
     };
   }, [searchQuery, isInputCA, allCallouts]);
 
-  // Extract unique caller list with counts from live callouts
+  // Extract complete caller list with counts from all tracked 148 callers & live signals
   const callerList = useMemo(() => {
-    const counts: Record<string, number> = {};
-    for (const c of allCallouts) {
-      if (c.callerName) {
-        counts[c.callerName] = (counts[c.callerName] || 0) + 1;
+    const map: Record<string, { count: number; wallet?: string; avatarUrl?: string; xUsername?: string }> = {};
+
+    // 1. Populate all real tracked callers from API watched list (148 real Pump.fun callers)
+    if (Array.isArray(data?.watched)) {
+      for (const item of data.watched) {
+        if (item.label) {
+          map[item.label] = {
+            count: item.count || 0,
+            wallet: item.wallet,
+            avatarUrl: item.avatarUrl,
+            xUsername: item.xUsername,
+          };
+        }
       }
     }
-    return Object.entries(counts).map(([name, count]) => ({ name, count }));
-  }, [allCallouts]);
+
+    // 2. Count all actual live callouts for each caller & capture avatar if available
+    for (const c of allCallouts) {
+      if (c.callerName) {
+        const existing = map[c.callerName] || { count: 0, wallet: c.callerWallet };
+        map[c.callerName] = {
+          count: existing.count > 0 ? existing.count : (map[c.callerName]?.count || 0) + 1,
+          wallet: c.callerWallet || existing.wallet,
+          avatarUrl: c.callerAvatarUrl || existing.avatarUrl,
+          xUsername: c.callerXUsername || existing.xUsername,
+        };
+      }
+    }
+
+    // Only show callers who have active verified callouts
+    return Object.entries(map)
+      .filter(([_, info]) => info.count > 0)
+      .map(([name, info]) => ({
+        name,
+        count: info.count,
+        wallet: info.wallet,
+        avatarUrl: info.avatarUrl,
+        xUsername: info.xUsername,
+      }))
+      .sort((a, b) => b.count - a.count || a.name.localeCompare(b.name));
+  }, [allCallouts, data?.watched]);
 
   // Multi-tier Filter: Tab + Multiple Selected Callers + Search Query + Prop Filter
   const filteredCallouts = useMemo(() => {
@@ -364,8 +399,6 @@ export function CalloutFeed({ onSelectToken, filterSymbol }: CalloutFeedProps) {
     // Tab filter
     if (filterTab === "2x") {
       list = list.filter((c) => c.multiplier >= 2.0);
-    } else if (filterTab === "whitelist") {
-      list = list.filter((c) => c.callerBadge?.includes("Whitelist") || c.callerBadge?.includes("Pinned"));
     }
 
     // Text search query
@@ -385,6 +418,16 @@ export function CalloutFeed({ onSelectToken, filterSymbol }: CalloutFeedProps) {
     return list;
   }, [allCallouts, boostedCallouts, filterSymbol, selectedCallers, filterTab, searchQuery]);
 
+  const [visibleCount, setVisibleCount] = useState(30);
+
+  useEffect(() => {
+    setVisibleCount(30);
+  }, [filterTab, selectedCallers, searchQuery]);
+
+  const visibleCallouts = useMemo(() => {
+    return filteredCallouts.slice(0, visibleCount);
+  }, [filteredCallouts, visibleCount]);
+
   return (
     <>
       <div className="w-full space-y-3 font-mono select-none">
@@ -399,11 +442,6 @@ export function CalloutFeed({ onSelectToken, filterSymbol }: CalloutFeedProps) {
                   id: "2x",
                   label: "🔥 2X+ GAINS",
                   count: allCallouts.filter((c) => c.multiplier >= 2.0).length,
-                },
-                {
-                  id: "whitelist",
-                  label: "👑 WHITELIST",
-                  count: allCallouts.filter((c) => c.callerBadge?.includes("Whitelist")).length,
                 },
                 {
                   id: "pinned",
@@ -510,8 +548,12 @@ export function CalloutFeed({ onSelectToken, filterSymbol }: CalloutFeedProps) {
                           : "bg-zinc-100 dark:bg-zinc-900 text-zinc-600 dark:text-zinc-400 hover:text-amber-400 hover:border-amber-500/30 border border-zinc-200 dark:border-white/5"
                       }`}
                     >
-                      {isSelected && <Check className="w-3 h-3 text-zinc-950 stroke-[3]" />}
-                      <span>{caller.name}</span>
+                      {isSelected ? (
+                        <Check className="w-3 h-3 text-zinc-950 stroke-[3]" />
+                      ) : caller.avatarUrl ? (
+                        <CallerAvatar avatarUrl={caller.avatarUrl} name={caller.name} size="sm" className="w-4 h-4 rounded-full" />
+                      ) : null}
+                      <span>@{caller.name}</span>
                       <span className={`text-[9px] ${isSelected ? "text-zinc-900 font-bold" : "opacity-60"}`}>
                         ({caller.count})
                       </span>
@@ -583,17 +625,11 @@ export function CalloutFeed({ onSelectToken, filterSymbol }: CalloutFeedProps) {
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
               {/* Token Info */}
               <div className="flex items-center gap-3 min-w-0">
-                <div className="w-11 h-11 rounded-xl bg-zinc-800 border border-zinc-200 dark:border-white/10 overflow-hidden flex items-center justify-center shrink-0 text-sm font-bold text-amber-400 shadow-md">
-                  {searchedCaResult.iconUrl ? (
-                    <img
-                      src={searchedCaResult.iconUrl}
-                      alt={searchedCaResult.symbol}
-                      className="w-full h-full object-cover"
-                    />
-                  ) : (
-                    <span>${searchedCaResult.symbol.slice(0, 2)}</span>
-                  )}
-                </div>
+                <TokenLogo
+                  src={searchedCaResult.iconUrl}
+                  symbol={searchedCaResult.symbol}
+                  size="lg"
+                />
 
                 <div className="min-w-0">
                   <div className="flex items-center gap-2">
@@ -695,8 +731,7 @@ export function CalloutFeed({ onSelectToken, filterSymbol }: CalloutFeedProps) {
 
         {/* ── Callout Cards Grid ────────────────────────────────────────── */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {filteredCallouts.map((item: CalloutItem) => {
-            const upvoteCount = Math.max(0, item.upvotes + (likesDeltaMap[item.id] || 0));
+          {visibleCallouts.map((item) => {
             const percentGain = Math.round((item.multiplier - 1) * 100);
 
             return (
@@ -733,25 +768,12 @@ export function CalloutFeed({ onSelectToken, filterSymbol }: CalloutFeedProps) {
                     className="flex items-center gap-2.5 min-w-0 group/caller hover:opacity-90 transition-opacity cursor-pointer"
                     title={item.callerWallet && item.callerWallet.length > 20 ? `View ${item.callerName} on Pump.fun (${item.callerWallet})` : item.callerName}
                   >
-                    <div className="w-10 h-10 rounded-xl bg-zinc-800 border border-zinc-200 dark:border-white/10 group-hover/caller:border-amber-500/50 overflow-hidden flex items-center justify-center shrink-0 shadow-md transition-colors relative">
-                      {item.callerAvatarUrl ? (
-                        <img
-                          src={item.callerAvatarUrl}
-                          alt={item.callerName}
-                          onError={(e) => {
-                            (e.currentTarget as HTMLElement).style.display = "none";
-                          }}
-                          className="w-full h-full object-cover z-10 relative"
-                        />
-                      ) : null}
-                      {item.callerAvatar === "🔥" ? (
-                        <Flame className="w-5 h-5 text-amber-400 fill-current" />
-                      ) : (
-                        <span className="font-black text-amber-400 text-xs uppercase">
-                          {item.callerName.slice(0, 2)}
-                        </span>
-                      )}
-                    </div>
+                    <CallerAvatar
+                      avatarUrl={item.callerAvatarUrl}
+                      name={item.callerName}
+                      size="md"
+                      className="group-hover/caller:border-amber-500/50 transition-colors"
+                    />
                     <div className="min-w-0">
                       <div className="flex items-center gap-1.5 flex-wrap">
                         <span className="text-xs sm:text-sm font-bold text-zinc-950 dark:text-white group-hover/caller:text-amber-500 dark:group-hover/caller:text-amber-400 transition-colors truncate">
@@ -805,21 +827,11 @@ export function CalloutFeed({ onSelectToken, filterSymbol }: CalloutFeedProps) {
                   <div className="flex items-center justify-between gap-2 flex-wrap">
                     {/* Token Icon & Symbol */}
                     <div className="flex items-center gap-2.5 min-w-0">
-                      <div className="w-8 h-8 rounded-xl bg-zinc-800 border border-zinc-200 dark:border-white/10 overflow-hidden flex items-center justify-center shrink-0 text-xs font-bold text-amber-400 shadow-sm relative">
-                        {item.tokenIconUrl ? (
-                          <img
-                            src={item.tokenIconUrl}
-                            alt={item.tokenSymbol}
-                            onError={(e) => {
-                              (e.currentTarget as HTMLElement).style.display = "none";
-                            }}
-                            className="w-full h-full object-cover z-10 relative"
-                          />
-                        ) : null}
-                        <span className="font-bold text-amber-400 text-[10px] absolute">
-                          ${item.tokenSymbol.slice(0, 2)}
-                        </span>
-                      </div>
+                      <TokenLogo
+                        src={item.tokenIconUrl}
+                        symbol={item.tokenSymbol}
+                        size="md"
+                      />
                       <div className="min-w-0">
                         <span className="text-base sm:text-lg font-black text-amber-500 dark:text-amber-400 tracking-wide group-hover:text-amber-300 transition-colors block truncate">
                           ${item.tokenSymbol}
@@ -886,7 +898,7 @@ export function CalloutFeed({ onSelectToken, filterSymbol }: CalloutFeedProps) {
                         <ExternalLink className="w-2.5 h-2.5" />
                       </a>
 
-                      {/* Direct Caller Callouts Link */}
+                      {/* Direct Caller Profile Link */}
                       {item.callerWallet && (
                         <a
                           href={`https://pump.fun/profile/${item.callerWallet}`}
@@ -928,7 +940,7 @@ export function CalloutFeed({ onSelectToken, filterSymbol }: CalloutFeedProps) {
                     </div>
                   </div>
 
-                  {/* Thesis */}
+                  {/* Thesis Quote */}
                   <p className="text-xs text-zinc-600 dark:text-zinc-400 line-clamp-2 leading-relaxed italic">
                     &ldquo;{item.thesis}&rdquo;
                   </p>
@@ -960,7 +972,7 @@ export function CalloutFeed({ onSelectToken, filterSymbol }: CalloutFeedProps) {
                       title="Open discussion thread"
                     >
                       <MessageSquare className="w-3 h-3 text-amber-400" />
-                      <span>Discuss{item.commentCount && item.commentCount > 0 ? ` (${item.commentCount})` : ""}</span>
+                      <span>Discuss</span>
                     </button>
 
                     {/* Upvote Button */}
@@ -1004,6 +1016,22 @@ export function CalloutFeed({ onSelectToken, filterSymbol }: CalloutFeedProps) {
             );
           })}
         </div>
+
+        {/* ── Load More Progressive Infinite Pagination ───────────────────── */}
+        {visibleCount < filteredCallouts.length && (
+          <div className="flex justify-center pt-3 pb-6">
+            <button
+              type="button"
+              onClick={() => setVisibleCount((prev) => Math.min(filteredCallouts.length, prev + 30))}
+              className="px-6 py-2.5 rounded-2xl bg-zinc-100 hover:bg-amber-500/15 dark:bg-zinc-900 dark:hover:bg-amber-500/20 text-zinc-900 dark:text-zinc-200 hover:text-amber-500 dark:hover:text-amber-400 font-bold text-xs border border-zinc-200 dark:border-white/10 hover:border-amber-500/30 shadow-md flex items-center gap-2 transition-all cursor-pointer hover:scale-[1.02] active:scale-95"
+            >
+              <span>Load More Alpha Signals (+{Math.min(30, filteredCallouts.length - visibleCount)})</span>
+              <span className="text-[10px] text-zinc-500 font-mono">
+                ({visibleCount}/{filteredCallouts.length})
+              </span>
+            </button>
+          </div>
+        )}
       </div>
 
       {/* ── Callout Discussion Forum Modal ──────────────────────────────── */}

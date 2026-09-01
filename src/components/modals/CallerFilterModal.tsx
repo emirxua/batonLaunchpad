@@ -2,11 +2,15 @@
 
 import React, { useState, useMemo } from "react";
 import { Search, X, Check, Users, Sparkles, Filter, ShieldCheck, CheckCheck } from "lucide-react";
+import { CallerAvatar } from "@/components/callouts/CallerAvatar";
 
 export interface CallerInfo {
   name: string;
   count: number;
   badge?: string;
+  avatarUrl?: string;
+  xUsername?: string;
+  wallet?: string;
 }
 
 interface CallerFilterModalProps {
@@ -33,12 +37,34 @@ export function CallerFilterModal({
   const filteredCallers = useMemo(() => {
     const q = search.trim().toLowerCase();
     if (!q) return allCallers;
-    return allCallers.filter((c) => c.name.toLowerCase().includes(q));
+    return allCallers.filter(
+      (c) =>
+        c.name.toLowerCase().includes(q) ||
+        (c.xUsername && c.xUsername.toLowerCase().includes(q)) ||
+        (c.wallet && c.wallet.toLowerCase().includes(q))
+    );
   }, [allCallers, search]);
 
   const whitelistCallers = useMemo(() => {
     return allCallers
-      .filter((c) => ["slingoor", "archelon", "croakie", "cupseyyyyy"].includes(c.name.toLowerCase()) || c.badge?.includes("Whitelist"))
+      .filter((c) =>
+        [
+          "slingoor",
+          "archelon",
+          "croakie",
+          "cupseyyyyy",
+          "ferre",
+          "schoen",
+          "netvyxe",
+          "ansemconzimp",
+          "sapijiju",
+          "alonalon",
+          "supermandev",
+          "shitoshi__",
+          "haanz",
+          "pnut_deployer",
+        ].includes(c.name.toLowerCase()) || c.badge?.includes("Whitelist") || c.count > 0
+      )
       .map((c) => c.name);
   }, [allCallers]);
 
@@ -91,7 +117,7 @@ export function CallerFilterModal({
             <input
               type="text"
               autoFocus
-              placeholder="Search callers by name or handle..."
+              placeholder="Search callers by username, handle or address..."
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               className="w-full bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-white/10 focus:border-amber-500 rounded-2xl pl-10 pr-4 py-2.5 text-xs text-zinc-900 dark:text-zinc-100 outline-none font-mono placeholder:text-zinc-500"
@@ -116,7 +142,7 @@ export function CallerFilterModal({
                 className="px-2.5 py-1 rounded-lg bg-zinc-200 dark:bg-zinc-800 hover:bg-zinc-300 dark:hover:bg-zinc-700 text-zinc-800 dark:text-zinc-200 text-[11px] font-bold transition-all cursor-pointer flex items-center gap-1"
               >
                 <CheckCheck className="w-3 h-3 text-amber-500" />
-                <span>Select All</span>
+                <span>Select All ({allCallers.length})</span>
               </button>
 
               {whitelistCallers.length > 0 && (
@@ -126,7 +152,7 @@ export function CallerFilterModal({
                   className="px-2.5 py-1 rounded-lg bg-amber-500/15 hover:bg-amber-500/25 border border-amber-500/30 text-amber-400 text-[11px] font-bold transition-all cursor-pointer flex items-center gap-1"
                 >
                   <ShieldCheck className="w-3 h-3 text-amber-400" />
-                  <span>Top Whitelist ({whitelistCallers.length})</span>
+                  <span>Top Alpha ({whitelistCallers.length})</span>
                 </button>
               )}
             </div>
@@ -155,7 +181,7 @@ export function CallerFilterModal({
                 const isSelected = selectedCallers.some(
                   (sc) => sc.toLowerCase() === caller.name.toLowerCase()
                 );
-                const isWhitelist = ["slingoor", "archelon", "croakie", "cupseyyyyy"].includes(caller.name.toLowerCase());
+                const isAlpha = ["slingoor", "archelon", "croakie", "cupseyyyyy", "ferre", "schoen", "netvyxe", "ansemconzimp", "sapijiju"].includes(caller.name.toLowerCase());
 
                 return (
                   <div
@@ -168,15 +194,12 @@ export function CallerFilterModal({
                     }`}
                   >
                     <div className="flex items-center gap-2.5 min-w-0">
-                      <div
-                        className={`w-8 h-8 rounded-xl flex items-center justify-center font-black text-xs shrink-0 ${
-                          isSelected
-                            ? "bg-amber-500 text-zinc-950 font-black"
-                            : "bg-zinc-200 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300"
-                        }`}
-                      >
-                        {caller.name.slice(0, 2).toUpperCase()}
-                      </div>
+                      <CallerAvatar
+                        avatarUrl={caller.avatarUrl}
+                        name={caller.name}
+                        size="md"
+                        className={isSelected ? "ring-2 ring-amber-400 shadow-amber-500/20" : ""}
+                      />
 
                       <div className="min-w-0">
                         <div className="flex items-center gap-1.5">
@@ -185,17 +208,28 @@ export function CallerFilterModal({
                               isSelected ? "text-amber-400" : "text-zinc-900 dark:text-white"
                             }`}
                           >
-                            {caller.name}
+                            @{caller.name}
                           </span>
-                          {isWhitelist && (
+                          {isAlpha && (
                             <span className="text-[9px] px-1.5 py-0.2 rounded bg-amber-500/20 text-amber-400 font-bold">
                               ★ Alpha
                             </span>
                           )}
                         </div>
-                        <span className="text-[10px] text-zinc-500 font-mono block">
-                          {caller.count} verified {caller.count === 1 ? "callout" : "callouts"}
-                        </span>
+                        <div className="flex items-center gap-2 text-[10px] text-zinc-500 font-mono">
+                          <span>
+                            {caller.count > 0 ? (
+                              <strong className="text-amber-400 font-bold">{caller.count} callouts</strong>
+                            ) : (
+                              <span>Tracked</span>
+                            )}
+                          </span>
+                          {caller.xUsername && (
+                            <span className="text-zinc-400 hover:text-sky-400">
+                              𝕏 @{caller.xUsername}
+                            </span>
+                          )}
+                        </div>
                       </div>
                     </div>
 

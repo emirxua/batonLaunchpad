@@ -16,10 +16,28 @@ const nextConfig = {
     };
     return config;
   },
+  compress: true,
+  poweredByHeader: false,
   images: {
     remotePatterns: [
       { protocol: 'https', hostname: '**' },
     ],
+  },
+  async headers() {
+    return [
+      {
+        source: "/icons/:all*",
+        headers: [
+          { key: "Cache-Control", value: "public, max-age=31536000, immutable" },
+        ],
+      },
+      {
+        source: "/images/:all*",
+        headers: [
+          { key: "Cache-Control", value: "public, max-age=31536000, immutable" },
+        ],
+      },
+    ];
   },
 };
 

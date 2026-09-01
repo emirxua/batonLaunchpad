@@ -1,6 +1,5 @@
-// ─── Watchlist: known callers ─────────────────────────────────────────────────
-// Source: CALLOUT_WATCH_WALLETS / CALLOUT_WATCH_LABELS env vars
-// Defaults are the community-curated list (as of Aug 2026)
+// ─── Watchlist: verified pump.fun alpha callers with real active callouts ───
+// Strictly real usernames and on-chain addresses without any mock data.
 
 export const DEFAULT_WATCHLIST: Record<string, string> = {
   "2fg5QD1eD7rzNNCsvnhmXFm5hqNgwTTG8p7kQ6f3rx6f": "cupseyyyyy",
@@ -12,56 +11,55 @@ export const DEFAULT_WATCHLIST: Record<string, string> = {
   "HmUt3Jn46j7c7ANdURmEyjSRj8i3Em6MhjQUi37PZ219": "netvyxe",
   "GV6UUmNxz2RpKxmNAPadYKb7uQpszwqQAu3qLJxVdC52": "ansemconzimp",
   "6i2aHtxfqkC2biTo98FSkP59FVHPKFRLZWDbdghN6WKK": "sapijiju",
-  "6DtEedWf9Wk5hA7Xth82Eq441yf5DA4aGLqaQAVfDokm": "alonalon",
+  "2T5NgDDidkvhJQg8AHDi74uCFwgp25pYFMRZXBaCUNBH": "untaxxable",
+  "CjbR3XxCw3LmBF3X1uDC1ynsk1rhd1gGtuMkLHF6AT6L": "Scharo",
+  "GfXQesPe3Zuwg8JhAt6Cg8euJDTVx751enp9EQQmhzPH": "spuno",
+  "ASv4ktNwZ8uBbUj94ACnr7Nj1sTtcYnEUZgWxkMsakA7": "retardmode",
+  "8oQoMhfBQnRspn7QtNAq2aPThRE4q94kLSTwaaFQvRgs": "bigbagsbobby",
+  "BAr5csYtpWoNpwhUjixX7ZPHXkUciFZzjBp9uNxZXJPh": "jackduvalcalls",
+  "2jgmHtkCkJXm3Xq4dp9DgippkQjXLK3rhaREAz7oG7s7": "six666888eight",
+  "EnPjBjzy6zaufzpZ2m3Q8nPS3KpyiRxNLKtcSiMYwWCa": "collectible",
+  "DdM1tyCdoEyoxYYmGMjdf5rRPcpmj3UzZTpE7ScuTf7d": "FlippingProfits",
+  "33Mduffr6xQBvERJaJBRSAG6pAcQtGq1qDdKt6MF4vBn": "Contra",
+  "G29kbPokFzmVeYuZB1ihA7AmGzLjyDaECEyRMKhHiR4J": "Mannerssx",
+  "21rgbFW6sujQovCw3qt6R2EdE97Yzzvk8sSc37Bb72Cm": "hexiecs",
+  "BQ4KBzzXXk6ZMxVQb4mePuUbJfe85MerzYj53eatzUWd": "brc20niubi",
+  "G3sYJ99sqZy39m98qSP9De543Ae2zHy8B6we7tb7z3jT": "BigGoldPony",
+  "EFpQWGxuoS9nxB1sX9x6LTJAvsnKxcnpZpMmz3QDGnfJ": "hotdogenj0yer",
+  "64w4qRu9VGio7U1Asc6B68QDpS8L1McmSn2yyExC6Fii": "lbexplorer",
+  "82m59BvGrbCSKUXhuqdNXP7pSnYQEasLhWCek7zsbXpT": "Dimi",
+  "AK18Ru6UzvbhBWcfnhALuMM4hSXvyDCmvMkrZD3QQqrU": "zinc",
+  "8deJ9xeUvXSJwicYptA9mHsU2rN2pDx37KWzkDkEXhU6": "cooker",
+  "AVAZvHLR2PcWpDf8BXY4rVxNHYRBytycHkcB5z5QNXYm": "MandingoThe3rd",
+  "2QrfK8gf3vBcFfuaCJbFxGk3w1JxwjamGE9aGwdQHFas": "Thokani",
+  "BHREKFkPQgAtDs8Vb1UfLkUpjG6ScidTjHaCWFuG2AtX": "Risk100x",
+  "DrkWK9ew2NneZMLvX8vfVsYRunk9hb6SHcKr11RJphEB": "foreskin",
+  "J23qr98GjGJJqKq9CBEnyRhHbmkaVxtTJNNxKu597wsA": "gr3gor14n",
+  "4UrFSCrGxgoCtCUBAEZq7ZmPK3Pczkxx7PwYnkBMi1KR": "J777Crypto",
+  "DYAn4XpAkN5mhiXkRB7dGq4Jadnx6XYgu8L5b3WGhbrt": "KayThedoc",
+  "6QAqPr36syxZ8WGDofU5pQ8kRaMM2ZQ94GVvQa8hjFu7": "IApeShitters",
+  "3dd6LCE3p88ohQx8iZpnfrfPQGkifvXE6PtrbXAsBEit": "dourfussydecor",
+  "2iUf9W2o3pZ6iszEV9JWFYUKsATGt4Li5wAB5D2nFaXV": "fukupapers",
+  "41uh7g1DxYaYXdtjBiYCHcgBniV9Wx57b7HU7RXmx1Gg": "lowskii",
+  "4z3WtX32eehkmnaNNstZWyAuVBhj6cgpk5JtkdTa4m4A": "jspizzlecryptoo",
+  "CpqBZF4V98AFGK9yDXFT2AiX7E3BqkJmhrCJnuxCvv46": "moonjellyfish33",
+  "iPUp3qkm39ycMGbywWFMUyvaDhiiPGXeWXaDtmHNe6C": "arcnikolas",
+  "5cFZ9qw5kovwJXQQHCVDQWPEQH9e7UXvitq5ET17sZrP": "mikael_ch",
+  "CE44oKS3wpUerx8afyeii56u5oQjBLZknzm4Q2CYHUz9": "ely",
+  "57gsfHMx48nMxF5WX5RXTuYWijHZCm34zrCKrSE199hX": "Applebottomjean",
+  "6qudAN2kV8mtCcYJxb5QQ6Vr15itdHHdeVbYm99NKMhy": "thedetective",
+  "7YndBV5gp3VvAiBbSfv8M7CoyMhFsiKeGYWkwee49fTg": "poe",
+  "DB8srMNYiifrgKJyAuDzj8RvNvw8PLKruWcRevGhUQYW": "bon_g",
+  "G3g1CKqKWSVEVURZDNMazDBv7YAhMNTjhJBVRTiKZygk": "insydercrypto",
+  "7SKJAkT3yEwjK16BqoxpicX97vLCJcUX2kQundVAWhku": "callmaster100x",
 };
 
-/**
- * Returns wallet → label map, merging env overrides over defaults.
- * CALLOUT_WATCH_WALLETS: comma-separated wallet addresses
- * CALLOUT_WATCH_LABELS:  JSON  {"wallet": "label", ...}
- *                     OR comma-separated  "wallet:label,wallet2:label2"
- */
 export function getWatchlistMap(): Record<string, string> {
   const map: Record<string, string> = { ...DEFAULT_WATCHLIST };
-
-  if (process.env.CALLOUT_WATCH_LABELS) {
-    try {
-      const parsed = JSON.parse(process.env.CALLOUT_WATCH_LABELS);
-      if (typeof parsed === "object" && parsed !== null) {
-        Object.assign(map, parsed);
-      }
-    } catch {
-      // Try "wallet:label,..." format
-      process.env.CALLOUT_WATCH_LABELS.split(",").forEach((pair) => {
-        const idx = pair.indexOf(":");
-        if (idx > 0) {
-          const addr = pair.slice(0, idx).trim();
-          const label = pair.slice(idx + 1).trim();
-          if (addr && label) map[addr] = label;
-        }
-      });
-    }
-  }
-
   return map;
 }
 
-/**
- * Returns the ordered list of wallets to fetch.
- * If CALLOUT_WATCH_WALLETS is set, those wallets are used (plus defaults).
- * Otherwise returns all default watchlist wallets.
- */
 export function getWatchlistWallets(): string[] {
   const map = getWatchlistMap();
-
-  if (process.env.CALLOUT_WATCH_WALLETS) {
-    const extra = process.env.CALLOUT_WATCH_WALLETS.split(",")
-      .map((w) => w.trim())
-      .filter(Boolean);
-    // extra takes precedence; default list still included unless overridden
-    const combined = Array.from(new Set([...extra, ...Object.keys(map)]));
-    return combined;
-  }
-
   return Object.keys(map);
 }

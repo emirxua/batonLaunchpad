@@ -4,6 +4,8 @@ import React, { useState } from "react";
 import Link from "next/link";
 import useSWR from "swr";
 import { formatCurrency, formatNumber } from "@/lib/utils";
+import { TokenLogo } from "@/components/callouts/TokenLogo";
+import { CallerAvatar } from "@/components/callouts/CallerAvatar";
 import {
   Radio,
   Flame,
@@ -75,20 +77,26 @@ export function LiveCalloutsFeed({ onSelectToken }: LiveCalloutsFeedProps) {
               }}
               className="p-3 rounded-xl bg-zinc-50 dark:bg-zinc-900/50 hover:bg-zinc-100 dark:hover:bg-zinc-900 border border-zinc-200 dark:border-white/5 hover:border-amber-500/30 transition-all cursor-pointer space-y-2 group"
             >
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <span className="font-extrabold text-amber-500 dark:text-amber-400 group-hover:text-amber-300">
-                    ${symbol}
-                  </span>
-                  <span className="text-xs text-zinc-500">{name}</span>
+              <div className="flex items-center justify-between gap-2">
+                <div className="flex items-center gap-2.5 min-w-0">
+                  <TokenLogo src={item.mediaUrl} symbol={symbol} size="sm" />
+                  <div className="min-w-0">
+                    <span className="font-extrabold text-amber-500 dark:text-amber-400 group-hover:text-amber-300 block truncate">
+                      ${symbol}
+                    </span>
+                    <span className="text-[11px] text-zinc-500 block truncate">{name}</span>
+                  </div>
                 </div>
-                <span className="text-xs font-bold text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20">
+                <span className="text-xs font-bold text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20 shrink-0">
                   +{Math.round((mult - 1) * 100)}% ({mult.toFixed(2)}x)
                 </span>
               </div>
 
               <div className="flex items-center justify-between text-xs text-zinc-500">
-                <span>By @{caller}</span>
+                <div className="flex items-center gap-1.5">
+                  <CallerAvatar avatarUrl={item.callerAvatarUrl} name={caller} size="sm" className="w-4 h-4 rounded-full" />
+                  <span>By @{caller}</span>
+                </div>
                 <div className="flex items-center gap-2">
                   <button
                     type="button"

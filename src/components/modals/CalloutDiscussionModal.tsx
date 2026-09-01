@@ -7,6 +7,7 @@ import { formatCurrency, formatNumber } from "@/lib/utils";
 import { useUserProfile } from "@/hooks/useUserProfile";
 import { SetUsernameModal } from "@/components/modals/SetUsernameModal";
 import { AuthModal } from "@/components/modals/AuthModal";
+import { TokenLogo } from "@/components/callouts/TokenLogo";
 import {
   MessageSquare,
   X,
@@ -149,19 +150,11 @@ export function CalloutDiscussionModal({
           {/* ── Modal Header: Token Alpha Snapshot ───────────────────────── */}
           <div className="p-4 sm:p-5 border-b border-zinc-200 dark:border-white/10 bg-zinc-50 dark:bg-zinc-900/50 flex items-start justify-between gap-3 shrink-0">
             <div className="flex items-center gap-3 min-w-0">
-              <div className="w-10 h-10 rounded-2xl bg-zinc-800 border border-zinc-200 dark:border-white/10 overflow-hidden flex items-center justify-center shrink-0 shadow-md">
-                {callout.tokenIconUrl ? (
-                  <img
-                    src={callout.tokenIconUrl}
-                    alt={callout.tokenSymbol}
-                    className="w-full h-full object-cover"
-                  />
-                ) : (
-                  <span className="font-black text-amber-400 text-xs">
-                    ${callout.tokenSymbol.slice(0, 2)}
-                  </span>
-                )}
-              </div>
+              <TokenLogo
+                src={callout.tokenIconUrl}
+                symbol={callout.tokenSymbol}
+                size="md"
+              />
 
               <div className="min-w-0">
                 <div className="flex items-center gap-2 flex-wrap">
