@@ -12,7 +12,7 @@ export async function GET(req: NextRequest) {
       "2vdc4owf1MPz54jJCN61y3QSKqjcPpr32wJ9qKkpump";
     const amountStr = searchParams.get("amount") || "500000000"; // 0.5 SOL in lamports
 
-    // 1. Jupiter Standart Quote Denemesi
+    // 1. Jupiter Standard Quote Request
     for (const baseUrl of [
       "https://api.jup.ag/swap/v1/quote",
       "https://lite-api.jup.ag/swap/v1/quote",
@@ -39,11 +39,11 @@ export async function GET(req: NextRequest) {
           }
         }
       } catch {
-        // Try next
+        // Try next endpoint
       }
     }
 
-    // 2. Fallback: DexScreener üzerinden dinamik SOL/$BATON parite hesabı
+    // 2. Fallback: Dynamic SOL/$BATON parity calculation via DexScreener
     const dexRes = await fetch(
       `https://api.dexscreener.com/latest/dex/tokens/${outputMint}`,
       {
@@ -56,7 +56,7 @@ export async function GET(req: NextRequest) {
 
     if (pair && pair.priceNative) {
       const solAmount = Number(amountStr) / 1e9;
-      const priceInSol = parseFloat(pair.priceNative); // 1 Token kaç SOL?
+      const priceInSol = parseFloat(pair.priceNative); // 1 Token price in SOL
       if (priceInSol > 0) {
         const estimatedTokens = solAmount / priceInSol;
         const decimals = outputMint.endsWith("pump") ? 6 : 9;

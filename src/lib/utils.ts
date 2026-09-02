@@ -18,6 +18,14 @@ export function formatCurrency(value: number): string {
   return `$${value.toFixed(2)}`;
 }
 
+export function formatCryptoPrice(price: number | undefined | null): string {
+  if (typeof price !== "number" || isNaN(price) || price <= 0) return "$0.00";
+  if (price < 0.0001) return `$${price.toFixed(8)}`;
+  if (price < 0.01) return `$${price.toFixed(6)}`;
+  if (price < 1) return `$${price.toFixed(4)}`;
+  return `$${price.toFixed(2)}`;
+}
+
 export function formatNumber(value: number): string {
   return new Intl.NumberFormat("en-US", { maximumFractionDigits: 0 }).format(
     Math.floor(Math.max(0, value || 0))

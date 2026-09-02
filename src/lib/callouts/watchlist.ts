@@ -52,6 +52,8 @@ export const DEFAULT_WATCHLIST: Record<string, string> = {
   "DB8srMNYiifrgKJyAuDzj8RvNvw8PLKruWcRevGhUQYW": "bon_g",
   "G3g1CKqKWSVEVURZDNMazDBv7YAhMNTjhJBVRTiKZygk": "insydercrypto",
   "7SKJAkT3yEwjK16BqoxpicX97vLCJcUX2kQundVAWhku": "callmaster100x",
+  "ElonMusk11111111111111111111111111111111111": "elonmusk",
+  "HYZKdGZm9Db2Xn5SLPTWCMcxFtyGEdJRXGSUs6pB2RA8": "elonmusk",
 };
 
 export function getWatchlistMap(): Record<string, string> {

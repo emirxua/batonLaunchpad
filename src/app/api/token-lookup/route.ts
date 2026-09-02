@@ -57,7 +57,7 @@ async function fetchFromPumpFun(mint: string): Promise<LookupResult | null> {
       if (data && (data.name || data.symbol)) {
         const mcap = Number(data.usd_market_cap) || 0;
         const isBaton = mint === BATON_MINT;
-        const rawImg = isBaton ? "/images/baton-logo.png" : (data.image_uri || null);
+        const rawImg = data.image_uri || (isBaton ? "/images/baton-logo.png" : null);
         return {
           mint,
           name: data.name || data.symbol || "Solana Token",

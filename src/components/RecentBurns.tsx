@@ -72,101 +72,160 @@ export const RecentBurns: React.FC<RecentBurnsProps> = ({
           </div>
         </div>
       ) : (
-        <div className="overflow-x-auto no-scrollbar">
-          <table className="w-full text-left text-xs">
-            <thead>
-              <tr className="text-zinc-500 dark:text-zinc-400 dark:text-text-faint uppercase text-[11px] border-b border-zinc-200/80 dark:border-line/60">
-                <th className="py-3 px-3">Burner Wallet</th>
-                <th className="py-3 px-3">Mascot / Project</th>
-                <th className="py-3 px-3 text-right">Burned Amount</th>
-                <th className="py-3 px-3 text-center">Time</th>
-                <th className="py-3 px-3 text-right">Solscan Proof</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-zinc-200/60 dark:divide-line/40">
-              {burns.map((burn) => {
-                const shortUser =
-                  burn.userAddress && burn.userAddress.length > 8
-                    ? `${burn.userAddress.slice(0, 4)}...${burn.userAddress.slice(-4)}`
-                    : burn.userAddress || "Anonymous";
-                const shortTx =
-                  burn.txHash && burn.txHash.length > 12
-                    ? `${burn.txHash.slice(0, 6)}...${burn.txHash.slice(-6)}`
-                    : burn.txHash;
-                const isCopied = copiedTx === burn.txHash;
+        <>
+          {/* ── Mobile Burn Cards (Zero Horizontal Scroll, Perfect Stacking) ── */}
+          <div className="sm:hidden divide-y divide-zinc-200 dark:divide-white/5 font-mono">
+            {burns.map((burn) => {
+              const shortUser =
+                burn.userAddress && burn.userAddress.length > 8
+                  ? `${burn.userAddress.slice(0, 4)}...${burn.userAddress.slice(-4)}`
+                  : burn.userAddress || "Anonymous";
+              const shortTx =
+                burn.txHash && burn.txHash.length > 10
+                  ? `${burn.txHash.slice(0, 5)}...${burn.txHash.slice(-5)}`
+                  : burn.txHash;
+              const isCopied = copiedTx === burn.txHash;
 
-                return (
-                  <tr
-                    key={burn.id}
-                    className="hover:bg-zinc-50 dark:hover:bg-bg-raised/50 transition-colors group"
-                  >
-                    {/* User Address */}
-                    <td className="py-3.5 px-3">
-                      <div className="flex items-center gap-2">
-                        <span className="font-bold text-zinc-800 dark:text-text">
-                          {shortUser}
+              return (
+                <div key={burn.id} className="py-3.5 space-y-2.5">
+                  <div className="flex items-center justify-between text-xs">
+                    <span className="font-bold text-zinc-900 dark:text-white font-mono">{shortUser}</span>
+                    <span className="text-[10px] text-zinc-500">{formatTimeAgo(burn.timestamp)}</span>
+                  </div>
+
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-zinc-100 dark:bg-zinc-900 border border-zinc-200 dark:border-white/10 text-zinc-800 dark:text-zinc-200 text-xs font-bold truncate max-w-[160px]">
+                      {burn.coinName || "Baton"} (${burn.coinTicker || "BATON"})
+                    </span>
+                    <div className="flex items-center gap-1 text-rose-500 font-mono font-black text-xs">
+                      <Flame className="w-3.5 h-3.5 fill-current text-rose-500" />
+                      <span>{formatNumber(burn.amount)}</span>
+                      <span className="text-[9px] text-zinc-500">$BATON</span>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center justify-end gap-2 pt-1 border-t border-zinc-100 dark:border-white/5">
+                    <button
+                      type="button"
+                      onClick={() => handleCopy(burn.txHash)}
+                      className="text-[11px] text-zinc-500 hover:text-amber-400 flex items-center gap-1 font-mono cursor-pointer"
+                      title="Copy TX Hash"
+                    >
+                      {isCopied ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3" />}
+                      <span>Copy</span>
+                    </button>
+                    <a
+                      href={`https://solscan.io/tx/${burn.txHash}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="px-2.5 py-1 rounded-lg bg-zinc-100 dark:bg-zinc-900 text-amber-500 dark:text-amber-400 border border-zinc-200 dark:border-white/10 text-[11px] font-bold flex items-center gap-1 shadow-sm"
+                    >
+                      <span>{shortTx}</span>
+                      <ExternalLink className="w-3 h-3" />
+                    </a>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          {/* ── Desktop Table (Hidden on Mobile) ───────────────────────────── */}
+          <div className="hidden sm:block overflow-x-auto no-scrollbar">
+            <table className="w-full text-left text-xs">
+              <thead>
+                <tr className="text-zinc-500 dark:text-zinc-400 dark:text-text-faint uppercase text-[11px] border-b border-zinc-200/80 dark:border-line/60">
+                  <th className="py-3 px-3">Burner Wallet</th>
+                  <th className="py-3 px-3">Mascot / Project</th>
+                  <th className="py-3 px-3 text-right">Burned Amount</th>
+                  <th className="py-3 px-3 text-center">Time</th>
+                  <th className="py-3 px-3 text-right">Solscan Proof</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-zinc-200/60 dark:divide-line/40">
+                {burns.map((burn) => {
+                  const shortUser =
+                    burn.userAddress && burn.userAddress.length > 8
+                      ? `${burn.userAddress.slice(0, 4)}...${burn.userAddress.slice(-4)}`
+                      : burn.userAddress || "Anonymous";
+                  const shortTx =
+                    burn.txHash && burn.txHash.length > 12
+                      ? `${burn.txHash.slice(0, 6)}...${burn.txHash.slice(-6)}`
+                      : burn.txHash;
+                  const isCopied = copiedTx === burn.txHash;
+
+                  return (
+                    <tr
+                      key={burn.id}
+                      className="hover:bg-zinc-50 dark:hover:bg-bg-raised/50 transition-colors group"
+                    >
+                      {/* User Address */}
+                      <td className="py-3.5 px-3">
+                        <div className="flex items-center gap-2">
+                          <span className="font-bold text-zinc-800 dark:text-text">
+                            {shortUser}
+                          </span>
+                        </div>
+                      </td>
+
+                      {/* Target Coin */}
+                      <td className="py-3.5 px-3">
+                        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-lg bg-zinc-100 dark:bg-bg-raised border border-zinc-200/80 dark:border-line text-zinc-700 dark:text-text-dim text-[11px] font-bold">
+                          {burn.coinName || "Baton"} (${burn.coinTicker || "BATON"})
                         </span>
-                      </div>
-                    </td>
+                      </td>
 
-                    {/* Target Coin */}
-                    <td className="py-3.5 px-3">
-                      <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-lg bg-zinc-100 dark:bg-bg-raised border border-zinc-200/80 dark:border-line text-zinc-700 dark:text-text-dim text-[11px] font-bold">
-                        {burn.coinName || "Baton"} (${burn.coinTicker || "BATON"})
-                      </span>
-                    </td>
+                      {/* Amount */}
+                      <td className="py-3.5 px-3 text-right">
+                        <div className="flex items-center justify-end gap-1.5 font-bold text-rose-600 dark:text-magenta">
+                          <Flame className="w-3.5 h-3.5 fill-current" />
+                          <span className="text-sm font-mono-num font-black">
+                            {formatNumber(burn.amount)}
+                          </span>
+                          <span className="text-[10px] text-zinc-500 dark:text-text-dim uppercase">
+                            $BATON
+                          </span>
+                        </div>
+                      </td>
 
-                    {/* Amount */}
-                    <td className="py-3.5 px-3 text-right">
-                      <div className="flex items-center justify-end gap-1.5 font-bold text-rose-600 dark:text-magenta">
-                        <Flame className="w-3.5 h-3.5 fill-current" />
-                        <span className="text-sm font-mono-num font-black">
-                          {formatNumber(burn.amount)}
-                        </span>
-                        <span className="text-[10px] text-zinc-500 dark:text-text-dim uppercase">
-                          $BATON
-                        </span>
-                      </div>
-                    </td>
+                      {/* Timestamp */}
+                      <td className="py-3.5 px-3 text-center text-zinc-500 dark:text-text-faint text-[11px]">
+                        {formatTimeAgo(burn.timestamp)}
+                      </td>
 
-                    {/* Timestamp */}
-                    <td className="py-3.5 px-3 text-center text-zinc-500 dark:text-text-faint text-[11px]">
-                      {formatTimeAgo(burn.timestamp)}
-                    </td>
+                      {/* Solscan Link */}
+                      <td className="py-3.5 px-3 text-right">
+                        <div className="flex items-center justify-end gap-2">
+                          <button
+                            type="button"
+                            onClick={() => handleCopy(burn.txHash)}
+                            className="p-1 rounded text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-acid transition-colors"
+                            title="Copy Full TX Hash"
+                          >
+                            {isCopied ? (
+                              <Check className="w-3 h-3 text-emerald-500" />
+                            ) : (
+                              <Copy className="w-3 h-3" />
+                            )}
+                          </button>
 
-                    {/* Solscan Link */}
-                    <td className="py-3.5 px-3 text-right">
-                      <div className="flex items-center justify-end gap-2">
-                        <button
-                          type="button"
-                          onClick={() => handleCopy(burn.txHash)}
-                          className="p-1 rounded text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-acid transition-colors"
-                          title="Copy Full TX Hash"
-                        >
-                          {isCopied ? (
-                            <Check className="w-3 h-3 text-emerald-500" />
-                          ) : (
-                            <Copy className="w-3 h-3" />
-                          )}
-                        </button>
-
-                        <a
-                          href={`https://solscan.io/tx/${burn.txHash}`}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-zinc-50 dark:bg-zinc-900 dark:bg-bg-raised text-zinc-950 dark:text-white dark:text-acid border border-zinc-900 dark:border-acid/30 hover:bg-emerald-600 dark:hover:bg-acid dark:hover:text-bg text-[11px] font-bold transition-all shadow-sm"
-                        >
-                          <span>{shortTx}</span>
-                          <ArrowUpRight className="w-3 h-3 stroke-[2.5]" />
-                        </a>
-                      </div>
-                    </td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
+                          <a
+                            href={`https://solscan.io/tx/${burn.txHash}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-zinc-50 dark:bg-zinc-900 dark:bg-bg-raised text-zinc-950 dark:text-white dark:text-acid border border-zinc-900 dark:border-acid/30 hover:bg-emerald-600 dark:hover:bg-acid dark:hover:text-bg text-[11px] font-bold transition-all shadow-sm"
+                          >
+                            <span>{shortTx}</span>
+                            <ArrowUpRight className="w-3 h-3 stroke-[2.5]" />
+                          </a>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </>
       )}
 
       {/* Footer info */}

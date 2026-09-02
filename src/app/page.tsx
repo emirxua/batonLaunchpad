@@ -12,7 +12,8 @@ import { BurnModal } from "@/components/BurnModal";
 import { JupiterSwapModal } from "@/components/modals/JupiterSwapModal";
 import { LeaderboardItem } from "@/types/token";
 import { Coin } from "@/types/coin";
-import { Flame, Radio, Trophy, Zap } from "lucide-react";
+import Link from "next/link";
+import { Flame, Radio, Trophy, Zap, Terminal, ArrowUpRight } from "lucide-react";
 import { useCoinsData } from "@/hooks/useCoinsData";
 import { useTokenStats } from "@/hooks/useTokenStats";
 
@@ -133,7 +134,7 @@ export default function OutbidHomePage() {
                   : "text-zinc-600 dark:text-zinc-400 hover:text-zinc-950 dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-white/5"
               }`}
             >
-              <Radio className="w-3.5 h-3.5" />
+              <Radio className="w-3.5 h-3.5 shrink-0" />
               <span>Callouts Feed</span>
             </button>
 
@@ -146,7 +147,7 @@ export default function OutbidHomePage() {
                   : "text-zinc-600 dark:text-zinc-400 hover:text-zinc-950 dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-white/5"
               }`}
             >
-              <Zap className="w-3.5 h-3.5" />
+              <Zap className="w-3.5 h-3.5 shrink-0" />
               <span>Trending</span>
             </button>
 
@@ -159,8 +160,8 @@ export default function OutbidHomePage() {
                   : "text-zinc-600 dark:text-zinc-400 hover:text-zinc-950 dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-white/5"
               }`}
             >
-              <Trophy className="w-3.5 h-3.5" />
-              <span>Leaderboard</span>
+              <Flame className="w-3.5 h-3.5 fill-current text-orange-500 shrink-0" />
+              <span>Burn-to-Rank</span>
             </button>
           </div>
 

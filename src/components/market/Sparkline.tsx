@@ -46,7 +46,7 @@ export function Sparkline({
     const last = points[points.length - 1];
     d += ` T ${last[0]},${last[1]}`;
 
-    // Gradient dolgu için altı kapalı path
+    // Closed path for gradient fill
     const fill = `${d} L ${width},${height} L 0,${height} Z`;
 
     return { pathD: d, fillD: fill };

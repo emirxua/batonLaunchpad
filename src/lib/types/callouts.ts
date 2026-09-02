@@ -44,6 +44,9 @@ export interface CalloutCard extends PumpCallout {
   callerXUsername?: string; // real pump.fun Twitter/X handle
   coinSymbol?: string;
   coinName?: string;
+  entryMcap?: number;
+  currentMcap?: number;
+  currentPriceUsd?: number;
 }
 
 // ─── API route response shape ────────────────────────────────────────────────

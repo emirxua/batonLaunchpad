@@ -1,84 +1,131 @@
 import { NextRequest, NextResponse } from "next/server";
-import { CalloutCard, PumpCalloutListResponse, WatchedSummary } from "@/lib/types/callouts";
+import { CalloutCard, WatchedSummary } from "@/lib/types/callouts";
 import { getWatchlistMap, DEFAULT_WATCHLIST } from "@/lib/callouts/watchlist";
-
-export const dynamic = "force-dynamic";
-export const revalidate = 15;
-
-const PUMP_BASE = "https://frontend-api-v3.pump.fun";
-const DEX_BASE = "https://api.dexscreener.com";
-const FETCH_TIMEOUT_MS = 4000;
-
-import liveFeedSeed from "@/lib/callouts/live-feed-seed.json";
-
-// Persistent in-memory storage for user-submitted community callouts
-let userSubmittedCallouts: CalloutCard[] = [];
-
-// Cumulative in-memory storage for all verified real signals across 125 callers
-const cumulativeSignalsMap = new Map<string, CalloutCard>();
-
-// Initialize with verified on-chain pump.fun callouts
-if (Array.isArray(liveFeedSeed)) {
-  for (const c of liveFeedSeed as any[]) {
-    if (c && c.coinMint) {
-      const id = c.calloutId || `callout-${c.coinMint}-${(c.callerWallet || "").slice(0, 6)}`;
-      cumulativeSignalsMap.set(id, {
-        calloutId: id,
-        userId: c.userId || c.callerWallet || "caller",
-        callerWallet: c.callerWallet || c.userId || "",
-        callerLabel: c.callerLabel || DEFAULT_WATCHLIST[c.callerWallet] || "Alpha Caller",
-        coinMint: c.coinMint,
-        coinName: c.coinName || c.name || "Solana Project",
-        coinSymbol: (c.coinSymbol || c.symbol || "TOKEN").toUpperCase(),
-        marketCap: c.marketCap || 0,
-        calloutPrice: c.calloutPrice || 0,
-        calloutPriceUsd: c.calloutPriceUsd || 0,
-        multiple: Number(c.multiple) || 1.0,
-        createdAt: c.createdAt || Date.now(),
-        maxPriceSol: c.maxPriceSol || 0,
-        maxPriceUsd: c.maxPriceUsd || 0,
-        thesis: c.thesis || "",
-        user_uuid: c.user_uuid || `user-${(c.callerWallet || "").slice(0, 6)}`,
-        likes: c.likes || 0,
-        hasLiked: c.hasLiked || false,
-        hasReposted: c.hasReposted || false,
-        repostCount: c.repostCount || 0,
-        quoteCount: c.quoteCount || 0,
-        commentCount: c.commentCount || 0,
-        replyCount: c.replyCount || 0,
-        maxMultiplier: Number(c.maxMultiplier) || Number(c.multiple) || 1.0,
-        maxMultiplierAt: c.maxMultiplierAt || new Date().toISOString(),
-        viewCount: c.viewCount || 0,
-        mediaUrl: c.mediaUrl || null,
-        quotedCalloutId: c.quotedCalloutId || null,
-        quotedCallout: c.quotedCallout || null,
-        updates: Array.isArray(c.updates) ? c.updates : [],
-        updateCount: c.updateCount || 0,
-      });
-    }
-  }
-}
-
 import profilesCache from "@/lib/callouts/profiles-cache.json";
 
-// In-memory cache for live alpha signals
-let cachedSignals: { data: CalloutCard[]; time: number } | null = null;
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
 
-// In-memory cache for caller user profiles from pump.fun
+const PUMP_BASE = "https://frontend-api-v3.pump.fun";
+const FETCH_TIMEOUT_MS = 6000;
+
+// Maximum age for live callouts: strictly 8 hours (eliminates stale 22-hour-old data)
+const MAX_CALLOUT_AGE_MS = 8 * 60 * 60 * 1000;
+
+// Cloudflare Worker Proxy pool for high-availability fallback (prevents live data drops)
+const WORKER_PROXIES = [
+  "https://pump-callout-proxy-6.enir34232.workers.dev",
+  "https://pump-callout-proxy-8.froggyrobinhood.workers.dev",
+  "https://pump-callout-proxy-9.calimayemusk.workers.dev",
+  "https://pump-callout-proxy-10.emir1903topuz6.workers.dev",
+];
+let workerCursor = 0;
+function getNextWorkerProxy(): string {
+  const p = WORKER_PROXIES[workerCursor % WORKER_PROXIES.length];
+  workerCursor++;
+  return p;
+}
+
+// ─── In-memory cumulative store (Live on-chain signals only) ──────────────────
+const cumulativeSignalsMap = new Map<string, CalloutCard>();
+
+function sanitizeIpfsUrl(url?: string | null): string | null {
+  if (!url) return null;
+  if (url.includes("ipfs.io/ipfs/")) {
+    return url.replace("https://ipfs.io/ipfs/", "https://cf-ipfs.com/ipfs/");
+  }
+  return url;
+}
+
+function sanitizeAvatarUrl(url?: string | null): string | null {
+  if (!url) return null;
+  if (url.includes("ipfs.io/ipfs/")) {
+    return url.replace("https://ipfs.io/ipfs/", "https://pump.mypinata.cloud/ipfs/");
+  }
+  return url;
+}
+
+export function isSolanaAddress(addr?: string | null): boolean {
+  if (!addr) return false;
+  if (addr.startsWith("0x")) return false;
+  return /^[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(addr.trim());
+}
+
+// User-submitted callouts
+const userSubmittedCallouts: CalloutCard[] = [];
+
+// ─── Profile cache ────────────────────────────────────────────────────────────
 const callerProfilesCache = new Map<
   string,
   { username?: string; profileImage?: string; xUsername?: string; lastFetched: number }
 >();
 
-// Preload verified profile avatars and Twitter handles
 if (typeof profilesCache === "object" && profilesCache !== null) {
   for (const [w, p] of Object.entries(profilesCache as Record<string, any>)) {
     callerProfilesCache.set(w, {
       username: p.username || undefined,
-      profileImage: p.profileImage || undefined,
+      profileImage: sanitizeAvatarUrl(p.profileImage) || undefined,
       xUsername: p.xUsername || undefined,
       lastFetched: Date.now(),
     });
+  }
+}
+
+// ─── Real-Time Token Metadata & Live Mcap Cache (DexScreener & Pump.fun) ──────
+interface TokenLiveMeta {
+  name?: string;
+  symbol?: string;
+  iconUrl?: string;
+  currentMcap?: number;
+  currentPriceUsd?: number;
+  lastUpdated: number;
+}
+
+const liveTokenMetaCache = new Map<string, TokenLiveMeta>();
+
+async function enrichTokensWithDexScreener(mints: string[]): Promise<void> {
+  const now = Date.now();
+  const toFetch = Array.from(new Set(mints)).filter((m) => {
+    if (!m || !isSolanaAddress(m)) return false;
+    const cached = liveTokenMetaCache.get(m);
+    return !cached || now - cached.lastUpdated > 25_000;
+  });
+
+  if (toFetch.length === 0) return;
+
+  const chunkSize = 30;
+  for (let i = 0; i < toFetch.length; i += chunkSize) {
+    const chunk = toFetch.slice(i, i + chunkSize);
+    try {
+      const res = await fetchWithTimeout(
+        `https://api.dexscreener.com/latest/dex/tokens/${chunk.join(",")}`,
+        4000
+      );
+      if (res.ok) {
+        const json = await res.json();
+        const pairs = Array.isArray(json?.pairs) ? json.pairs : [];
+        for (const pair of pairs) {
+          const addr = pair.baseToken?.address;
+          if (addr && isSolanaAddress(addr)) {
+            const mcap = pair.marketCap ?? pair.fdv ?? 0;
+            const price = parseFloat(pair.priceUsd || "0") || 0;
+            const existing = liveTokenMetaCache.get(addr);
+            if (!existing || (mcap > 0 && (!existing.currentMcap || mcap > existing.currentMcap))) {
+              liveTokenMetaCache.set(addr, {
+                name: pair.baseToken?.name,
+                symbol: pair.baseToken?.symbol?.toUpperCase(),
+                iconUrl: sanitizeIpfsUrl(pair.info?.imageUrl),
+                currentMcap: mcap > 0 ? mcap : undefined,
+                currentPriceUsd: price > 0 ? price : undefined,
+                lastUpdated: now,
+              });
+            }
+          }
+        }
+      }
+    } catch {
+      // Ignore transient errors
+    }
   }
 }
 
@@ -90,7 +137,7 @@ async function fetchWithTimeout(url: string, ms = FETCH_TIMEOUT_MS): Promise<Res
       signal: ctrl.signal,
       headers: {
         Accept: "application/json",
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36",
+        "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36",
       },
       cache: "no-store",
     });
@@ -99,65 +146,287 @@ async function fetchWithTimeout(url: string, ms = FETCH_TIMEOUT_MS): Promise<Res
   }
 }
 
-const PROXY_POOL = [
-  "https://pump-callout-proxy.emir1903topuz106.workers.dev",
-  "https://pump-callout-proxy-2.baton-launchpad.workers.dev",
-  "https://pump-callout-proxy-3.emir1903topuz0.workers.dev",
-  "https://pump-callout-proxy-4.yuksekmustafa600.workers.dev",
-  "https://pump-callout-proxy-5.emir1903topuz-proxy.workers.dev",
-];
+// ─── Sync Real-Time Callouts from Pump.fun Global Feeds ───────────────────────
+let isSyncing = false;
+let syncStartedAt = 0;
+let lastSyncTime = 0;
+let watchlistCursor = 0;
 
-let proxyIndex = 0;
-function getNextProxyUrl(): string {
-  const url = PROXY_POOL[proxyIndex % PROXY_POOL.length];
-  proxyIndex++;
-  return url;
-}
+async function syncLivePumpCallouts(force = false): Promise<number> {
+  const now = Date.now();
+  if (isSyncing && !force && now - syncStartedAt < 8000) return 0;
+  isSyncing = true;
+  syncStartedAt = now;
+  let newCalloutCount = 0;
 
-/**
- * Fetch real callouts from all 5 Cloudflare Worker shards in parallel
- */
-async function fetchRealCalloutsFromProxy(): Promise<CalloutCard[]> {
-  const labelMap = getWatchlistMap();
-  const allCards: CalloutCard[] = [];
+  try {
+    const labelMap = getWatchlistMap();
+    const watchlistEntries = Object.entries(labelMap);
 
-  const results = await Promise.allSettled(
-    PROXY_POOL.map(async (proxyUrl) => {
-      const res = await fetchWithTimeout(proxyUrl, 5000);
-      if (!res.ok) return [];
-      const data = await res.json();
-      return Array.isArray(data?.callouts)
-        ? data.callouts
-        : Array.isArray(data?.results)
-          ? data.results.flatMap((r: any) => r.callouts || [])
-          : [];
-    })
-  );
+    // 1. Fetch Global Home Feed (Offsets 0 and 150, strictly chain=solana)
+    const feedOffsets = [0, 150];
+    const feedPromises = feedOffsets.map(async (offset) => {
+      try {
+        const res = await fetchWithTimeout(
+          `${PUMP_BASE}/home-feed?pageSize=150&offset=${offset}&chain=solana`,
+          5000
+        );
+        if (!res.ok) return [];
+        const data = await res.json();
+        return Array.isArray(data?.coins) ? data.coins : [];
+      } catch {
+        return [];
+      }
+    });
 
-  for (const r of results) {
-    if (r.status === "fulfilled" && Array.isArray(r.value)) {
-      for (const c of r.value) {
+    // 2. Fetch PnL Leaderboard (Daily & Weekly top caller positions)
+    const pnlPromises = ["daily", "weekly"].map(async (period) => {
+      try {
+        const res = await fetchWithTimeout(
+          `${PUMP_BASE}/pnl-leaderboard/positions?period=${period}`,
+          5000
+        );
+        if (!res.ok) return [];
+        const data = await res.json();
+        return Array.isArray(data?.entries) ? data.entries : [];
+      } catch {
+        return [];
+      }
+    });
+
+    // 3. Batch 6 watched alpha callers from watchlist
+    const batchSize = 6;
+    const currentBatch = [];
+    for (let i = 0; i < batchSize && watchlistEntries.length > 0; i++) {
+      const idx = (watchlistCursor + i) % watchlistEntries.length;
+      currentBatch.push(watchlistEntries[idx]);
+    }
+    watchlistCursor = (watchlistCursor + batchSize) % (watchlistEntries.length || 1);
+
+    const watchlistPromises = currentBatch.map(async ([wallet, label]) => {
+      try {
+        let res = await fetchWithTimeout(`${PUMP_BASE}/callout/list/${wallet}`, 3500);
+        if (!res.ok) {
+          const proxyUrl = `${getNextWorkerProxy()}?wallet=${wallet}`;
+          res = await fetchWithTimeout(proxyUrl, 3500);
+        }
+        if (!res.ok) return [];
+        const data = await res.json();
+        return (data.callouts || []).map((c: any) => ({ ...c, callerWallet: wallet, callerLabel: label }));
+      } catch {
+        try {
+          const proxyUrl = `${getNextWorkerProxy()}?wallet=${wallet}`;
+          const res = await fetchWithTimeout(proxyUrl, 3500);
+          if (!res.ok) return [];
+          const data = await res.json();
+          return (data.callouts || []).map((c: any) => ({ ...c, callerWallet: wallet, callerLabel: label }));
+        } catch {
+          return [];
+        }
+      }
+    });
+
+    const [feedResults, pnlResults, watchlistResults] = await Promise.all([
+      Promise.all(feedPromises),
+      Promise.all(pnlPromises),
+      Promise.all(watchlistPromises),
+    ]);
+
+    console.log(`[PumpSync] Fetched ${feedResults.reduce((a, b) => a + b.length, 0)} Solana feed coins, ${pnlResults.reduce((a, b) => a + b.length, 0)} pnl entries, ${watchlistResults.reduce((a, b) => a + b.length, 0)} watchlist calls`);
+
+    // Process Home Feed items (STRICT SOLANA ONLY)
+    for (const coinList of feedResults) {
+      for (const item of coinList) {
+        const c = item.position?.callout;
+        if (!c || !item.coinMint) continue;
+        // Strictly exclude EVM / non-Solana tokens
+        if (!isSolanaAddress(item.coinMint)) continue;
+        if (item.chain && item.chain !== "solana") continue;
+
+        const pos = item.position;
+        const wallet = pos.walletAddress || pos.userId || "";
+        const id = c.calloutId || `callout-${item.coinMint}-${wallet.slice(0, 6)}`;
+
+        const callerLabel = pos.userName || labelMap[wallet] || (wallet ? `${wallet.slice(0, 4)}…${wallet.slice(-4)}` : "Solana Trader");
+        const avatarUrl = sanitizeAvatarUrl(pos.profileImage);
+        const xUsername = pos.xUsername || undefined;
+
+        if (wallet) {
+          callerProfilesCache.set(wallet, {
+            username: callerLabel,
+            profileImage: avatarUrl || undefined,
+            xUsername,
+            lastFetched: Date.now(),
+          });
+        }
+
+        const coinImg = sanitizeIpfsUrl(item.coinImage || c.mediaUrl);
+        const createdAtMs = c.calloutTimestamp ? new Date(c.calloutTimestamp).getTime() : Date.now();
+        // Strictly discard stale callouts older than 8 hours (eliminates old 22h+ data)
+        if (Date.now() - createdAtMs > MAX_CALLOUT_AGE_MS) continue;
+
+        if (!cumulativeSignalsMap.has(id)) {
+          newCalloutCount++;
+        }
+
+        const rawMultiple = Number(c.multiple) || 1.0;
+        const entryMcap = Number(c.calledOutAtMcap) || (item.marketCap && rawMultiple > 0 ? Math.round(item.marketCap / rawMultiple) : 0) || Number(c.marketCap) || 0;
+        const currentMcap = Number(item.marketCap) || (entryMcap > 0 && rawMultiple > 0 ? Math.round(entryMcap * rawMultiple) : entryMcap);
+        const actualMultiple = entryMcap > 0 && currentMcap > 0 ? Number((currentMcap / entryMcap).toFixed(2)) : rawMultiple;
+
+        cumulativeSignalsMap.set(id, {
+          calloutId: id,
+          userId: pos.userId || wallet,
+          callerWallet: wallet,
+          callerLabel,
+          callerAvatarUrl: avatarUrl || undefined,
+          callerXUsername: xUsername,
+          coinMint: item.coinMint,
+          coinName: item.coinName || item.symbol || "Solana Project",
+          coinSymbol: (item.symbol || "TOKEN").toUpperCase(),
+          marketCap: entryMcap,
+          entryMcap,
+          currentMcap,
+          calloutPrice: c.calloutPrice || 0,
+          calloutPriceUsd: c.calloutPrice || 0,
+          multiple: actualMultiple,
+          createdAt: createdAtMs,
+          maxPriceSol: 0,
+          maxPriceUsd: 0,
+          thesis: c.thesis || "",
+          user_uuid: pos.userId || wallet,
+          likes: c.likes || 0,
+          hasLiked: c.hasLiked || false,
+          hasReposted: c.hasReposted || false,
+          repostCount: c.repostCount || 0,
+          quoteCount: c.quoteCount || 0,
+          commentCount: c.commentCount || 0,
+          replyCount: c.replyCount || 0,
+          maxMultiplier: Number(c.maxMultiplier) || Number(c.multiple) || 1.0,
+          maxMultiplierAt: c.maxMultiplierAt || new Date().toISOString(),
+          viewCount: c.viewCount || 0,
+          mediaUrl: coinImg,
+          quotedCalloutId: c.quotedCalloutId || null,
+          quotedCallout: c.quotedCallout || null,
+          updates: Array.isArray(c.updates) ? c.updates : [],
+          updateCount: c.updateCount || (Array.isArray(c.updates) ? c.updates.length : 0),
+        });
+      }
+    }
+
+    // Process PnL Leaderboard items (STRICT SOLANA ONLY)
+    for (const entryList of pnlResults) {
+      for (const entry of entryList) {
+        const c = entry.callout;
+        if (!c || !entry.coinMint) continue;
+        if (!isSolanaAddress(entry.coinMint)) continue;
+
+        const wallet = entry.walletAddress || entry.userId || "";
+        const id = c.calloutId || `callout-${entry.coinMint}-${wallet.slice(0, 6)}`;
+        const callerLabel = entry.username || labelMap[wallet] || "Top Alpha";
+        const avatarUrl = sanitizeAvatarUrl(entry.profileImage);
+        const xUsername = entry.xUsername || undefined;
+
+        if (wallet) {
+          callerProfilesCache.set(wallet, {
+            username: callerLabel,
+            profileImage: avatarUrl || undefined,
+            xUsername,
+            lastFetched: Date.now(),
+          });
+        }
+
+        const createdAtMs = c.calloutTimestamp ? new Date(c.calloutTimestamp).getTime() : Date.now();
+        // Strictly discard stale callouts older than 8 hours (eliminates old 22h+ data)
+        if (Date.now() - createdAtMs > MAX_CALLOUT_AGE_MS) continue;
+
+        if (!cumulativeSignalsMap.has(id)) {
+          newCalloutCount++;
+        }
+
+        const rawMultiple = Number(c.multiple) || 1.0;
+        const entryMcap = Number(c.calledOutAtMcap) || 0;
+        const currentMcap = entryMcap > 0 ? Math.round(entryMcap * rawMultiple) : 0;
+
+        cumulativeSignalsMap.set(id, {
+          calloutId: id,
+          userId: entry.userId || wallet,
+          callerWallet: wallet,
+          callerLabel,
+          callerAvatarUrl: avatarUrl || undefined,
+          callerXUsername: xUsername,
+          coinMint: entry.coinMint,
+          coinName: entry.coinName || "Solana Project",
+          coinSymbol: (entry.coinSymbol || "TOKEN").toUpperCase(),
+          marketCap: entryMcap,
+          entryMcap,
+          currentMcap,
+          calloutPrice: c.calloutPrice || 0,
+          calloutPriceUsd: c.calloutPrice || 0,
+          multiple: rawMultiple,
+          createdAt: createdAtMs,
+          maxPriceSol: 0,
+          maxPriceUsd: 0,
+          thesis: c.thesis || "",
+          user_uuid: entry.userId || wallet,
+          likes: c.likes || 0,
+          hasLiked: c.hasLiked || false,
+          hasReposted: c.hasReposted || false,
+          repostCount: c.repostCount || 0,
+          quoteCount: c.quoteCount || 0,
+          commentCount: c.commentCount || 0,
+          replyCount: c.replyCount || 0,
+          maxMultiplier: Number(c.maxMultiplier) || Number(c.multiple) || 1.0,
+          maxMultiplierAt: c.maxMultiplierAt || new Date().toISOString(),
+          viewCount: c.viewCount || 0,
+          mediaUrl: sanitizeIpfsUrl(c.mediaUrl),
+          quotedCalloutId: c.quotedCalloutId || null,
+          quotedCallout: c.quotedCallout || null,
+          updates: Array.isArray(c.updates) ? c.updates : [],
+          updateCount: c.updateCount || 0,
+        });
+      }
+    }
+
+    // Process Watchlist Alpha Caller direct callouts (STRICT SOLANA ONLY)
+    for (const callerCallouts of watchlistResults) {
+      for (const c of callerCallouts) {
         if (!c || !c.coinMint) continue;
+        if (!isSolanaAddress(c.coinMint)) continue;
         const wallet = c.callerWallet || c.userId || "";
-        const label =
-          c.callerLabel ||
-          labelMap[wallet] ||
-          DEFAULT_WATCHLIST[wallet] ||
-          (wallet.length > 8 ? `${wallet.slice(0, 4)}…${wallet.slice(-4)}` : "Alpha Caller");
+        const id = c.calloutId || `callout-${c.coinMint}-${wallet.slice(0, 6)}`;
+        const prof = wallet ? callerProfilesCache.get(wallet) : null;
+        const callerLabel = prof?.username || (c.callerLabel && c.callerLabel !== "Alpha Caller" ? c.callerLabel : "") || labelMap[wallet] || (wallet ? `${wallet.slice(0, 4)}…${wallet.slice(-4)}` : "Solana Trader");
 
-        allCards.push({
-          calloutId: c.calloutId || `callout-${c.coinMint}-${wallet.slice(0, 6)}`,
+        const createdAtMs = typeof c.createdAt === "number" ? c.createdAt : (c.calloutTimestamp ? new Date(c.calloutTimestamp).getTime() : Date.now());
+        // Strictly discard stale callouts older than 8 hours (eliminates old 22h+ data)
+        if (Date.now() - createdAtMs > MAX_CALLOUT_AGE_MS) continue;
+
+        if (!cumulativeSignalsMap.has(id)) {
+          newCalloutCount++;
+        }
+
+        const rawMultiple = Number(c.multiple) || 1.0;
+        const entryMcap = Number(c.calledOutAtMcap) || Number(c.marketCap) || 0;
+        const currentMcap = entryMcap > 0 ? Math.round(entryMcap * rawMultiple) : 0;
+
+        cumulativeSignalsMap.set(id, {
+          calloutId: id,
           userId: wallet,
           callerWallet: wallet,
-          callerLabel: label,
+          callerLabel,
+          callerAvatarUrl: prof?.profileImage,
+          callerXUsername: prof?.xUsername,
           coinMint: c.coinMint,
           coinName: c.coinName || c.name || "Solana Project",
           coinSymbol: (c.coinSymbol || c.symbol || "TOKEN").toUpperCase(),
-          marketCap: c.marketCap || 0,
+          marketCap: entryMcap,
+          entryMcap,
+          currentMcap,
           calloutPrice: c.calloutPrice || 0,
-          calloutPriceUsd: c.calloutPriceUsd || 0,
-          multiple: Number(c.multiple) || 1.0,
-          createdAt: c.createdAt || Date.now(),
+          calloutPriceUsd: c.calloutPriceUsd || c.calloutPrice || 0,
+          multiple: rawMultiple,
+          createdAt: createdAtMs,
           maxPriceSol: c.maxPriceSol || 0,
           maxPriceUsd: c.maxPriceUsd || 0,
           thesis: c.thesis || "",
@@ -172,7 +441,7 @@ async function fetchRealCalloutsFromProxy(): Promise<CalloutCard[]> {
           maxMultiplier: Number(c.maxMultiplier) || Number(c.multiple) || 1.0,
           maxMultiplierAt: c.maxMultiplierAt || new Date().toISOString(),
           viewCount: c.viewCount || 0,
-          mediaUrl: c.mediaUrl || null,
+          mediaUrl: sanitizeIpfsUrl(c.mediaUrl),
           quotedCalloutId: c.quotedCalloutId || null,
           quotedCallout: c.quotedCallout || null,
           updates: Array.isArray(c.updates) ? c.updates : [],
@@ -180,267 +449,58 @@ async function fetchRealCalloutsFromProxy(): Promise<CalloutCard[]> {
         });
       }
     }
-  }
 
-  return allCards;
-}
-
-/**
- * Safe asynchronous non-blocking fetch from individual pump caller wallet
- */
-async function fetchCallerCalloutsSafe(
-  wallet: string,
-  label: string
-): Promise<CalloutCard[]> {
-  try {
-    const res = await fetchWithTimeout(`${PUMP_BASE}/callout/list/${wallet}`, 2000);
-    if (!res.ok) return [];
-
-    const json: PumpCalloutListResponse = await res.json();
-    const callouts = json.callouts ?? [];
-
-    return callouts.map((c: any) => ({
-      calloutId: c.calloutId || `callout-${c.coinMint}-${wallet.slice(0, 6)}`,
-      userId: wallet,
-      callerWallet: wallet,
-      callerLabel: label,
-      coinMint: c.coinMint,
-      coinName: c.coinName || c.name || "Solana Project",
-      coinSymbol: (c.coinSymbol || c.symbol || "TOKEN").toUpperCase(),
-      marketCap: c.marketCap || 0,
-      calloutPrice: c.calloutPrice || 0,
-      calloutPriceUsd: c.calloutPriceUsd || 0,
-      multiple: Number(c.multiple) || 1.0,
-      createdAt: c.createdAt || Date.now(),
-      maxPriceSol: c.maxPriceSol || 0,
-      maxPriceUsd: c.maxPriceUsd || 0,
-      thesis: c.thesis || "",
-      user_uuid: c.user_uuid || `user-${wallet.slice(0, 6)}`,
-      likes: c.likes || 0,
-      hasLiked: c.hasLiked || false,
-      hasReposted: c.hasReposted || false,
-      repostCount: c.repostCount || 0,
-      quoteCount: c.quoteCount || 0,
-      commentCount: c.commentCount || 0,
-      replyCount: c.replyCount || 0,
-      maxMultiplier: Number(c.maxMultiplier) || Number(c.multiple) || 1.0,
-      maxMultiplierAt: c.maxMultiplierAt || new Date().toISOString(),
-      viewCount: c.viewCount || 0,
-      mediaUrl: c.mediaUrl || null,
-      quotedCalloutId: c.quotedCalloutId || null,
-      quotedCallout: c.quotedCallout || null,
-      updates: Array.isArray(c.updates) ? c.updates : [],
-      updateCount: c.updateCount || 0,
-    }));
-  } catch {
-    return [];
-  }
-}
-
-/**
- * Enriches caller profiles with REAL photos and usernames from pump.fun /users/:wallet
- */
-async function enrichCallerProfiles(cards: CalloutCard[]): Promise<CalloutCard[]> {
-  const uniqueWallets = Array.from(new Set(cards.map((c) => c.callerWallet).filter(Boolean)));
-  const now = Date.now();
-
-  const toFetch = uniqueWallets.filter((w) => {
-    const cached = callerProfilesCache.get(w);
-    return !cached || now - cached.lastFetched > 300_000;
-  });
-
-  if (toFetch.length > 0) {
-    const promises = toFetch.slice(0, 20).map(async (wallet) => {
-      try {
-        const res = await fetchWithTimeout(`${PUMP_BASE}/users/${wallet}`, 3000);
-        if (res.ok) {
-          const user = await res.json();
-          let pImg = user.profile_image || null;
-          if (pImg && pImg.includes("ipfs.io")) {
-            pImg = pImg.replace("https://ipfs.io/ipfs/", "https://pump.mypinata.cloud/ipfs/");
-          }
-          callerProfilesCache.set(wallet, {
-            username: user.username || undefined,
-            profileImage: pImg || undefined,
-            xUsername: user.x_username || undefined,
-            lastFetched: now,
-          });
-        }
-      } catch {
-        /* continue */
-      }
-    });
-    await Promise.allSettled(promises);
-  }
-
-  return cards.map((c) => {
-    const p = callerProfilesCache.get(c.callerWallet);
-    return {
-      ...c,
-      callerLabel: p?.username || c.callerLabel,
-      callerAvatarUrl: p?.profileImage || undefined,
-      callerXUsername: p?.xUsername || undefined,
-    };
-  });
-}
-
-/**
- * Enriches all callouts with real DexScreener & Pump.fun metadata (symbols, names, icons)
- */
-async function enrichCalloutMetadata(cards: CalloutCard[]): Promise<CalloutCard[]> {
-  const uniqueMints = Array.from(new Set(cards.map((c) => c.coinMint).filter(Boolean)));
-  if (uniqueMints.length === 0) return cards;
-
-  const metadataMap = new Map<
-    string,
-    { symbol?: string; name?: string; imageUrl?: string; priceUsd?: number; mcap?: number }
-  >();
-
-  // 1. Fetch from DexScreener in chunks of 30 for ALL mints
-  const chunkSize = 30;
-  for (let i = 0; i < uniqueMints.length; i += chunkSize) {
-    const chunk = uniqueMints.slice(i, i + chunkSize);
-    try {
-      const res = await fetchWithTimeout(`${DEX_BASE}/latest/dex/tokens/${chunk.join(",")}`, 3500);
-      if (res.ok) {
-        const data = await res.json();
-        const pairs: any[] = Array.isArray(data?.pairs) ? data.pairs : [];
-        for (const p of pairs) {
-          if (p.chainId === "solana" && p.baseToken?.address) {
-            const addr = p.baseToken.address;
-            const existing = metadataMap.get(addr);
-            if (!existing || (p.info?.imageUrl && !existing.imageUrl) || (p.liquidity?.usd ?? 0) > 0) {
-              metadataMap.set(addr, {
-                symbol: p.baseToken.symbol,
-                name: p.baseToken.name,
-                imageUrl: p.info?.imageUrl,
-                priceUsd: p.priceUsd ? parseFloat(p.priceUsd) : undefined,
-                mcap: p.marketCap || p.fdv,
-              });
-            }
-          }
-        }
-      }
-    } catch {
-      /* continue */
-    }
-  }
-
-  // 2. For mints still missing real metadata, query pump.fun coin endpoint directly
-  const missingMints = uniqueMints.filter((m) => {
-    const meta = metadataMap.get(m);
-    return !meta || !meta.symbol || !meta.name;
-  });
-
-  if (missingMints.length > 0) {
-    const pumpPromises = missingMints.slice(0, 40).map(async (mint) => {
-      try {
-        const res = await fetchWithTimeout(`${PUMP_BASE}/coins/${mint}`, 2500);
-        if (res.ok) {
-          const coin = await res.json();
-          if (coin && coin.symbol) {
-            metadataMap.set(mint, {
-              symbol: String(coin.symbol).toUpperCase(),
-              name: coin.name || coin.symbol,
-              imageUrl: coin.image_uri,
-              priceUsd: coin.usd_market_cap ? Number(coin.usd_market_cap) / 1_000_000_000 : undefined,
-              mcap: Number(coin.usd_market_cap) || undefined,
-            });
-          }
-        }
-      } catch {
-        /* continue */
-      }
-    });
-    await Promise.allSettled(pumpPromises);
-  }
-
-  return cards
-    .map((c) => {
-      const meta = metadataMap.get(c.coinMint);
-      const isBadSymbol = (s?: string) => !s || s.startsWith("0x") || s.length < 2 || s.toLowerCase() === c.coinMint.slice(0, 4).toLowerCase();
-      
-      const realSymbol = meta?.symbol || (!isBadSymbol(c.coinSymbol) ? c.coinSymbol : undefined);
-      const realName = meta?.name || (c.coinName && c.coinName !== "Solana Token" ? c.coinName : realSymbol || "Solana Project");
-
-      let img = meta?.imageUrl || c.mediaUrl || null;
-      if (img && img.includes("ipfs.io")) {
-        img = img.replace("https://ipfs.io/ipfs/", "https://cf-ipfs.com/ipfs/");
-      }
-      if (c.coinMint === "2vdc4owf1MPz54jJCN61y3QSKqjcPpr32wJ9qKkmpump") {
-        img = "/images/baton-logo.png";
-      }
-
-      return {
-        ...c,
-        coinSymbol: realSymbol || c.coinSymbol || (meta?.name ? meta.name.slice(0, 6).toUpperCase() : "TOKEN"),
-        coinName: realName,
-        mediaUrl: img,
-      };
-    })
-    .filter((c) => {
-      // Filter out invalid/unresolved address artifacts
-      if (!c.coinSymbol || c.coinSymbol.startsWith("0x")) return false;
-      return true;
-    });
-}
-
-let isRefreshing = false;
-let lastRefreshedAt = 0;
-
-async function revalidateInBackground() {
-  if (isRefreshing) return;
-  isRefreshing = true;
-  try {
-    const labelMap = getWatchlistMap();
-    const realCallouts = await fetchRealCalloutsFromProxy();
-    const coveredWallets = new Set(realCallouts.map((c) => c.callerWallet));
-
-    const remainingWallets = Object.entries(labelMap).filter(([w]) => !coveredWallets.has(w));
-    if (remainingWallets.length > 0) {
-      const callerPromises = remainingWallets.map(([w, l]) => fetchCallerCalloutsSafe(w, l));
-      const callerResults = await Promise.allSettled(callerPromises);
-      callerResults.forEach((r) => {
-        if (r.status === "fulfilled" && Array.isArray(r.value)) {
-          realCallouts.push(...r.value);
-        }
-      });
-    }
-
-    if (realCallouts.length > 0) {
-      for (const c of realCallouts) {
-        if (c && c.coinMint && c.calloutId) {
-          cumulativeSignalsMap.set(c.calloutId, c);
-        }
-      }
-    }
-
-    const rawAccumulated = Array.from(cumulativeSignalsMap.values()).sort((a, b) => b.createdAt - a.createdAt);
-    const withProfiles = await enrichCallerProfiles(rawAccumulated);
-    const allAccumulated = await enrichCalloutMetadata(withProfiles);
-
-    if (allAccumulated.length > 0) {
-      cachedSignals = { data: allAccumulated, time: Date.now() };
-    }
-    lastRefreshedAt = Date.now();
+    lastSyncTime = Date.now();
   } catch (err) {
-    /* continue with current cache */
+    console.error("[CalloutSync] Error:", err);
   } finally {
-    isRefreshing = false;
+    isSyncing = false;
   }
+
+  return newCalloutCount;
 }
 
-export async function GET() {
-  const labelMap = getWatchlistMap();
-  const now = Date.now();
+// ─── Background auto-refresh loop ─────────────────────────────────────────────
+let bgLoopRunning = false;
 
-  // Trigger non-blocking background revalidation if stale (> 25s)
-  if (now - lastRefreshedAt > 25_000) {
-    revalidateInBackground().catch(() => {});
+function startBackgroundLoop() {
+  if (bgLoopRunning) return;
+  bgLoopRunning = true;
+
+  // Initial sync immediately
+  syncLivePumpCallouts().catch(() => {});
+
+  // Continuous sync every 4 seconds
+  setInterval(() => {
+    syncLivePumpCallouts().catch(() => {});
+  }, 4000);
+}
+
+// Start background loop
+startBackgroundLoop();
+
+// ─── GET handler ─────────────────────────────────────────────────────────────
+export async function GET(req: NextRequest) {
+  const labelMap = getWatchlistMap();
+  const { searchParams } = new URL(req.url);
+  const forceRefresh = searchParams.get("refresh") === "1" || searchParams.get("refresh") === "true";
+
+  // If force refresh requested, or never synced, or stale (> 3s), sync fresh calls immediately
+  if (forceRefresh || lastSyncTime === 0 || Date.now() - lastSyncTime > 3000) {
+    await syncLivePumpCallouts(forceRefresh);
   }
 
-  const baseCards = cachedSignals?.data || Array.from(cumulativeSignalsMap.values());
+  const now = Date.now();
+  // Prune signals older than MAX_CALLOUT_AGE_MS (strictly discards stale 22h+ data)
+  for (const [id, c] of cumulativeSignalsMap.entries()) {
+    if (now - (c.createdAt || 0) > MAX_CALLOUT_AGE_MS) {
+      cumulativeSignalsMap.delete(id);
+    }
+  }
+
+  const baseCards = Array.from(cumulativeSignalsMap.values());
   const allCards = [...userSubmittedCallouts, ...baseCards]
+    .filter((c) => now - (c.createdAt || 0) <= MAX_CALLOUT_AGE_MS)
     .map((c) => {
       const prof = c.callerWallet ? callerProfilesCache.get(c.callerWallet) : null;
       return {
@@ -452,38 +512,114 @@ export async function GET() {
     })
     .sort((a, b) => b.createdAt - a.createdAt);
 
-  const watched: WatchedSummary[] = Object.entries(labelMap).map(([wallet, label]) => {
-    const prof = callerProfilesCache.get(wallet);
+  // Batch-enrich unique active mints with DexScreener live market cap, price, real symbol & name
+  const uniqueMints = Array.from(new Set(allCards.map((c) => c.coinMint).filter(Boolean))).slice(0, 90);
+  try {
+    await enrichTokensWithDexScreener(uniqueMints);
+  } catch {}
+
+  const enrichedCards = allCards.map((c) => {
+    const live = liveTokenMetaCache.get(c.coinMint);
+    const entryMcap = c.entryMcap || (c as any).calledOutAtMcap || c.marketCap || 0;
+    const currentMcap = live?.currentMcap || c.currentMcap || (entryMcap > 0 && c.multiple ? Math.round(entryMcap * c.multiple) : entryMcap);
+    const currentPriceUsd = live?.currentPriceUsd || c.currentPriceUsd || (c.calloutPriceUsd ? c.calloutPriceUsd * (c.multiple || 1) : 0);
+    const actualMultiple = entryMcap > 0 && currentMcap > 0
+      ? Number((currentMcap / entryMcap).toFixed(2))
+      : Number(c.multiple) || 1.0;
+
     return {
-      wallet,
-      label: prof?.username || label,
-      count: allCards.filter((c) => c.callerWallet === wallet).length,
-      avatarUrl: prof?.profileImage || undefined,
-      xUsername: prof?.xUsername || undefined,
+      ...c,
+      coinName: live?.name || (c.coinName && c.coinName !== "Solana Project" ? c.coinName : live?.symbol || c.coinSymbol),
+      coinSymbol: live?.symbol || (c.coinSymbol && c.coinSymbol !== "TOKEN" ? c.coinSymbol : live?.name || "TOKEN"),
+      mediaUrl: live?.iconUrl || c.mediaUrl,
+      marketCap: entryMcap,
+      entryMcap,
+      currentMcap,
+      currentPriceUsd,
+      multiple: actualMultiple,
     };
   });
+
+  // Combine all known callers: watchlist + all profiles in cache + all callers from signals
+  const allKnownWallets = new Map<string, { label: string; avatarUrl?: string; xUsername?: string }>();
+
+  // 1. From labelMap (watchlist)
+  for (const [wallet, label] of Object.entries(labelMap)) {
+    allKnownWallets.set(wallet, { label });
+  }
+
+  // 2. From callerProfilesCache (350+ verified callers)
+  for (const [wallet, prof] of callerProfilesCache.entries()) {
+    if (prof.username) {
+      const existing = allKnownWallets.get(wallet);
+      allKnownWallets.set(wallet, {
+        label: prof.username || existing?.label || wallet.slice(0, 6),
+        avatarUrl: prof.profileImage || existing?.avatarUrl,
+        xUsername: prof.xUsername || existing?.xUsername,
+      });
+    }
+  }
+
+  // 3. From enrichedCards
+  for (const c of enrichedCards) {
+    if (c.callerWallet) {
+      const existing = allKnownWallets.get(c.callerWallet);
+      allKnownWallets.set(c.callerWallet, {
+        label: c.callerLabel || existing?.label || c.callerWallet.slice(0, 6),
+        avatarUrl: c.callerAvatarUrl || existing?.avatarUrl,
+        xUsername: c.callerXUsername || existing?.xUsername,
+      });
+    }
+  }
+
+  // Count callouts for each caller
+  const callerCalloutCounts = new Map<string, number>();
+  for (const c of enrichedCards) {
+    if (c.callerWallet) {
+      callerCalloutCounts.set(c.callerWallet, (callerCalloutCounts.get(c.callerWallet) || 0) + 1);
+    }
+    if (c.callerLabel) {
+      const key = c.callerLabel.toLowerCase();
+      callerCalloutCounts.set(key, (callerCalloutCounts.get(key) || 0) + 1);
+    }
+  }
+
+  const watched: WatchedSummary[] = Array.from(allKnownWallets.entries()).map(([wallet, info]) => {
+    const prof = callerProfilesCache.get(wallet);
+    const count = callerCalloutCounts.get(wallet) || (info.label ? callerCalloutCounts.get(info.label.toLowerCase()) : 0) || 0;
+    return {
+      wallet,
+      label: prof?.username || info.label,
+      count,
+      avatarUrl: prof?.profileImage || info.avatarUrl || undefined,
+      xUsername: prof?.xUsername || info.xUsername || undefined,
+    };
+  }).sort((a, b) => b.count - a.count || a.label.localeCompare(b.label));
 
   return NextResponse.json(
     {
       success: true,
-      updatedAt: cachedSignals?.time || Date.now(),
-      callouts: allCards,
-      count: allCards.length,
+      updatedAt: lastSyncTime || Date.now(),
+      callouts: enrichedCards,
+      count: enrichedCards.length,
       watched,
       activeWallets: watched.filter((w) => w.count > 0).length,
-      totalWallets: Object.keys(labelMap).length,
+      totalWallets: watched.length,
       emptyWallets: [],
       errors: [],
     },
     {
       status: 200,
       headers: {
-        "Cache-Control": "public, s-maxage=10, stale-while-revalidate=30",
+        "Cache-Control": "no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0",
+        Pragma: "no-cache",
+        Expires: "0",
       },
     }
   );
 }
 
+// ─── POST handler (user submitted callouts) ───────────────────────────────────
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
@@ -494,7 +630,6 @@ export async function POST(req: NextRequest) {
       entryPrice,
       entryMcap,
       thesis,
-      burnAmount,
       callerWallet,
       callerName,
     } = body;
@@ -543,16 +678,17 @@ export async function POST(req: NextRequest) {
       quotedCallout: null,
       updates: [],
       updateCount: 0,
-    } as any;
+    };
 
     userSubmittedCallouts.unshift(newCallout);
+    cumulativeSignalsMap.set(newCallout.calloutId, newCallout);
 
     return NextResponse.json({
       success: true,
       callout: newCallout,
       count: userSubmittedCallouts.length,
     });
-  } catch (err) {
+  } catch {
     return NextResponse.json({ error: "Failed to submit callout" }, { status: 500 });
   }
 }

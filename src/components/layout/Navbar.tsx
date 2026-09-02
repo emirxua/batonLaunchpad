@@ -23,6 +23,8 @@ import {
   Users,
   RefreshCw,
   Zap,
+  Radio,
+  Flame,
   Check,
   Copy,
   ExternalLink,
@@ -30,6 +32,7 @@ import {
 } from "lucide-react";
 import useSWR from "swr";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { formatCryptoPrice } from "@/lib/utils";
 
 const fetcher = (url: string) => fetch(url).then((res) => res.json());
 
@@ -71,6 +74,12 @@ export const Navbar: React.FC = () => {
   });
 
   const activeCount = activeUsersData?.activeUsers ?? 1;
+
+  const { data: batonStats } = useSWR("/api/token-stats", fetcher, {
+    refreshInterval: 8_000,
+    revalidateOnFocus: true,
+    dedupingInterval: 4_000,
+  });
 
   const { connected, publicKey, disconnect } = useWallet();
   const { setVisible: openWalletModal } = useWalletModal();
@@ -134,14 +143,17 @@ export const Navbar: React.FC = () => {
     {
       name: "Callouts Feed",
       href: "/",
+      icon: Radio,
     },
     {
       name: "Terminal Swap",
       href: "/terminal",
+      icon: Zap,
     },
     {
       name: "Burn-to-Rank",
       href: "/leaderboard",
+      icon: Flame,
     },
   ];
 
@@ -185,10 +197,11 @@ export const Navbar: React.FC = () => {
           </div>
 
           {/* ── Center: Navigation Tabs ──────────────────────────────── */}
-          <nav className="hidden lg:flex items-center gap-1 xl:gap-2 font-mono text-xs font-bold shrink-0 mx-auto">
+          <nav className="hidden lg:flex items-center gap-2 xl:gap-3 font-mono text-xs font-bold shrink-0 mx-auto">
             {navLinks.map((link) => {
               const isActive =
                 pathname === link.href || (link.href !== "/" && pathname?.startsWith(link.href));
+              const Icon = link.icon;
 
               return (
                 <Link
@@ -201,12 +214,19 @@ export const Navbar: React.FC = () => {
                       );
                     }
                   }}
-                  className={`px-3 py-1.5 rounded-xl transition-all flex items-center gap-1.5 whitespace-nowrap ${
+                  className={`px-3.5 py-1.5 rounded-xl transition-all flex items-center gap-2 whitespace-nowrap group ${
                     isActive
-                      ? "bg-amber-500/15 text-amber-500 dark:text-amber-400 font-black shadow-sm"
-                      : "text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-white/5"
+                      ? "bg-amber-500/15 text-amber-500 dark:text-amber-400 font-black shadow-sm ring-1 ring-amber-500/30"
+                      : "text-zinc-600 dark:text-zinc-400 hover:text-zinc-950 dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-white/5"
                   }`}
                 >
+                  <Icon
+                    className={`w-3.5 h-3.5 transition-colors ${
+                      isActive
+                        ? "text-amber-500"
+                        : "text-zinc-400 group-hover:text-amber-500"
+                    }`}
+                  />
                   <span>{link.name}</span>
                 </Link>
               );
@@ -215,6 +235,35 @@ export const Navbar: React.FC = () => {
 
           {/* ── Right: Twitter, Auth / Profile, Wallet, Theme ─────────── */}
           <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
+            {/* $BATON Live Price Pill (Desktop) */}
+            <a
+              href="https://pump.fun/coin/2vdc4owf1MPz54jJCN61y3QSKqjcPpr32wJ9qKkmpump"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="hidden xl:flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/30 text-amber-500 dark:text-amber-400 text-[11px] font-bold transition-all shadow-sm cursor-pointer"
+              title="View $BATON profile on Pump.fun"
+            >
+              <div className="w-3.5 h-3.5 rounded-full overflow-hidden shrink-0">
+                <img
+                  src={batonStats?.iconUrl || "/images/baton-logo.png"}
+                  alt="BATON"
+                  className="w-full h-full object-cover"
+                  onError={(e) => {
+                    (e.currentTarget as HTMLImageElement).src = "/images/baton-logo.png";
+                  }}
+                />
+              </div>
+              <span className="font-mono font-black">$BATON</span>
+              <span className="font-mono opacity-90 text-[10px]">
+                {formatCryptoPrice(batonStats?.priceUsd)}
+              </span>
+              {typeof batonStats?.priceChange24h === "number" && (
+                <span className={`text-[9px] font-bold ${batonStats.priceChange24h >= 0 ? "text-emerald-400" : "text-rose-400"}`}>
+                  {batonStats.priceChange24h >= 0 ? `+${batonStats.priceChange24h.toFixed(1)}%` : `${batonStats.priceChange24h.toFixed(1)}%`}
+                </span>
+              )}
+            </a>
+
             {/* Official Twitter (X) Direct Link (Desktop only) */}
             <a
               href="https://x.com/batonoutbid"

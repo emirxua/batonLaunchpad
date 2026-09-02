@@ -2,6 +2,7 @@ import React, { useState, useMemo } from "react";
 import useSWR from "swr";
 import { TrendingTokenItem } from "@/types/token";
 import { JupiterSwapModal } from "@/components/modals/JupiterSwapModal";
+import { BoostAnyTokenModal } from "@/components/modals/BoostAnyTokenModal";
 import {
   Zap,
   Copy,
@@ -14,6 +15,7 @@ import {
   Coins,
   AlertTriangle,
   X,
+  Flame,
 } from "lucide-react";
 
 type FilterTab = "all" | "gainers" | "top_volume" | "high_mcap";
@@ -38,6 +40,15 @@ export function TrendingGrid({ onSelectToken }: TrendingGridProps) {
   const [activeTab, setActiveTab] = useState<FilterTab>("all");
   const [copiedCA, setCopiedCA] = useState<string | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [isBoostModalOpen, setIsBoostModalOpen] = useState(false);
+  const [selectedBoostToken, setSelectedBoostToken] = useState<{
+    mint: string;
+    name: string;
+    symbol: string;
+    iconUrl?: string;
+    priceUsd?: number;
+    marketCap?: number;
+  } | null>(null);
   const [toastMessage, setToastMessage] = useState<string | null>(null);
   const [confirmNonPumpToken, setConfirmNonPumpToken] = useState<any | null>(null);
   const [swapModalToken, setSwapModalToken] = useState<{
@@ -202,14 +213,30 @@ export function TrendingGrid({ onSelectToken }: TrendingGridProps) {
             </button>
           </div>
 
-          <button
-            type="button"
-            onClick={handleManualRefresh}
-            title="Refresh Trending Data"
-            className="p-1.5 rounded-xl border border-zinc-200 dark:border-white/10 bg-white dark:bg-zinc-900 text-zinc-400 hover:text-amber-400 transition-all cursor-pointer hover:bg-zinc-100 dark:hover:bg-zinc-800"
-          >
-            <RefreshCw className={`w-3.5 h-3.5 ${isRefreshing ? "animate-spin text-amber-400" : ""}`} />
-          </button>
+          <div className="flex items-center gap-2 shrink-0">
+            {/* Burn $BATON to Leaderboard CTA Button */}
+            <button
+              type="button"
+              onClick={() => {
+                setSelectedBoostToken(null);
+                setIsBoostModalOpen(true);
+              }}
+              className="px-3 py-1.5 rounded-xl bg-gradient-to-r from-amber-500 via-orange-500 to-amber-500 hover:from-amber-400 hover:to-orange-400 text-zinc-950 font-black text-xs uppercase tracking-wider flex items-center gap-1.5 shadow-md shadow-amber-500/10 cursor-pointer active:scale-95 transition-all"
+              title="Burn $BATON to rank any token on the official Leaderboard"
+            >
+              <Flame className="w-3.5 h-3.5 fill-current text-zinc-950" />
+              <span>Burn $BATON to Rank</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={handleManualRefresh}
+              title="Refresh Trending Data"
+              className="p-1.5 rounded-xl border border-zinc-200 dark:border-white/10 bg-white dark:bg-zinc-900 text-zinc-400 hover:text-amber-400 transition-all cursor-pointer hover:bg-zinc-100 dark:hover:bg-zinc-800"
+            >
+              <RefreshCw className={`w-3.5 h-3.5 ${isRefreshing ? "animate-spin text-amber-400" : ""}`} />
+            </button>
+          </div>
         </div>
       </div>
 
@@ -328,8 +355,8 @@ export function TrendingGrid({ onSelectToken }: TrendingGridProps) {
                 </span>
               </div>
 
-              {/* ── Actions Row: Instant Swap, DEX, Pump, Copy CA ─────────── */}
-              <div className="pt-2 border-t border-zinc-100 dark:border-white/5 flex items-center justify-between gap-1.5">
+              {/* ── Actions Row: Instant Swap, 💊 Pump.fun, 🦅 Dex, Copy CA ─────────── */}
+              <div className="pt-2 border-t border-zinc-100 dark:border-white/5 flex items-center justify-between gap-1.5 flex-wrap sm:flex-nowrap">
                 <button
                   type="button"
                   onClick={(e) => {
@@ -351,28 +378,65 @@ export function TrendingGrid({ onSelectToken }: TrendingGridProps) {
                   <span>Instant Swap</span>
                 </button>
 
+                {/* Boost to Leaderboard Button */}
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setSelectedBoostToken({
+                      mint: token.ca,
+                      name: token.name,
+                      symbol: token.symbol,
+                      iconUrl: token.iconUrl,
+                      priceUsd: token.price || token.priceUsd || 0,
+                      marketCap: token.mcap || token.marketCap || 0,
+                    });
+                    setIsBoostModalOpen(true);
+                  }}
+                  className="py-1.5 px-2 rounded-lg bg-gradient-to-r from-amber-500/20 to-orange-500/20 hover:from-amber-500/30 hover:to-orange-500/30 text-amber-500 dark:text-amber-400 border border-amber-500/30 font-extrabold text-[10px] flex items-center gap-0.5 shadow-sm transition-all cursor-pointer active:scale-95 shrink-0"
+                  title={`Burn $BATON to rank $${token.symbol} on Leaderboard`}
+                >
+                  <Flame className="w-3 h-3 fill-current text-orange-500" />
+                  <span>Boost</span>
+                </button>
+
+                {/* Pump.fun Official Coin Link */}
                 <a
-                  href={token.dexScreenerUrl}
+                  href={`https://pump.fun/coin/${token.ca}`}
                   target="_blank"
                   rel="noopener noreferrer"
                   onClick={(e) => e.stopPropagation()}
-                  className="p-1.5 rounded-lg bg-zinc-100 dark:bg-zinc-900 border border-zinc-200 dark:border-white/10 hover:border-amber-500/50 text-zinc-400 hover:text-amber-400 transition-colors text-[10px] font-bold flex items-center gap-1"
-                  title="View on DexScreener"
+                  className="px-2 py-1.5 rounded-lg bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 text-[10px] font-extrabold flex items-center gap-1 transition-all shadow-sm shrink-0"
+                  title="View & Trade on Pump.fun"
+                >
+                  <span>💊 Pump.fun</span>
+                  <ExternalLink className="w-2.5 h-2.5" />
+                </a>
+
+                {/* DexScreener Link */}
+                <a
+                  href={token.dexScreenerUrl || `https://dexscreener.com/solana/${token.ca}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  onClick={(e) => e.stopPropagation()}
+                  className="px-2 py-1.5 rounded-lg bg-amber-500/10 hover:bg-amber-500/20 text-amber-500 dark:text-amber-400 border border-amber-500/30 text-[10px] font-extrabold flex items-center gap-1 transition-all shadow-sm shrink-0"
+                  title="View Chart on DexScreener"
                 >
                   <span>🦅 Dex</span>
                   <ExternalLink className="w-2.5 h-2.5" />
                 </a>
 
+                {/* Copy CA Button */}
                 <button
                   type="button"
                   onClick={(e) => handleCopy(token.ca, e)}
-                  className="p-1.5 rounded-lg bg-zinc-100 dark:bg-zinc-900 border border-zinc-200 dark:border-white/10 hover:border-amber-500/50 text-zinc-400 hover:text-amber-400 transition-colors cursor-pointer"
-                  title="Copy CA"
+                  className="p-1.5 rounded-lg bg-zinc-100 dark:bg-zinc-900 hover:bg-zinc-200 dark:hover:bg-zinc-800 border border-zinc-200 dark:border-white/10 hover:border-amber-500/50 text-zinc-400 hover:text-amber-400 transition-colors cursor-pointer shrink-0"
+                  title="Copy Contract Address"
                 >
                   {copiedCA === token.ca ? (
-                    <Check className="w-3 h-3 text-emerald-400" />
+                    <Check className="w-3.5 h-3.5 text-emerald-400" />
                   ) : (
-                    <Copy className="w-3 h-3" />
+                    <Copy className="w-3.5 h-3.5" />
                   )}
                 </button>
               </div>
@@ -491,6 +555,21 @@ export function TrendingGrid({ onSelectToken }: TrendingGridProps) {
           targetIconUrl={swapModalToken.iconUrl}
         />
       )}
+
+      {/* ── Boost to Leaderboard Modal ─────────────────────────────── */}
+      <BoostAnyTokenModal
+        isOpen={isBoostModalOpen}
+        onClose={() => {
+          setIsBoostModalOpen(false);
+          setSelectedBoostToken(null);
+        }}
+        initialToken={selectedBoostToken}
+        onSuccess={() => {
+          setIsBoostModalOpen(false);
+          setSelectedBoostToken(null);
+          mutate();
+        }}
+      />
     </section>
   );
 }

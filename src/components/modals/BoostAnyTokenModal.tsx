@@ -26,6 +26,14 @@ interface BoostAnyTokenModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSuccess?: (mint: string, burnedAmount: number) => void;
+  initialToken?: {
+    mint: string;
+    name: string;
+    symbol: string;
+    iconUrl?: string;
+    priceUsd?: number;
+    marketCap?: number;
+  } | null;
 }
 
 interface SearchedToken {
@@ -43,6 +51,7 @@ export function BoostAnyTokenModal({
   isOpen,
   onClose,
   onSuccess,
+  initialToken,
 }: BoostAnyTokenModalProps) {
   const { connection } = useConnection();
   const { publicKey, sendTransaction, connected } = useWallet();
@@ -57,23 +66,53 @@ export function BoostAnyTokenModal({
   const [txSignature, setTxSignature] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
-  // Reset state whenever modal opens or closes
+  // Reset or pre-fill state whenever modal opens
   useEffect(() => {
     if (isOpen) {
-      setSearchQuery("");
-      setSelectedToken(null);
+      if (initialToken) {
+        setSelectedToken({
+          mint: initialToken.mint,
+          name: initialToken.name,
+          symbol: initialToken.symbol,
+          iconUrl: initialToken.iconUrl,
+          priceUsd: initialToken.priceUsd ?? 0,
+          marketCap: initialToken.marketCap ?? 0,
+          volume24h: 0,
+          liquidityUsd: 0,
+        });
+        setSearchQuery(initialToken.mint);
+      } else {
+        setSearchQuery("");
+        setSelectedToken(null);
+      }
       setBurnAmount("");
       setErrorMessage(null);
       setTxSignature(null);
     }
-  }, [isOpen]);
+  }, [isOpen, initialToken]);
 
-  // Live CA lookup via DexScreener proxy
+  // Live CA / token lookup via DexScreener & Pump.fun proxy
   useEffect(() => {
     const trimmed = searchQuery.trim();
     if (!trimmed) {
       setIsSearching(false);
       setSelectedToken(null);
+      return;
+    }
+
+    // If query matches current initialToken mint, retain initialToken data
+    if (initialToken && trimmed.toLowerCase() === initialToken.mint.toLowerCase()) {
+      setSelectedToken({
+        mint: initialToken.mint,
+        name: initialToken.name,
+        symbol: initialToken.symbol,
+        iconUrl: initialToken.iconUrl,
+        priceUsd: initialToken.priceUsd ?? 0,
+        marketCap: initialToken.marketCap ?? 0,
+        volume24h: 0,
+        liquidityUsd: 0,
+      });
+      setIsSearching(false);
       return;
     }
 
@@ -98,14 +137,16 @@ export function BoostAnyTokenModal({
             ? data
             : null;
 
-          if (match && match.mint) {
+          if (match && (match.mint || match.ca)) {
+            const mcap = match.marketCap || match.mcap || match.usd_market_cap || 0;
+            const price = match.priceUsd || match.price || 0;
             setSelectedToken({
-              mint: match.mint,
+              mint: match.mint || match.ca,
               name: match.name || "Solana Token",
               symbol: (match.symbol || "TOKEN").toUpperCase(),
-              iconUrl: match.iconUrl || undefined,
-              priceUsd: match.priceUsd || 0,
-              marketCap: match.marketCap || 0,
+              iconUrl: match.iconUrl || match.image_uri,
+              priceUsd: price,
+              marketCap: mcap,
               volume24h: match.volume24h || 0,
               liquidityUsd: match.liquidityUsd || 0,
             });
@@ -116,7 +157,7 @@ export function BoostAnyTokenModal({
             setSelectedToken({
               mint: trimmed,
               name: "Solana Token",
-              symbol: `${trimmed.slice(0, 4)}…${trimmed.slice(-4)}`,
+              symbol: "SOLANA",
               priceUsd: 0,
               marketCap: 0,
               volume24h: 0,
@@ -135,7 +176,7 @@ export function BoostAnyTokenModal({
     } else {
       setSelectedToken(null);
     }
-  }, [searchQuery]);
+  }, [searchQuery, initialToken]);
 
   if (!isOpen) return null;
 
@@ -250,37 +291,32 @@ export function BoostAnyTokenModal({
     >
       <div
         onClick={(e) => e.stopPropagation()}
-        className="bg-white dark:bg-[#0D0E12] border border-amber-500/30 rounded-3xl w-full max-w-lg p-6 sm:p-7 space-y-5 shadow-2xl relative overflow-hidden cursor-default"
+        className="bg-white dark:bg-[#0c0d14] border border-amber-500/40 rounded-3xl w-full max-w-lg p-6 sm:p-7 space-y-5 shadow-2xl shadow-amber-500/10 relative overflow-hidden cursor-default"
       >
-        <div className="absolute top-0 right-0 -mr-20 -mt-20 w-60 h-60 bg-amber-500/10 rounded-full blur-3xl pointer-events-none" />
+        <div className="absolute top-0 right-0 -mr-24 -mt-24 w-72 h-72 bg-gradient-to-br from-amber-500/15 via-orange-500/10 to-transparent rounded-full blur-3xl pointer-events-none" />
 
         {/* ── Header ─────────────────────────────────────────────────── */}
-        <div className="flex items-center justify-between border-b border-zinc-200 dark:border-white/10 pb-4">
-          <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-xl bg-orange-500/20 text-orange-400 font-bold flex items-center justify-center">
-              <Flame className="w-4 h-4 fill-current text-orange-500" />
-            </div>
-            <div>
-              <h3 className="font-bold text-sm sm:text-base text-zinc-950 dark:text-white uppercase tracking-wider">
-                Boost Any Token
-              </h3>
-              <span className="text-[10px] text-zinc-500 block">
-                Burn $BATON to rank any Solana token on the Leaderboard
-              </span>
-            </div>
+        <div className="flex items-center gap-3.5 border-b border-zinc-200 dark:border-white/10 pb-4">
+          <div className="w-11 h-11 rounded-2xl bg-gradient-to-br from-amber-500/25 via-orange-500/15 to-transparent border border-amber-500/40 text-orange-500 flex items-center justify-center shadow-lg shadow-orange-500/10 shrink-0">
+            <Flame className="w-5 h-5 fill-current animate-pulse" />
           </div>
-          <button
-            onClick={onClose}
-            className="p-1.5 rounded-lg text-zinc-500 hover:text-zinc-950 dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-white/5 transition-colors cursor-pointer"
-          >
-            <X className="w-4 h-4" />
-          </button>
+          <div className="min-w-0">
+            <h3 className="font-black text-base sm:text-lg text-zinc-950 dark:text-white uppercase tracking-wider flex items-center gap-2">
+              <span>{selectedToken ? `Burn $BATON & Boost $${selectedToken.symbol}` : "Burn $BATON & Boost Rank"}</span>
+              <span className="text-[10px] px-2 py-0.5 rounded-full bg-amber-500/15 text-amber-500 border border-amber-500/30 font-bold uppercase">
+                Leaderboard
+              </span>
+            </h3>
+            <p className="text-xs text-zinc-500 dark:text-zinc-400 truncate">
+              {selectedToken ? `Burn $BATON to elevate $${selectedToken.symbol} on the official Leaderboard` : "Burn $BATON to rank any Solana token on the Leaderboard"}
+            </p>
+          </div>
         </div>
 
         {/* ── Step 1: Search / Paste Token CA ─────────────────────────── */}
         <div className="space-y-2">
           <label className="text-xs font-bold text-zinc-700 dark:text-zinc-300 uppercase tracking-wider flex items-center justify-between">
-            <span>1. Enter Solana Contract Address (CA)</span>
+            <span>1. Target Solana Contract Address (CA)</span>
             {isSearching && (
               <span className="text-[10px] text-amber-500 animate-pulse font-bold">
                 Fetching DexScreener...
@@ -294,62 +330,98 @@ export function BoostAnyTokenModal({
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Paste Token Mint CA (e.g. 2vdc4owf...pump)"
-              className="w-full bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-white/10 rounded-2xl pl-10 pr-4 py-3 text-xs font-mono text-zinc-950 dark:text-white outline-none focus:border-amber-500 transition-colors placeholder:text-zinc-500"
+              placeholder="Paste Token Mint CA or type name..."
+              className="w-full bg-zinc-50 dark:bg-zinc-900/90 border border-zinc-200 dark:border-white/10 rounded-2xl pl-10 pr-10 py-3 text-xs font-mono text-zinc-950 dark:text-white outline-none focus:border-amber-500 transition-colors placeholder:text-zinc-500"
             />
+            {searchQuery && (
+              <button
+                type="button"
+                onClick={() => setSearchQuery("")}
+                className="absolute right-3.5 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-600 dark:hover:text-white transition-colors cursor-pointer"
+                title="Clear input"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            )}
+          </div>
+
+          {/* Edit / Change Token Hint Notice */}
+          <div className="flex items-start gap-2 text-[11px] text-amber-700 dark:text-amber-300 bg-amber-500/10 border border-amber-500/25 px-3.5 py-2.5 rounded-2xl font-mono leading-relaxed">
+            <Sparkles className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" />
+            <span>
+              Want to boost a different token? Clear the address above and paste any token&apos;s <strong>Contract Address (CA)</strong> or search by <strong>name</strong>.
+            </span>
           </div>
         </div>
 
         {/* ── Token Preview Box (Only when valid CA is found) ─────────── */}
         {selectedToken && (
-          <div className="p-3.5 bg-zinc-50 dark:bg-zinc-900/70 rounded-2xl border border-amber-500/30 flex items-center justify-between gap-3 animate-in fade-in">
-            <div className="flex items-center gap-3">
+          <div className="p-4 bg-gradient-to-r from-zinc-50 via-white to-zinc-50 dark:from-[#12131a] dark:via-[#161822] dark:to-[#12131a] rounded-2xl border border-amber-500/40 flex items-center justify-between gap-3 shadow-lg shadow-black/5 dark:shadow-black/40 animate-in fade-in">
+            <div className="flex items-center gap-3.5 min-w-0">
               {selectedToken.iconUrl ? (
                 <img
                   src={selectedToken.iconUrl}
                   alt={selectedToken.name}
-                  className="w-10 h-10 rounded-xl object-cover border border-amber-500/20"
+                  className="w-12 h-12 rounded-2xl object-cover border border-amber-500/30 shadow-md shrink-0"
                 />
               ) : (
-                <div className="w-10 h-10 rounded-xl bg-amber-500/20 text-amber-400 font-black text-sm flex items-center justify-center border border-amber-500/30">
+                <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-amber-500/25 to-orange-500/25 text-amber-400 font-black text-sm flex items-center justify-center border border-amber-500/30 shrink-0">
                   {selectedToken.symbol.slice(0, 3)}
                 </div>
               )}
-              <div>
-                <h4 className="font-black text-sm text-zinc-950 dark:text-white uppercase">
-                  {selectedToken.name}
-                </h4>
-                <div className="flex items-center gap-2 text-[11px]">
-                  <span className="font-bold text-amber-500 dark:text-amber-400">
+              <div className="min-w-0">
+                <div className="flex items-center gap-2">
+                  <h4 className="font-black text-sm sm:text-base text-zinc-950 dark:text-white truncate">
+                    {selectedToken.name}
+                  </h4>
+                  <span className="px-1.5 py-0.5 rounded-md bg-amber-500/15 text-amber-500 text-[10px] font-extrabold font-mono">
                     ${selectedToken.symbol}
                   </span>
-                  <span className="text-zinc-500">
-                    MC: {formatCurrency(selectedToken.marketCap)}
+                </div>
+                <div className="flex items-center gap-3 text-xs text-zinc-500 font-mono mt-0.5">
+                  <span>
+                    MC:{" "}
+                    <strong className="text-zinc-800 dark:text-zinc-200">
+                      {selectedToken.marketCap > 0
+                        ? selectedToken.marketCap >= 1e6
+                          ? `$${(selectedToken.marketCap / 1e6).toFixed(2)}M`
+                          : `$${(selectedToken.marketCap / 1e3).toFixed(1)}K`
+                        : "Live Solana Pair"}
+                    </strong>
                   </span>
+                  <a
+                    href={`https://dexscreener.com/solana/${selectedToken.mint}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-amber-500 hover:underline flex items-center gap-0.5 text-[10px]"
+                  >
+                    Dex ↗
+                  </a>
                 </div>
               </div>
             </div>
 
-            <div className="text-right">
-              <span className="px-2 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-[10px] font-bold">
-                ✓ Verified CA
+            <div className="text-right shrink-0">
+              <span className="px-2.5 py-1 rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-[11px] font-bold flex items-center gap-1">
+                <CheckCircle2 className="w-3.5 h-3.5" />
+                Verified
               </span>
             </div>
           </div>
         )}
 
         {/* ── Step 2: Select $BATON Burn Amount & Wallet Balance ───────── */}
-        <div className="space-y-2">
+        <div className="space-y-2.5">
           <div className="flex items-center justify-between text-xs">
-            <span className="font-bold text-zinc-700 dark:text-zinc-300 uppercase tracking-wider">
-              2. $BATON Burn Amount
+            <span className="font-bold text-zinc-700 dark:text-zinc-300 uppercase tracking-wider flex items-center gap-1.5">
+              <span>2. $BATON Burn Amount</span>
             </span>
 
             {/* Live Connected Wallet Balance */}
             <div className="flex items-center gap-1.5 font-mono text-[11px]">
-              <Wallet className="w-3 h-3 text-amber-400" />
+              <Wallet className="w-3.5 h-3.5 text-amber-500" />
               <span className="text-zinc-500">Balance:</span>
-              <span className="font-bold text-zinc-950 dark:text-zinc-100">
+              <span className="font-bold text-zinc-950 dark:text-white">
                 {isBalanceLoading
                   ? "Loading..."
                   : `${formatNumber(currentWalletBaton)} $BATON`}
@@ -366,20 +438,21 @@ export function BoostAnyTokenModal({
                 setBurnAmount(val === "" ? "" : Math.max(0, parseInt(val) || 0));
                 setErrorMessage(null);
               }}
-              className={`w-full bg-zinc-50 dark:bg-zinc-900 border rounded-2xl px-4 py-3 text-lg font-black text-zinc-950 dark:text-white outline-none transition-colors placeholder:text-zinc-600 ${
+              className={`w-full bg-zinc-50 dark:bg-zinc-900/90 border rounded-2xl pl-5 pr-24 py-3.5 text-xl font-black text-zinc-950 dark:text-white outline-none transition-all placeholder:text-zinc-400 dark:placeholder:text-zinc-600 ${
                 isExceedingBalance
-                  ? "border-rose-500/70 focus:border-rose-500"
-                  : "border-zinc-200 dark:border-white/10 focus:border-amber-500"
+                  ? "border-rose-500/70 focus:border-rose-500 ring-2 ring-rose-500/10"
+                  : "border-zinc-200 dark:border-white/10 focus:border-amber-500 focus:ring-2 focus:ring-amber-500/10"
               }`}
-              placeholder="Enter $BATON amount (e.g. 50000)"
+              placeholder="0.00"
             />
-            <span className="absolute right-4 top-1/2 -translate-y-1/2 text-xs font-black text-amber-500">
-              $BATON
-            </span>
+            <div className="absolute right-3.5 top-1/2 -translate-y-1/2 flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-amber-500/15 border border-amber-500/30 text-amber-500 font-extrabold text-xs">
+              <Flame className="w-3.5 h-3.5 fill-current" />
+              <span>$BATON</span>
+            </div>
           </div>
 
-          {/* Preset Additive Buttons + HALF & MAX */}
-          <div className="grid grid-cols-6 gap-1.5 pt-1">
+          {/* Preset Additive Buttons + 50% & MAX */}
+          <div className="grid grid-cols-6 gap-1.5 pt-0.5">
             {[10000, 50000, 100000, 500000].map((val) => (
               <button
                 key={val}
@@ -388,7 +461,7 @@ export function BoostAnyTokenModal({
                   setBurnAmount((prev) => (typeof prev === "number" ? prev + val : val));
                   setErrorMessage(null);
                 }}
-                className="py-2 px-1 rounded-xl text-xs font-bold transition-all border cursor-pointer bg-zinc-100 dark:bg-zinc-900 hover:bg-amber-500/20 text-zinc-700 dark:text-zinc-300 hover:text-amber-400 border-zinc-200 dark:border-white/5 hover:border-amber-500/30 active:scale-95"
+                className="py-2 rounded-xl text-[11px] font-extrabold transition-all border cursor-pointer bg-zinc-100 dark:bg-zinc-900/80 hover:bg-amber-500/15 text-zinc-800 dark:text-zinc-200 hover:text-amber-400 border-zinc-200 dark:border-white/10 hover:border-amber-500/40 active:scale-95 shadow-sm"
               >
                 +{val >= 1000 ? `${val / 1000}K` : val}
               </button>
@@ -400,9 +473,9 @@ export function BoostAnyTokenModal({
                 setBurnAmount(Math.floor(currentWalletBaton / 2));
                 setErrorMessage(null);
               }}
-              className="py-2 px-1 rounded-xl text-xs font-bold bg-zinc-100 dark:bg-zinc-900 hover:bg-amber-500/20 text-zinc-600 dark:text-zinc-400 hover:text-amber-400 border border-zinc-200 dark:border-white/5 hover:border-amber-500/30 cursor-pointer active:scale-95"
+              className="py-2 rounded-xl text-[11px] font-extrabold bg-zinc-100 dark:bg-zinc-900/80 hover:bg-amber-500/15 text-zinc-700 dark:text-zinc-300 hover:text-amber-400 border border-zinc-200 dark:border-white/10 hover:border-amber-500/40 cursor-pointer active:scale-95"
             >
-              HALF
+              50%
             </button>
 
             <button
@@ -411,14 +484,32 @@ export function BoostAnyTokenModal({
                 setBurnAmount(Math.floor(currentWalletBaton));
                 setErrorMessage(null);
               }}
-              className="py-2 px-1 rounded-xl text-xs font-bold bg-zinc-100 dark:bg-zinc-900 hover:bg-amber-500/20 text-amber-500 dark:text-amber-400 border border-zinc-200 dark:border-white/5 hover:border-amber-500/30 cursor-pointer font-black active:scale-95"
+              className="py-2 rounded-xl text-[11px] font-black bg-gradient-to-r from-amber-500/20 to-orange-500/20 hover:from-amber-500/30 hover:to-orange-500/30 text-amber-500 dark:text-amber-400 border border-amber-500/40 cursor-pointer active:scale-95 shadow-sm"
             >
               MAX
             </button>
           </div>
         </div>
 
-        {/* ── Insufficient Balance Warning Banner (Only if amount entered exceeds wallet balance) ── */}
+        {/* ── Live Leaderboard Impact Preview Box ─────────────────────── */}
+        {selectedToken && numAmount > 0 && (
+          <div className="p-3.5 rounded-2xl bg-gradient-to-r from-amber-500/10 via-orange-500/5 to-transparent border border-amber-500/30 space-y-1.5 animate-in fade-in">
+            <div className="flex items-center justify-between text-xs font-bold">
+              <span className="text-zinc-700 dark:text-zinc-300 flex items-center gap-1.5">
+                <Crown className="w-4 h-4 text-amber-400" />
+                <span>Leaderboard Impact</span>
+              </span>
+              <span className="text-amber-500 dark:text-amber-400 font-extrabold font-mono">
+                +{formatNumber(numAmount)} Score
+              </span>
+            </div>
+            <p className="text-[11px] text-zinc-500 dark:text-zinc-400 leading-snug">
+              Burning {formatNumber(numAmount)} $BATON elevates <strong className="text-zinc-950 dark:text-white">${selectedToken.symbol}</strong> into the official Solana Leaderboard rankings.
+            </p>
+          </div>
+        )}
+
+        {/* ── Insufficient Balance Warning Banner ────────────────────────── */}
         {isExceedingBalance && (
           <div className="p-3 rounded-2xl bg-rose-500/10 border border-rose-500/30 flex items-center gap-2 text-rose-400 text-xs animate-in shake">
             <AlertCircle className="w-4 h-4 shrink-0" />
@@ -460,7 +551,7 @@ export function BoostAnyTokenModal({
           type="button"
           disabled={burning || !selectedToken || numAmount <= 0}
           onClick={handleExecuteBurn}
-          className="w-full py-3.5 rounded-2xl bg-gradient-to-r from-amber-500 via-orange-500 to-amber-500 hover:from-amber-400 hover:to-orange-400 text-zinc-950 font-black text-sm uppercase tracking-wider shadow-lg shadow-amber-500/20 transition-all flex items-center justify-center gap-2 cursor-pointer active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
+          className="w-full py-4 rounded-2xl bg-gradient-to-r from-amber-500 via-orange-500 to-amber-500 hover:from-amber-400 hover:to-orange-400 text-zinc-950 font-black text-sm uppercase tracking-wider shadow-xl shadow-orange-500/25 transition-all flex items-center justify-center gap-2 cursor-pointer active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed"
         >
           {burning ? (
             <>
@@ -486,6 +577,13 @@ export function BoostAnyTokenModal({
             </>
           )}
         </button>
+
+        {/* ── On-Chain Proof Footer ───────────────────────────────────── */}
+        <div className="text-center pt-1">
+          <span className="text-[10px] text-zinc-400 dark:text-zinc-500 font-mono">
+            🛡️ 100% On-Chain Verifiable Burn • Permanently removed from Solana supply
+          </span>
+        </div>
       </div>
     </div>
   );

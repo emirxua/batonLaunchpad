@@ -5,6 +5,8 @@ import { useLeaderboard } from "@/hooks/useLeaderboard";
 import { LeaderboardItem } from "@/types/token";
 import { formatNumber } from "@/lib/utils";
 import { BoostAnyTokenModal } from "@/components/modals/BoostAnyTokenModal";
+import { RecentBurns } from "@/components/RecentBurns";
+import { useRecentBurns } from "@/hooks/useRecentBurns";
 import {
   Flame,
   Crown,
@@ -17,6 +19,7 @@ import {
   PlusCircle,
   Clock,
   Sparkles,
+  ShieldCheck,
 } from "lucide-react";
 
 interface BurnLeaderboardProps {
@@ -25,6 +28,7 @@ interface BurnLeaderboardProps {
 
 export function BurnLeaderboard({ onBoostToken }: BurnLeaderboardProps) {
   const { leaderboard, isLoading, refresh } = useLeaderboard();
+  const { recentBurns, isLoading: isLoadingBurns, refresh: refreshBurns } = useRecentBurns();
   const [copiedCA, setCopiedCA] = useState<string | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isBoostAnyOpen, setIsBoostAnyOpen] = useState(false);
@@ -48,7 +52,64 @@ export function BurnLeaderboard({ onBoostToken }: BurnLeaderboardProps) {
   );
 
   return (
-    <div className="w-full space-y-4 font-mono select-none">
+    <div className="w-full space-y-6 font-mono select-none">
+      {/* ── Official Burn-to-Rank Engine Header & Rules Banner ─────────── */}
+      <div className="relative rounded-2xl border border-amber-500/30 bg-gradient-to-r from-zinc-950 via-[#0d0e12] to-zinc-950 p-5 sm:p-6 overflow-hidden shadow-2xl font-mono select-none">
+        <div
+          className="pointer-events-none absolute -top-12 -right-12 w-64 h-64 rounded-full bg-amber-500/10 blur-3xl"
+          aria-hidden="true"
+        />
+
+        <div className="relative z-10 space-y-4">
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div className="space-y-1">
+              <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full border border-amber-500/30 bg-amber-500/10 text-amber-400 text-[10px] font-bold uppercase tracking-wider">
+                <Crown className="w-3 h-3 text-amber-400" />
+                <span>BURN-TO-RANK ENGINE</span>
+              </div>
+              <h2 className="text-xl sm:text-2xl font-black text-white uppercase tracking-tight">
+                SOLANA <span className="bg-gradient-to-r from-amber-400 via-orange-500 to-amber-400 bg-clip-text text-transparent">BURN STANDINGS</span>
+              </h2>
+            </div>
+
+            <div className="flex flex-wrap items-center gap-2.5 shrink-0">
+              <button
+                type="button"
+                onClick={() => setIsBoostAnyOpen(true)}
+                className="px-4 py-2 rounded-xl bg-gradient-to-r from-amber-500 via-orange-500 to-amber-500 hover:from-amber-400 hover:to-orange-400 text-zinc-950 text-xs font-black flex items-center gap-1.5 transition-all shadow-md shadow-amber-500/20 active:scale-95 cursor-pointer uppercase tracking-wider"
+              >
+                <Flame className="w-4 h-4 fill-current text-zinc-950" />
+                <span>🔥 Boost Any Token</span>
+              </button>
+
+              <a
+                href="https://solscan.io/token/2vdc4owf1MPz54jJCN61y3QSKqjcPpr32wJ9qKkmpump#txs"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="px-3.5 py-2 rounded-xl bg-amber-500/15 hover:bg-amber-500/25 border border-amber-500/30 text-amber-400 text-xs font-bold flex items-center gap-1.5 transition-all shadow-md active:scale-95"
+              >
+                <span>Solscan Proofs</span>
+                <ExternalLink className="w-3.5 h-3.5 text-amber-400" />
+              </a>
+            </div>
+          </div>
+
+          {/* Official Rule Callout Banner (Explaining how burn-to-rank works) */}
+          <div className="p-3.5 rounded-xl bg-amber-500/10 border border-amber-500/30 flex items-start gap-3 text-xs leading-relaxed">
+            <ShieldCheck className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
+            <div className="text-zinc-300">
+              <span className="text-amber-400 font-extrabold uppercase mr-1">
+                EVERY $BATON BURN ELEVATES YOUR PROJECT ON THE LEADERBOARD:
+              </span>
+              When you burn <strong className="text-white">$BATON</strong> for any Solana token (or by pasting its Contract Address), the burned amount is credited directly to that token&apos;s score to climb the official standings!
+              <span className="text-amber-300 font-bold block sm:inline sm:ml-1">
+                ⚠️ Only burns executed via the Outbid platform are on-chain verified and recorded on the official Leaderboard.
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+
       {/* ── Main Burn-to-Rank Table Card ─────────────────────────────── */}
       <div className="bg-white dark:bg-zinc-950 rounded-2xl border border-zinc-200 dark:border-white/10 overflow-hidden shadow-2xl">
         {/* Table Header Row */}
@@ -377,6 +438,9 @@ export function BurnLeaderboard({ onBoostToken }: BurnLeaderboardProps) {
           </>
         )}
       </div>
+
+      {/* ── Live Verified On-Chain Burns Feed ─────────────────────────── */}
+      <RecentBurns burns={recentBurns} isLoading={isLoadingBurns} onRefresh={refreshBurns} />
 
       {/* ── Boost Any Token Modal ────────────────────────────────────── */}
       <BoostAnyTokenModal

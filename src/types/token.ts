@@ -40,6 +40,24 @@ export interface TrendingTokenItem {
   dexId?: string;
 }
 
+export interface CalloutCallerItem {
+  callerName: string;
+  callerHandle: string;
+  callerWallet?: string;
+  callerAvatar: string;
+  callerAvatarUrl?: string;
+  callerXUsername?: string;
+  callerBadge?: string;
+  thesis: string;
+  multiple: number;
+  entryMcap: number;
+  calloutPrice: number;
+  timeAgo: string;
+  createdAt?: number;
+  likes?: number;
+  calloutId?: string;
+}
+
 export interface CalloutItem {
   id: string;
   callerName: string;
@@ -65,6 +83,9 @@ export interface CalloutItem {
   batonBurned: number;
   burnRank?: number;
   thesis: string;
+  calloutId?: string;
+  createdAt?: number;
+  callers?: CalloutCallerItem[];
 }
 
 export interface CommentItem {

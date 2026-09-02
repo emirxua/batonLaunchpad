@@ -11,6 +11,7 @@ export interface CallerInfo {
   avatarUrl?: string;
   xUsername?: string;
   wallet?: string;
+  winRate?: number;
 }
 
 interface CallerFilterModalProps {
@@ -68,6 +69,12 @@ export function CallerFilterModal({
       .map((c) => c.name);
   }, [allCallers]);
 
+  const highWrCallers = useMemo(() => {
+    return allCallers
+      .filter((c) => typeof c.winRate === "number" && c.winRate >= 50)
+      .map((c) => c.name);
+  }, [allCallers]);
+
   if (!isOpen) return null;
 
   return (
@@ -100,14 +107,6 @@ export function CallerFilterModal({
               </p>
             </div>
           </div>
-
-          <button
-            type="button"
-            onClick={onClose}
-            className="p-2 rounded-xl text-zinc-500 hover:text-zinc-950 dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-white/5 transition-colors cursor-pointer"
-          >
-            <X className="w-5 h-5" />
-          </button>
         </div>
 
         {/* Search & Batch Actions Toolbar */}
@@ -155,6 +154,17 @@ export function CallerFilterModal({
                   <span>Top Alpha ({whitelistCallers.length})</span>
                 </button>
               )}
+
+              {highWrCallers.length > 0 && (
+                <button
+                  type="button"
+                  onClick={() => onSelectAll(highWrCallers)}
+                  className="px-2.5 py-1 rounded-lg bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/30 text-emerald-400 text-[11px] font-bold transition-all cursor-pointer flex items-center gap-1"
+                >
+                  <Sparkles className="w-3 h-3 text-emerald-400" />
+                  <span>🎯 High Win Rate ({highWrCallers.length})</span>
+                </button>
+              )}
             </div>
 
             {selectedCallers.length > 0 && (
@@ -172,8 +182,21 @@ export function CallerFilterModal({
         {/* Scrollable Caller Cards Grid */}
         <div className="p-4 sm:p-5 overflow-y-auto max-h-[48vh] space-y-2">
           {filteredCallers.length === 0 ? (
-            <div className="py-12 text-center text-xs text-zinc-500 font-mono">
-              No callers found matching &quot;{search}&quot;.
+            <div className="py-12 text-center text-xs text-zinc-500 font-mono space-y-3">
+              <p>No callers found matching &quot;{search}&quot;.</p>
+              {search.trim().length >= 2 && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    onToggleCaller(search.trim());
+                    setSearch("");
+                  }}
+                  className="px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-zinc-950 font-black text-xs transition-all shadow-sm cursor-pointer inline-flex items-center gap-1.5"
+                >
+                  <Sparkles className="w-4 h-4" />
+                  <span>+ Track & Filter by @{search.trim()}</span>
+                </button>
+              )}
             </div>
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
@@ -205,7 +228,7 @@ export function CallerFilterModal({
                         <div className="flex items-center gap-1.5">
                           <span
                             className={`text-xs font-black truncate block ${
-                              isSelected ? "text-amber-400" : "text-zinc-900 dark:text-white"
+                              isSelected ? "text-amber-400" : "text-zinc-950 dark:text-white"
                             }`}
                           >
                             @{caller.name}
@@ -213,6 +236,17 @@ export function CallerFilterModal({
                           {isAlpha && (
                             <span className="text-[9px] px-1.5 py-0.2 rounded bg-amber-500/20 text-amber-400 font-bold">
                               ★ Alpha
+                            </span>
+                          )}
+                          {typeof caller.winRate === "number" && caller.winRate > 0 && (
+                            <span
+                              className={`text-[9px] px-1.5 py-0.2 rounded font-black ${
+                                caller.winRate >= 65
+                                  ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/30"
+                                  : "bg-amber-500/20 text-amber-400 border border-amber-500/30"
+                              }`}
+                            >
+                              🎯 {caller.winRate}% WR
                             </span>
                           )}
                         </div>

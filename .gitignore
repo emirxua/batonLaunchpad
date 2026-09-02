@@ -41,4 +41,9 @@ next-env.d.ts
 .data/
 workers/shard-*.js
 scripts/deploy-shards.js
+workers/deploy-results.json
+workers/deploy-workers.js
+workers/generate-shards.js
+workers/get-worker-urls.js
+workers/setup-subdomains.js
 

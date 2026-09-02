@@ -391,7 +391,7 @@ export function QuickSwapCard({
     setErrorMsg(null);
     setTxSuccess(null);
 
-    // 1. Cüzdan kontrolü
+    // 1. Wallet connection verification
     if (!connected || !publicKey) {
       setVisible(true);
       return;

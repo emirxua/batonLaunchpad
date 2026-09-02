@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useEffect } from "react";
-import { X, Zap, ShieldCheck } from "lucide-react";
+import { Zap, ShieldCheck } from "lucide-react";
 import { JupiterSwapWidget } from "@/components/terminal/JupiterSwapWidget";
 
 interface JupiterSwapModalProps {
@@ -100,15 +100,6 @@ export function JupiterSwapModal({
               </p>
             </div>
           </div>
-
-          <button
-            type="button"
-            onClick={onClose}
-            className="hidden sm:flex w-8 h-8 rounded-full bg-zinc-100 hover:bg-zinc-200 dark:bg-white/5 dark:hover:bg-white/10 text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white items-center justify-center transition-colors cursor-pointer shrink-0"
-            title="Close modal"
-          >
-            <X className="w-4 h-4" />
-          </button>
         </div>
 
         {/* Swap Widget Content Body */}

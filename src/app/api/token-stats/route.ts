@@ -22,6 +22,13 @@ export interface TokenStatsResponse {
   burnPercentage: number;
   totalHoldersCount: number;
   topHolders: TopHolder[];
+  priceUsd?: number;
+  priceChange24h?: number;
+  marketCap?: number;
+  volume24h?: number;
+  iconUrl?: string;
+  name?: string;
+  symbol?: string;
   lastUpdated: string;
   note?: string;
 }
@@ -154,6 +161,45 @@ export async function GET() {
       });
     }
 
+    // 4. Fetch real DexScreener market price & 24h metrics for $BATON
+    let priceUsd = 0;
+    let priceChange24h = 0;
+    let marketCap = 0;
+    let volume24h = 0;
+    try {
+      const dexRes = await fetch(`https://api.dexscreener.com/latest/dex/tokens/${DEFAULT_MINT}`, {
+        cache: "no-store",
+      });
+      if (dexRes.ok) {
+        const dexJson = await dexRes.json();
+        const pair = dexJson?.pairs?.[0];
+        if (pair) {
+          priceUsd = parseFloat(pair.priceUsd || "0");
+          priceChange24h = pair.priceChange?.h24 ?? 0;
+          marketCap = pair.marketCap ?? pair.fdv ?? 0;
+          volume24h = pair.volume?.h24 ?? 0;
+        }
+      }
+    } catch {}
+
+    // 5. Fetch real Pump.fun coin metadata (name, symbol, image_uri)
+    let iconUrl = "https://pump.mypinata.cloud/ipfs/QmXr34HfSuBTVJSpXH7gQGwUhTgKWEVvHAbRcANJvjs3qV";
+    let tokenName = "Baton Corporation Ltd";
+    let tokenSymbol = "Baton";
+    try {
+      const pumpRes = await fetch(`https://frontend-api-v3.pump.fun/coins/${DEFAULT_MINT}`, {
+        cache: "no-store",
+      });
+      if (pumpRes.ok) {
+        const pumpData = await pumpRes.json();
+        if (pumpData?.image_uri) {
+          iconUrl = pumpData.image_uri.replace("https://ipfs.io/ipfs/", "https://pump.mypinata.cloud/ipfs/");
+        }
+        if (pumpData?.name) tokenName = pumpData.name;
+        if (pumpData?.symbol) tokenSymbol = pumpData.symbol;
+      }
+    } catch {}
+
     const payload: TokenStatsResponse = {
       mintAddress: DEFAULT_MINT,
       initialSupply,
@@ -162,8 +208,15 @@ export async function GET() {
       burnPercentage,
       totalHoldersCount: topHolders.length > 0 ? topHolders.length : 0,
       topHolders,
+      priceUsd,
+      priceChange24h,
+      marketCap,
+      volume24h,
+      iconUrl,
+      name: tokenName,
+      symbol: tokenSymbol,
       lastUpdated: new Date().toISOString(),
-      note: "Live on-chain Solana RPC query",
+      note: "Live on-chain Solana RPC & Pump.fun query",
     };
 
     cachedStats = payload;

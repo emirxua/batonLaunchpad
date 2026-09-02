@@ -44,6 +44,7 @@ export default function TerminalPage() {
   const [boostCoin, setBoostCoin] = useState<Coin | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [isRefreshing, setIsRefreshing] = useState(false);
+  const [activeTab, setActiveTab] = useState<"all" | "gainers" | "top_volume" | "high_mcap">("all");
 
   // Sync with URL query parameter ?token= if present on mount
   useEffect(() => {
@@ -191,10 +192,22 @@ export default function TerminalPage() {
   }, [selectedTokenMint, tokensList]);
 
   const filteredTokens = useMemo(() => {
-    let list = tokensList;
+    let list = [...tokensList];
+
+    if (activeTab === "gainers") {
+      list = list.filter((t) => (t.priceChange24h || 0) > 0).sort((a, b) => b.priceChange24h - a.priceChange24h);
+    } else if (activeTab === "top_volume") {
+      list = list.sort((a, b) => (b.volume24h || 0) - (a.volume24h || 0));
+    } else if (activeTab === "high_mcap") {
+      list = list.filter((t) => (t.mcap || 0) >= 500_000).sort((a, b) => b.mcap - a.mcap);
+    } else {
+      // Default: sort by highest 24H volume (identically to Trending Tokens section)
+      list = list.sort((a, b) => (b.volume24h || 0) - (a.volume24h || 0));
+    }
+
     if (searchQuery.trim()) {
       const q = searchQuery.toLowerCase();
-      list = tokensList.filter(
+      list = list.filter(
         (t) =>
           t.name.toLowerCase().includes(q) ||
           t.symbol.toLowerCase().includes(q) ||
@@ -202,24 +215,8 @@ export default function TerminalPage() {
       );
     }
 
-    return [...list].sort((a, b) => {
-      // 1. Verified / Image present first
-      const aHasImg = Boolean(a.iconUrl && !a.iconUrl.includes("dicebear"));
-      const bHasImg = Boolean(b.iconUrl && !b.iconUrl.includes("dicebear"));
-      if (aHasImg && !bHasImg) return -1;
-      if (!aHasImg && bHasImg) return 1;
-
-      // 2. Highest Volume 24H
-      const aVol = a.volume24h || 0;
-      const bVol = b.volume24h || 0;
-      if (bVol !== aVol) return bVol - aVol;
-
-      // 3. Highest Market Cap
-      const aMcap = a.mcap || 0;
-      const bMcap = b.mcap || 0;
-      return bMcap - aMcap;
-    });
-  }, [searchQuery, tokensList]);
+    return list;
+  }, [searchQuery, tokensList, activeTab]);
 
   const isPositive = (selectedToken?.priceChange24h ?? 0) >= 0;
 
@@ -427,24 +424,49 @@ export default function TerminalPage() {
               )}
             </div>
 
-            {/* Quick Token Selector List */}
-            <div className="bg-white dark:bg-zinc-950 rounded-2xl border border-zinc-200 dark:border-white/10 p-5 shadow-xl space-y-4">
-              <div className="flex items-center justify-between gap-3">
-                <span className="text-xs font-bold text-zinc-950 dark:text-white uppercase tracking-wider flex items-center gap-1.5">
-                  <Activity className="w-4 h-4 text-amber-400" />
-                  <span>Select Live Solana Pair</span>
-                </span>
-                <span className="text-[10px] text-zinc-500">
-                  {filteredTokens.length} Available
-                </span>
+            {/* ── Bottom-Left: Trending Tokens Selector ────────────────────── */}
+            <div className="bg-white dark:bg-zinc-950 rounded-2xl border border-zinc-200 dark:border-white/10 p-4 sm:p-5 shadow-sm space-y-3.5">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
+                <div className="flex items-center gap-2">
+                  <Flame className="w-4 h-4 text-amber-500 fill-amber-500/20" />
+                  <span className="text-xs sm:text-sm font-black text-zinc-950 dark:text-white uppercase tracking-wider">
+                    Trending Tokens
+                  </span>
+                  <span className="text-[10px] text-zinc-500 bg-zinc-100 dark:bg-zinc-800 px-2 py-0.5 rounded-full font-bold">
+                    {filteredTokens.length} Tokens
+                  </span>
+                </div>
+
+                {/* Filter Tabs matching Trending Tokens section */}
+                <div className="flex items-center gap-1 bg-zinc-100 dark:bg-zinc-900 border border-zinc-200 dark:border-white/10 rounded-xl p-0.5 text-[10px] self-start sm:self-auto">
+                  {[
+                    { id: "all", label: "ALL" },
+                    { id: "gainers", label: "🚀 GAINERS" },
+                    { id: "top_volume", label: "📊 TOP VOL" },
+                    { id: "high_mcap", label: "💎 HIGH MC" },
+                  ].map((tab) => (
+                    <button
+                      key={tab.id}
+                      type="button"
+                      onClick={() => setActiveTab(tab.id as any)}
+                      className={`px-2 py-1 rounded-lg font-bold transition-all cursor-pointer whitespace-nowrap ${
+                        activeTab === tab.id
+                          ? "bg-amber-500 text-zinc-950 font-black shadow-sm"
+                          : "text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-200"
+                      }`}
+                    >
+                      {tab.label}
+                    </button>
+                  ))}
+                </div>
               </div>
 
               {/* Search Bar */}
               <div className="relative">
-                <Search className="w-4 h-4 text-zinc-500 absolute left-3 top-1/2 -translate-y-1/2" />
+                <Search className="w-4 h-4 text-zinc-400 absolute left-3 top-1/2 -translate-y-1/2" />
                 <input
                   type="text"
-                  placeholder="Filter by name, symbol or CA..."
+                  placeholder="Filter trending tokens or search CA..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   className="w-full bg-zinc-50 dark:bg-zinc-900 border border-zinc-200 dark:border-white/10 focus:border-amber-500 rounded-xl pl-9 pr-8 py-2 text-xs text-zinc-900 dark:text-zinc-100 outline-none font-mono"
@@ -454,17 +476,17 @@ export default function TerminalPage() {
                 )}
               </div>
 
-              {/* Scrollable Tokens List */}
-              <div className="max-h-80 overflow-y-auto space-y-2 pr-1">
+              {/* Scrollable Trending Tokens List */}
+              <div className="max-h-96 overflow-y-auto space-y-2 pr-1">
                 {filteredTokens.length === 0 ? (
                   <div className="py-8 text-center text-xs text-zinc-500 font-mono">
-                    {isLoading ? "Fetching live Solana pairs…" : "No tokens matching search."}
+                    {isLoading ? "Fetching live trending Solana tokens…" : "No trending tokens matching filter."}
                   </div>
                 ) : (
                   filteredTokens.map((t) => {
                     const isSelected =
                       selectedToken?.ca.toLowerCase() === t.ca.toLowerCase();
-                    const isPos = t.priceChange24h >= 0;
+                    const isPos = (t.priceChange24h ?? 0) >= 0;
 
                     return (
                       <div
@@ -472,45 +494,55 @@ export default function TerminalPage() {
                         onClick={() => setSelectedTokenMint(t.ca)}
                         className={`p-3 rounded-xl flex items-center justify-between cursor-pointer transition-all border ${
                           isSelected
-                            ? "bg-amber-500/10 border-amber-500/40 text-amber-400 shadow-md"
-                            : "bg-zinc-50 dark:bg-zinc-900/40 border-zinc-100 dark:border-white/5 hover:border-amber-500/20"
+                            ? "bg-amber-500/10 border-amber-500/60 dark:border-amber-500/50 shadow-sm"
+                            : "bg-zinc-50/70 dark:bg-zinc-900/40 border-zinc-200/60 dark:border-white/5 hover:border-amber-500/30 hover:bg-zinc-100/70 dark:hover:bg-zinc-900/70"
                         }`}
                       >
-                        <div className="flex items-center gap-3">
-                          <div className="w-8 h-8 rounded-lg bg-zinc-800 border border-zinc-200 dark:border-white/10 flex items-center justify-center overflow-hidden shrink-0 text-xs font-bold text-amber-400">
+                        <div className="flex items-center gap-3 min-w-0">
+                          <div className="w-9 h-9 rounded-xl bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-white/10 flex items-center justify-center overflow-hidden shrink-0 text-xs font-bold text-amber-500 shadow-sm">
                             {t.iconUrl ? (
                               <img
                                 src={t.iconUrl}
                                 alt={t.symbol}
                                 className="w-full h-full object-cover"
+                                onError={(e) => {
+                                  (e.currentTarget as HTMLImageElement).style.display = "none";
+                                }}
                               />
                             ) : (
                               <span>${t.symbol.slice(0, 2)}</span>
                             )}
                           </div>
-                          <div>
-                            <div className="text-xs font-bold text-zinc-950 dark:text-white flex items-center gap-1.5">
+                          <div className="min-w-0">
+                            <div className="text-xs font-black text-zinc-950 dark:text-white flex items-center gap-1.5 truncate">
                               <span>${t.symbol}</span>
-                              <span className="text-[10px] text-zinc-500 font-normal">
+                              <span className="text-[10px] text-zinc-500 font-normal truncate hidden sm:inline">
                                 {t.name}
                               </span>
+                              {t.badge && (
+                                <span className="text-[9px] font-black px-1.5 py-0.2 rounded-full bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/30 shrink-0">
+                                  {t.badge}
+                                </span>
+                              )}
                             </div>
-                            <div className="text-[10px] text-zinc-500 font-mono">
-                              MC: {t.mcapFormatted}
+                            <div className="text-[10px] text-zinc-500 font-mono flex items-center gap-2 mt-0.5">
+                              <span>MC: <strong className="text-zinc-700 dark:text-zinc-300 font-bold">{t.mcapFormatted}</strong></span>
+                              <span>•</span>
+                              <span>Vol: <strong className="text-zinc-700 dark:text-zinc-300 font-bold">{t.volumeFormatted}</strong></span>
                             </div>
                           </div>
                         </div>
 
-                        <div className="text-right">
-                          <div className="text-xs font-extrabold text-zinc-900 dark:text-zinc-100">
+                        <div className="text-right shrink-0 ml-2">
+                          <div className="text-xs font-mono font-extrabold text-zinc-900 dark:text-zinc-100">
                             {t.priceFormatted}
                           </div>
                           <div
-                            className={`text-[10px] font-bold ${
+                            className={`text-[10px] font-bold flex items-center justify-end gap-0.5 ${
                               isPos ? "text-emerald-500" : "text-rose-500"
                             }`}
                           >
-                            {t.priceChangeFormatted}
+                            <span>{t.priceChangeFormatted}</span>
                           </div>
                         </div>
                       </div>
