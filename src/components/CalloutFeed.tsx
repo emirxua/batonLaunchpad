@@ -1092,23 +1092,32 @@ export function CalloutFeed({ onSelectToken, filterSymbol }: CalloutFeedProps) {
                     className="flex items-center gap-2.5 min-w-0 flex-1 group/caller hover:opacity-90 transition-opacity cursor-pointer"
                     title={item.callerWallet && item.callerWallet.length > 20 ? `View ${item.callerName} on Pump.fun (${item.callerWallet})` : item.callerName}
                   >
-                    <CallerAvatar
-                      avatarUrl={item.callerAvatarUrl}
-                      name={item.callerName}
-                      size="md"
-                      className="group-hover/caller:border-amber-500/50 transition-colors shrink-0"
-                    />
+                    {(item.callerName?.toLowerCase().includes("outbid") || item.callerHandle?.toLowerCase().includes("outbid") || item.callerHandle === "burn_engine") ? (
+                      <div className="w-10 h-10 rounded-2xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center shrink-0 shadow-sm shadow-amber-500/10">
+                        <div className="flex flex-col gap-1 w-4 h-3.5 justify-center">
+                          <span className="w-full h-0.5 bg-[#f59e0b] rounded-full shadow-[0_0_6px_rgba(245,158,11,0.6)]" />
+                          <span className="w-full h-0.5 bg-[#f59e0b] rounded-full shadow-[0_0_6px_rgba(245,158,11,0.6)]" />
+                          <span className="w-full h-0.5 bg-[#f59e0b] rounded-full shadow-[0_0_6px_rgba(245,158,11,0.6)]" />
+                        </div>
+                      </div>
+                    ) : (
+                      <CallerAvatar
+                        avatarUrl={item.callerAvatarUrl}
+                        name={item.callerName}
+                        size="md"
+                        className="group-hover/caller:border-amber-500/50 transition-colors shrink-0"
+                      />
+                    )}
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-1.5 min-w-0 flex-wrap">
-                        <span className="text-xs sm:text-sm font-bold text-zinc-950 dark:text-white group-hover/caller:text-amber-500 dark:group-hover/caller:text-amber-400 transition-colors truncate max-w-[120px] sm:max-w-[150px] flex items-center gap-1">
+                        <span className="text-xs sm:text-sm font-bold text-zinc-950 dark:text-white group-hover/caller:text-amber-500 dark:group-hover/caller:text-amber-400 transition-colors truncate max-w-[120px] sm:max-w-[150px] flex items-center gap-1.5">
                           <span>{item.callerName}</span>
                           {(item.callerName?.toLowerCase().includes("outbid") || item.callerHandle?.toLowerCase().includes("outbid") || item.callerHandle === "burn_engine") && (
-                            <img
-                              src="/images/baton-logo.png"
-                              alt="Outbid Terminal"
-                              className="w-3.5 h-3.5 rounded-full inline-block shrink-0 border border-amber-500/40"
-                              title="Verified Outbid Terminal Engine"
-                            />
+                            <div className="flex flex-col gap-[2px] w-3 h-2.5 justify-center shrink-0" title="Outbid Terminal">
+                              <span className="w-full h-[1.5px] bg-[#f59e0b] rounded-full shadow-[0_0_4px_rgba(245,158,11,0.8)]" />
+                              <span className="w-full h-[1.5px] bg-[#f59e0b] rounded-full shadow-[0_0_4px_rgba(245,158,11,0.8)]" />
+                              <span className="w-full h-[1.5px] bg-[#f59e0b] rounded-full shadow-[0_0_4px_rgba(245,158,11,0.8)]" />
+                            </div>
                           )}
                         </span>
                         {(() => {
