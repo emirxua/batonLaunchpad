@@ -99,80 +99,98 @@ async function fetchWithTimeout(url: string, ms = FETCH_TIMEOUT_MS): Promise<Res
   }
 }
 
+const PROXY_POOL = [
+  "https://pump-callout-proxy.emir1903topuz106.workers.dev",
+  "https://pump-callout-proxy-2.baton-launchpad.workers.dev",
+  "https://pump-callout-proxy-3.emir1903topuz0.workers.dev",
+];
+
+let proxyIndex = 0;
+function getNextProxyUrl(): string {
+  const url = PROXY_POOL[proxyIndex % PROXY_POOL.length];
+  proxyIndex++;
+  return url;
+}
+
 /**
- * Fetch real callouts from Cloudflare Worker proxy
+ * Fetch real callouts from Cloudflare Worker proxy pool with automatic load-balancing & failover
  */
 async function fetchRealCalloutsFromProxy(): Promise<CalloutCard[]> {
-  const proxyUrl =
-    process.env.CALLOUT_PROXY_BASE ||
-    process.env.NEXT_PUBLIC_CALLOUT_PROXY_URL ||
-    "https://pump-callout-proxy.emir1903topuz106.workers.dev/";
+  const labelMap = getWatchlistMap();
 
-  try {
-    const res = await fetchWithTimeout(proxyUrl, 5000);
-    if (!res.ok) return [];
+  // Try across proxy pool with failover
+  for (let attempt = 0; attempt < PROXY_POOL.length; attempt++) {
+    const proxyUrl = getNextProxyUrl();
+    try {
+      const res = await fetchWithTimeout(proxyUrl, 5000);
+      if (!res.ok) continue;
 
-    const data = await res.json();
-    const labelMap = getWatchlistMap();
-    
-    // Parse both data.callouts (direct proxy response) and data.results
-    const rawList = Array.isArray(data?.callouts)
-      ? data.callouts
-      : Array.isArray(data?.results)
-        ? data.results.flatMap((r: any) => r.callouts || [])
-        : [];
+      const data = await res.json();
+      
+      // Parse both data.callouts (direct proxy response) and data.results
+      const rawList = Array.isArray(data?.callouts)
+        ? data.callouts
+        : Array.isArray(data?.results)
+          ? data.results.flatMap((r: any) => r.callouts || [])
+          : [];
 
-    const list: CalloutCard[] = [];
+      if (rawList.length === 0) continue;
 
-    for (const c of rawList) {
-      if (!c || !c.coinMint) continue;
-      const wallet = c.callerWallet || c.userId || "";
-      const label =
-        c.callerLabel ||
-        labelMap[wallet] ||
-        DEFAULT_WATCHLIST[wallet] ||
-        (wallet.length > 8 ? `${wallet.slice(0, 4)}…${wallet.slice(-4)}` : "Alpha Caller");
+      const list: CalloutCard[] = [];
 
-      list.push({
-        calloutId: c.calloutId || `callout-${c.coinMint}-${wallet.slice(0, 6)}`,
-        userId: wallet,
-        callerWallet: wallet,
-        callerLabel: label,
-        coinMint: c.coinMint,
-        coinName: c.coinName || c.name || "Solana Project",
-        coinSymbol: (c.coinSymbol || c.symbol || "TOKEN").toUpperCase(),
-        marketCap: c.marketCap || 0,
-        calloutPrice: c.calloutPrice || 0,
-        calloutPriceUsd: c.calloutPriceUsd || 0,
-        multiple: Number(c.multiple) || 1.0,
-        createdAt: c.createdAt || Date.now(),
-        maxPriceSol: c.maxPriceSol || 0,
-        maxPriceUsd: c.maxPriceUsd || 0,
-        thesis: c.thesis || "",
-        user_uuid: c.user_uuid || `user-${wallet.slice(0, 6)}`,
-        likes: c.likes || 0,
-        hasLiked: c.hasLiked || false,
-        hasReposted: c.hasReposted || false,
-        repostCount: c.repostCount || 0,
-        quoteCount: c.quoteCount || 0,
-        commentCount: c.commentCount || 0,
-        replyCount: c.replyCount || 0,
-        maxMultiplier: Number(c.maxMultiplier) || Number(c.multiple) || 1.0,
-        maxMultiplierAt: c.maxMultiplierAt || new Date().toISOString(),
-        viewCount: c.viewCount || 0,
-        mediaUrl: c.mediaUrl || null,
-        quotedCalloutId: c.quotedCalloutId || null,
-        quotedCallout: c.quotedCallout || null,
-        updates: Array.isArray(c.updates) ? c.updates : [],
-        updateCount: c.updateCount || 0,
-      });
+      for (const c of rawList) {
+        if (!c || !c.coinMint) continue;
+        const wallet = c.callerWallet || c.userId || "";
+        const label =
+          c.callerLabel ||
+          labelMap[wallet] ||
+          DEFAULT_WATCHLIST[wallet] ||
+          (wallet.length > 8 ? `${wallet.slice(0, 4)}…${wallet.slice(-4)}` : "Alpha Caller");
+
+        list.push({
+          calloutId: c.calloutId || `callout-${c.coinMint}-${wallet.slice(0, 6)}`,
+          userId: wallet,
+          callerWallet: wallet,
+          callerLabel: label,
+          coinMint: c.coinMint,
+          coinName: c.coinName || c.name || "Solana Project",
+          coinSymbol: (c.coinSymbol || c.symbol || "TOKEN").toUpperCase(),
+          marketCap: c.marketCap || 0,
+          calloutPrice: c.calloutPrice || 0,
+          calloutPriceUsd: c.calloutPriceUsd || 0,
+          multiple: Number(c.multiple) || 1.0,
+          createdAt: c.createdAt || Date.now(),
+          maxPriceSol: c.maxPriceSol || 0,
+          maxPriceUsd: c.maxPriceUsd || 0,
+          thesis: c.thesis || "",
+          user_uuid: c.user_uuid || `user-${wallet.slice(0, 6)}`,
+          likes: c.likes || 0,
+          hasLiked: c.hasLiked || false,
+          hasReposted: c.hasReposted || false,
+          repostCount: c.repostCount || 0,
+          quoteCount: c.quoteCount || 0,
+          commentCount: c.commentCount || 0,
+          replyCount: c.replyCount || 0,
+          maxMultiplier: Number(c.maxMultiplier) || Number(c.multiple) || 1.0,
+          maxMultiplierAt: c.maxMultiplierAt || new Date().toISOString(),
+          viewCount: c.viewCount || 0,
+          mediaUrl: c.mediaUrl || null,
+          quotedCalloutId: c.quotedCalloutId || null,
+          quotedCallout: c.quotedCallout || null,
+          updates: Array.isArray(c.updates) ? c.updates : [],
+          updateCount: c.updateCount || 0,
+        });
+      }
+
+      if (list.length > 0) {
+        return list;
+      }
+    } catch {
+      /* continue to next proxy in pool */
     }
-
-    return list;
-  } catch (err) {
-    console.warn("[callouts] Proxy fetch error:", err);
-    return [];
   }
+
+  return [];
 }
 
 /**
