@@ -115,32 +115,28 @@ function getNextProxyUrl(): string {
 }
 
 /**
- * Fetch real callouts from Cloudflare Worker proxy pool with automatic load-balancing & failover
+ * Fetch real callouts from all 5 Cloudflare Worker shards in parallel
  */
 async function fetchRealCalloutsFromProxy(): Promise<CalloutCard[]> {
   const labelMap = getWatchlistMap();
+  const allCards: CalloutCard[] = [];
 
-  // Try across proxy pool with failover
-  for (let attempt = 0; attempt < PROXY_POOL.length; attempt++) {
-    const proxyUrl = getNextProxyUrl();
-    try {
+  const results = await Promise.allSettled(
+    PROXY_POOL.map(async (proxyUrl) => {
       const res = await fetchWithTimeout(proxyUrl, 5000);
-      if (!res.ok) continue;
-
+      if (!res.ok) return [];
       const data = await res.json();
-      
-      // Parse both data.callouts (direct proxy response) and data.results
-      const rawList = Array.isArray(data?.callouts)
+      return Array.isArray(data?.callouts)
         ? data.callouts
         : Array.isArray(data?.results)
           ? data.results.flatMap((r: any) => r.callouts || [])
           : [];
+    })
+  );
 
-      if (rawList.length === 0) continue;
-
-      const list: CalloutCard[] = [];
-
-      for (const c of rawList) {
+  for (const r of results) {
+    if (r.status === "fulfilled" && Array.isArray(r.value)) {
+      for (const c of r.value) {
         if (!c || !c.coinMint) continue;
         const wallet = c.callerWallet || c.userId || "";
         const label =
@@ -149,7 +145,7 @@ async function fetchRealCalloutsFromProxy(): Promise<CalloutCard[]> {
           DEFAULT_WATCHLIST[wallet] ||
           (wallet.length > 8 ? `${wallet.slice(0, 4)}…${wallet.slice(-4)}` : "Alpha Caller");
 
-        list.push({
+        allCards.push({
           calloutId: c.calloutId || `callout-${c.coinMint}-${wallet.slice(0, 6)}`,
           userId: wallet,
           callerWallet: wallet,
@@ -183,16 +179,10 @@ async function fetchRealCalloutsFromProxy(): Promise<CalloutCard[]> {
           updateCount: c.updateCount || 0,
         });
       }
-
-      if (list.length > 0) {
-        return list;
-      }
-    } catch {
-      /* continue to next proxy in pool */
     }
   }
 
-  return [];
+  return allCards;
 }
 
 /**

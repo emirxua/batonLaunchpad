@@ -39,3 +39,6 @@ next-env.d.ts
 .npm-cache/
 .env*
 .data/
+workers/shard-*.js
+scripts/deploy-shards.js
+
