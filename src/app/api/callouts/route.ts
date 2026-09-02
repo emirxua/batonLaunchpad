@@ -5,29 +5,28 @@ import profilesCache from "@/lib/callouts/profiles-cache.json";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
+export const maxDuration = 30;
 
 const PUMP_BASE = "https://frontend-api-v3.pump.fun";
-const FETCH_TIMEOUT_MS = 6000;
+const FETCH_TIMEOUT_MS = 5000;
 
 // Maximum age for live callouts: strictly 8 hours (eliminates stale 22-hour-old data)
 const MAX_CALLOUT_AGE_MS = 8 * 60 * 60 * 1000;
 
-// Cloudflare Worker Proxy pool for high-availability fallback (prevents live data drops)
-const WORKER_PROXIES = [
-  "https://pump-callout-proxy-6.enir34232.workers.dev",
-  "https://pump-callout-proxy-8.froggyrobinhood.workers.dev",
-  "https://pump-callout-proxy-9.calimayemusk.workers.dev",
-  "https://pump-callout-proxy-10.emir1903topuz6.workers.dev",
-];
-let workerCursor = 0;
-function getNextWorkerProxy(): string {
-  const p = WORKER_PROXIES[workerCursor % WORKER_PROXIES.length];
-  workerCursor++;
-  return p;
-}
+// Real authentic browser headers matching pump.fun client requests
+const PUMP_HEADERS: Record<string, string> = {
+  "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36",
+  "Accept": "application/json, text/plain, */*",
+  "Referer": "https://pump.fun/",
+  "Origin": "https://pump.fun",
+};
 
 // ─── In-memory cumulative store (Live on-chain signals only) ──────────────────
-const cumulativeSignalsMap = new Map<string, CalloutCard>();
+declare global {
+  var __batonCumulativeSignals: Map<string, CalloutCard> | undefined;
+}
+const cumulativeSignalsMap = globalThis.__batonCumulativeSignals ?? new Map<string, CalloutCard>();
+globalThis.__batonCumulativeSignals = cumulativeSignalsMap;
 
 function sanitizeIpfsUrl(url?: string | null): string | null {
   if (!url) return null;
@@ -135,10 +134,7 @@ async function fetchWithTimeout(url: string, ms = FETCH_TIMEOUT_MS): Promise<Res
   try {
     return await fetch(url, {
       signal: ctrl.signal,
-      headers: {
-        Accept: "application/json",
-        "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36",
-      },
+      headers: PUMP_HEADERS,
       cache: "no-store",
     });
   } finally {
@@ -205,24 +201,12 @@ async function syncLivePumpCallouts(force = false): Promise<number> {
 
     const watchlistPromises = currentBatch.map(async ([wallet, label]) => {
       try {
-        let res = await fetchWithTimeout(`${PUMP_BASE}/callout/list/${wallet}`, 3500);
-        if (!res.ok) {
-          const proxyUrl = `${getNextWorkerProxy()}?wallet=${wallet}`;
-          res = await fetchWithTimeout(proxyUrl, 3500);
-        }
+        const res = await fetchWithTimeout(`${PUMP_BASE}/callout/list/${wallet}`, 3500);
         if (!res.ok) return [];
         const data = await res.json();
         return (data.callouts || []).map((c: any) => ({ ...c, callerWallet: wallet, callerLabel: label }));
       } catch {
-        try {
-          const proxyUrl = `${getNextWorkerProxy()}?wallet=${wallet}`;
-          const res = await fetchWithTimeout(proxyUrl, 3500);
-          if (!res.ok) return [];
-          const data = await res.json();
-          return (data.callouts || []).map((c: any) => ({ ...c, callerWallet: wallet, callerLabel: label }));
-        } catch {
-          return [];
-        }
+        return [];
       }
     });
 
@@ -462,22 +446,6 @@ async function syncLivePumpCallouts(force = false): Promise<number> {
 
 // ─── Background auto-refresh loop ─────────────────────────────────────────────
 let bgLoopRunning = false;
-
-function startBackgroundLoop() {
-  if (bgLoopRunning) return;
-  bgLoopRunning = true;
-
-  // Initial sync immediately
-  syncLivePumpCallouts().catch(() => {});
-
-  // Continuous sync every 4 seconds
-  setInterval(() => {
-    syncLivePumpCallouts().catch(() => {});
-  }, 4000);
-}
-
-// Start background loop
-startBackgroundLoop();
 
 // ─── GET handler ─────────────────────────────────────────────────────────────
 export async function GET(req: NextRequest) {
