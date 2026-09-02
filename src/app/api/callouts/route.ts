@@ -103,6 +103,7 @@ const PROXY_POOL = [
   "https://pump-callout-proxy.emir1903topuz106.workers.dev",
   "https://pump-callout-proxy-2.baton-launchpad.workers.dev",
   "https://pump-callout-proxy-3.emir1903topuz0.workers.dev",
+  "https://pump-callout-proxy-4.yuksekmustafa600.workers.dev",
 ];
 
 let proxyIndex = 0;
