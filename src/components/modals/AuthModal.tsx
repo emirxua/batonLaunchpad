@@ -20,7 +20,7 @@ interface AuthModalProps {
     name?: string;
     avatarUrl?: string;
     sub?: string;
-  }) => Promise<void>;
+  }) => Promise<any>;
 }
 
 // Decode Google JWT Credential helper
@@ -109,9 +109,9 @@ export function AuthModal({ isOpen, onClose, onGoogleSuccess }: AuthModalProps) 
     setErrorMessage(null);
     setIsLoadingGoogle(true);
 
-    if (typeof window !== "undefined" && window.google?.accounts?.oauth2) {
+    if (typeof window !== "undefined" && (window as any).google?.accounts?.oauth2) {
       try {
-        const tokenClient = window.google.accounts.oauth2.initTokenClient({
+        const tokenClient = (window as any).google.accounts.oauth2.initTokenClient({
           client_id: clientId,
           scope: "openid email profile",
           callback: async (tokenResponse: { access_token?: string; error?: string }) => {
@@ -186,12 +186,17 @@ export function AuthModal({ isOpen, onClose, onGoogleSuccess }: AuthModalProps) 
   return (
     <div
       onClick={onClose}
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-md animate-in fade-in duration-150 font-mono select-none cursor-pointer"
+      className="fixed inset-0 z-[99999] flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/85 backdrop-blur-md animate-in fade-in duration-150 font-mono select-none cursor-pointer"
     >
       <div
         onClick={(e) => e.stopPropagation()}
-        className="bg-white dark:bg-[#0D0E12] border border-amber-500/30 rounded-3xl w-full max-w-sm p-6 space-y-5 shadow-2xl relative overflow-hidden cursor-default"
+        className="bg-white dark:bg-[#0D0E12] border border-amber-500/30 rounded-t-3xl sm:rounded-3xl w-full max-w-sm p-5 sm:p-6 space-y-5 shadow-2xl relative overflow-hidden cursor-default animate-in slide-in-from-bottom-4 sm:zoom-in-95 duration-200"
       >
+        {/* Mobile Drag Handle */}
+        <div className="sm:hidden -mt-1 pb-1 flex justify-center cursor-grab active:cursor-grabbing">
+          <div className="w-12 h-1 rounded-full bg-zinc-300 dark:bg-zinc-700/80" />
+        </div>
+
         <div className="absolute top-0 right-0 -mr-16 -mt-16 w-48 h-48 bg-amber-500/10 rounded-full blur-3xl pointer-events-none" />
 
         {/* Header */}

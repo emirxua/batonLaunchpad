@@ -1,17 +1,40 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useCallback, useEffect } from "react";
+import dynamic from "next/dynamic";
 import { Navbar } from "@/components/layout/Navbar";
 import { Footer } from "@/components/layout/Footer";
-import { MobileBottomNav } from "@/components/layout/MobileBottomNav";
-import { TerminalHero } from "@/components/home/TerminalHero";
-import { TrendingGrid } from "@/components/TrendingGrid";
-import { CalloutFeed } from "@/components/CalloutFeed";
-import { BurnLeaderboard } from "@/components/BurnLeaderboard";
-import { BurnModal } from "@/components/BurnModal";
-import { JupiterSwapModal } from "@/components/modals/JupiterSwapModal";
 import { LeaderboardItem } from "@/types/token";
 import { Coin } from "@/types/coin";
+
+const TerminalHero = dynamic(
+  () => import("@/components/home/TerminalHero").then((mod) => mod.TerminalHero),
+  { ssr: false }
+);
+const CalloutFeed = dynamic(
+  () => import("@/components/CalloutFeed").then((mod) => mod.CalloutFeed),
+  { ssr: false }
+);
+const TrendingGrid = dynamic(
+  () => import("@/components/TrendingGrid").then((mod) => mod.TrendingGrid),
+  { ssr: false }
+);
+const BurnLeaderboard = dynamic(
+  () => import("@/components/BurnLeaderboard").then((mod) => mod.BurnLeaderboard),
+  { ssr: false }
+);
+const JupiterSwapModal = dynamic(
+  () => import("@/components/modals/JupiterSwapModal").then((mod) => mod.JupiterSwapModal),
+  { ssr: false }
+);
+const BurnModal = dynamic(
+  () => import("@/components/BurnModal").then((mod) => mod.BurnModal),
+  { ssr: false }
+);
+const MobileBottomNav = dynamic(
+  () => import("@/components/layout/MobileBottomNav").then((mod) => mod.MobileBottomNav),
+  { ssr: false }
+);
 import Link from "next/link";
 import { Flame, Radio, Trophy, Zap, Terminal, ArrowUpRight } from "lucide-react";
 import { useCoinsData } from "@/hooks/useCoinsData";
@@ -51,7 +74,7 @@ export default function OutbidHomePage() {
   const [selectedCoinForBurn, setSelectedCoinForBurn] = useState<Coin | null>(null);
   const [isBurnModalOpen, setIsBurnModalOpen] = useState(false);
 
-  const handleSelectSwapToken = (mint: string, symbol: string, name?: string, imageUrl?: string) => {
+  const handleSelectSwapToken = useCallback((mint: string, symbol: string, name?: string, imageUrl?: string) => {
     if (!mint) return;
     setSelectedSwapToken({
       mint,
@@ -60,9 +83,9 @@ export default function OutbidHomePage() {
       imageUrl: imageUrl || (mint === "2vdc4owf1MPz54jJCN61y3QSKqjcPpr32wJ9qKkmpump" ? "/images/baton-logo.png" : undefined),
     });
     setIsJupiterSwapModalOpen(true);
-  };
+  }, []);
 
-  const handleBoostFromLeaderboard = (item: LeaderboardItem) => {
+  const handleBoostFromLeaderboard = useCallback((item: LeaderboardItem) => {
     setSelectedCoinForBurn({
       id: `leaderboard-${item.ca}`,
       name: item.projectName,
@@ -80,7 +103,7 @@ export default function OutbidHomePage() {
       burnLevel: "gold",
     });
     setIsBurnModalOpen(true);
-  };
+  }, []);
 
   const handleOpenOutbid = () => {
     setSelectedCoinForBurn(
@@ -107,7 +130,7 @@ export default function OutbidHomePage() {
   const [isJupiterSwapModalOpen, setIsJupiterSwapModalOpen] = useState(false);
 
   return (
-    <div className="min-h-screen flex flex-col bg-white dark:bg-[#08090C] text-zinc-900 dark:text-zinc-200 selection:bg-amber-500 selection:text-black font-space">
+    <div className="min-h-screen flex flex-col bg-white dark:bg-[#0B0E14] text-zinc-900 dark:text-zinc-200 selection:bg-amber-500 selection:text-black font-space">
       {/* 1. Navbar */}
       <Navbar />
 
@@ -166,25 +189,19 @@ export default function OutbidHomePage() {
           </div>
 
           {/* Tab 1: Live Alpha Callouts Feed (Default & Primary Focus) */}
-          {activeTab === "callouts" && (
-            <div className="animate-in fade-in duration-150">
-              <CalloutFeed onSelectToken={handleSelectSwapToken} />
-            </div>
-          )}
+          <div className={activeTab === "callouts" ? "block" : "hidden"}>
+            <CalloutFeed onSelectToken={handleSelectSwapToken} />
+          </div>
 
           {/* Tab 2: Trending & Bonding Curves */}
-          {activeTab === "trending" && (
-            <div className="animate-in fade-in duration-150">
-              <TrendingGrid onSelectToken={handleSelectSwapToken} />
-            </div>
-          )}
+          <div className={activeTab === "trending" ? "block" : "hidden"}>
+            <TrendingGrid onSelectToken={handleSelectSwapToken} />
+          </div>
 
           {/* Tab 3: Burn-to-Rank Standings */}
-          {activeTab === "leaderboard" && (
-            <div className="animate-in fade-in duration-150">
-              <BurnLeaderboard onBoostToken={handleBoostFromLeaderboard} />
-            </div>
-          )}
+          <div className={activeTab === "leaderboard" ? "block" : "hidden"}>
+            <BurnLeaderboard onBoostToken={handleBoostFromLeaderboard} />
+          </div>
         </div>
 
         {/* ── Callout / Community Quick Strip (Ultra-Minimal) ─────────── */}
@@ -202,6 +219,17 @@ export default function OutbidHomePage() {
         targetName={selectedSwapToken.name}
         targetIconUrl={selectedSwapToken.imageUrl}
         onOpenSwapModal={() => setIsJupiterSwapModalOpen(true)}
+        onOpenBurnModal={() => {
+          setSelectedCoinForBurn({
+            coinId: "2vdc4owf1MPz54jJCN61y3QSKqjcPpr32wJ9qKkmpump",
+            name: "$BATON",
+            ticker: "BATON",
+            symbol: "BATON",
+            image_uri: "/images/baton-logo.png",
+            mint: "2vdc4owf1MPz54jJCN61y3QSKqjcPpr32wJ9qKkmpump",
+          } as any);
+          setIsBurnModalOpen(true);
+        }}
       />
 
       {/* 5. On-Chain Burn Modal */}

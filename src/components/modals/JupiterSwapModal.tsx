@@ -11,6 +11,7 @@ interface JupiterSwapModalProps {
   targetSymbol?: string;
   targetName?: string;
   targetIconUrl?: string;
+  initialInputAmount?: string;
 }
 
 export function JupiterSwapModal({
@@ -20,6 +21,7 @@ export function JupiterSwapModal({
   targetSymbol,
   targetName,
   targetIconUrl,
+  initialInputAmount,
 }: JupiterSwapModalProps) {
   const [resolvedIcon, setResolvedIcon] = React.useState<string | undefined>(targetIconUrl);
 
@@ -57,7 +59,7 @@ export function JupiterSwapModal({
   return (
     <div
       onClick={onClose}
-      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/85 backdrop-blur-md animate-in fade-in duration-150 select-none font-mono cursor-pointer"
+      className="fixed inset-0 z-[99999] flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/85 backdrop-blur-md animate-in fade-in duration-150 select-none font-mono cursor-pointer"
     >
       {/* Modal / Mobile Bottom Sheet Container */}
       <div
@@ -108,6 +110,7 @@ export function JupiterSwapModal({
             targetMint={targetMint || "2vdc4owf1MPz54jJCN61y3QSKqjcPpr32wJ9qKkmpump"}
             targetSymbol={targetSymbol || "BATON"}
             targetIconUrl={targetIconUrl}
+            initialInputAmount={initialInputAmount}
             isModal={true}
           />
         </div>

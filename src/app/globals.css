@@ -33,6 +33,39 @@
   --down: #F43F5E;
 }
 
+/* ── Always render Solana Wallet Adapter Modal above any app dialogs (z-[99999]) ── */
+.wallet-adapter-modal {
+  z-index: 1000000 !important;
+}
+.wallet-adapter-modal-container {
+  z-index: 1000001 !important;
+}
+.wallet-adapter-modal-wrapper {
+  z-index: 1000002 !important;
+}
+.wallet-adapter-modal-overlay {
+  z-index: 999999 !important;
+}
+
+/* Instant Zero-Jank Theme Switcher: Freezes style thrashing across thousands of DOM elements */
+html.disable-transitions,
+html.disable-transitions *,
+html.disable-transitions *::before,
+html.disable-transitions *::after {
+  -webkit-transition: none !important;
+  -moz-transition: none !important;
+  -o-transition: none !important;
+  -ms-transition: none !important;
+  transition: none !important;
+  animation-duration: 0s !important;
+}
+
+/* Off-screen Card Virtualization: Drastically accelerates scrolling & tab switching */
+.card-virtualized {
+  content-visibility: auto;
+  contain-intrinsic-size: 1px 260px;
+}
+
 * {
   box-sizing: border-box;
 }

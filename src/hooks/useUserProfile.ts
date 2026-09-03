@@ -81,6 +81,19 @@ export function useUserProfile() {
     };
   }, []);
 
+  // Listen for outbid:user-updated across all component hook instances
+  useEffect(() => {
+    const handleUserUpdate = (e: any) => {
+      if (e?.detail) {
+        setUser(e.detail);
+      } else if (e?.detail === null) {
+        setUser(null);
+      }
+    };
+    window.addEventListener("outbid:user-updated", handleUserUpdate);
+    return () => window.removeEventListener("outbid:user-updated", handleUserUpdate);
+  }, []);
+
   // Auto-sync handle/username and link connected Solana wallet to user account in Turso DB
   useEffect(() => {
     if (!connected || !publicKey) return;
@@ -173,6 +186,9 @@ export function useUserProfile() {
 
         setUser(authenticatedUser);
         localStorage.setItem(STORAGE_KEY, JSON.stringify(authenticatedUser));
+        if (typeof window !== "undefined") {
+          window.dispatchEvent(new CustomEvent("outbid:user-updated", { detail: authenticatedUser }));
+        }
         setIsAuthModalOpen(false);
 
         // If username not set yet, trigger username claim modal
@@ -197,6 +213,9 @@ export function useUserProfile() {
   const logout = useCallback(() => {
     setUser(null);
     localStorage.removeItem(STORAGE_KEY);
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(new CustomEvent("outbid:user-updated", { detail: null }));
+    }
     setIsUsernameModalOpen(false);
     setIsAuthModalOpen(false);
   }, []);
@@ -258,19 +277,30 @@ export function useUserProfile() {
     [user, publicKey]
   );
 
-  const isLoggedIn = Boolean(user && (user.email || user.id));
+  const isWalletConnected = Boolean(connected && publicKey && publicKey.toBase58().length > 20);
+  const isGoogleLoggedIn = Boolean(user && user.email && user.email.includes("@"));
+  const isLoggedIn = isWalletConnected || isGoogleLoggedIn;
+  const userIdentifier = isWalletConnected
+    ? publicKey!.toBase58()
+    : isGoogleLoggedIn
+    ? user!.email
+    : null;
   const needsUsername = Boolean(isLoggedIn && (!user?.username || user.username.length < 3));
 
   return {
     user,
+    userIdentifier,
     username: user?.username || null,
     email: user?.email || null,
     wallet: user?.wallet || (publicKey ? publicKey.toBase58() : null),
     isLoggedIn,
+    isWalletConnected,
+    isGoogleLoggedIn,
     needsUsername,
     isLoading,
     isUsernameModalOpen,
     isAuthModalOpen,
+    isGoogleLoginModalOpen: isAuthModalOpen,
     openAuthModal: () => setIsAuthModalOpen(true),
     closeAuthModal: () => setIsAuthModalOpen(false),
     openGoogleLoginModal: () => setIsAuthModalOpen(true),

@@ -46,4 +46,5 @@ workers/deploy-workers.js
 workers/generate-shards.js
 workers/get-worker-urls.js
 workers/setup-subdomains.js
-
+*.db
+*.db-journal

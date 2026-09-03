@@ -78,7 +78,7 @@ export const Ticker: React.FC = React.memo(() => {
   if (tokens.length === 0) return null;
 
   return (
-    <div className="w-full bg-[#08090C] text-zinc-300 border-b border-white/[0.06] h-8 sm:h-8.5 flex items-center overflow-hidden select-none z-50 relative font-mono text-[11px]">
+    <div className="w-full bg-[#08090C] text-zinc-300 border-b border-white/[0.06] h-8 sm:h-8.5 flex items-center overflow-hidden select-none z-30 relative font-mono text-[11px]">
       {/* ── Top-Leftmost Clean Online Indicator (Frameless & Sleek) ──────── */}
       <div
         className="flex items-center gap-1.5 px-3 h-full shrink-0 bg-[#08090C] z-20 border-r border-white/[0.08] text-[11px] font-mono select-none"

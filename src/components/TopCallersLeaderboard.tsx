@@ -24,7 +24,6 @@ export interface CallerLeaderboardItem {
   wallet: string;
   username?: string;
   totalCalls: number;
-  winRate: number;
   avgRoi: number;
   totalMcapCalled: number;
   rewardTier: "Diamond" | "Gold" | "Silver";
@@ -95,7 +94,7 @@ export const TopCallersLeaderboard: React.FC<TopCallersLeaderboardProps> = ({
               </span>
             </div>
             <p className="text-zinc-600 dark:text-zinc-400 text-xs mt-0.5">
-              Verified callers earn direct $BATON yield multipliers &amp; bounty pools based on verified accuracy, win rate, and community outbids.
+              Verified callers earn direct $BATON yield multipliers &amp; bounty pools based on verified accuracy, community outbids, and performance.
             </p>
           </div>
         </div>
@@ -178,9 +177,9 @@ export const TopCallersLeaderboard: React.FC<TopCallersLeaderboardProps> = ({
                 {/* Metrics */}
                 <div className="grid grid-cols-2 gap-2 p-3 rounded-xl bg-zinc-50 dark:bg-[#1c1f26] border border-zinc-200/60 dark:border-white/5 font-mono text-xs">
                   <div>
-                    <div className="text-[10px] text-zinc-500 dark:text-zinc-400 uppercase font-bold">Win Rate</div>
-                    <div className="font-black text-emerald-500 text-sm font-mono-num">
-                      {caller.winRate}%
+                    <div className="text-[10px] text-zinc-500 dark:text-zinc-400 uppercase font-bold">Rank</div>
+                    <div className="font-black text-amber-500 text-sm font-mono-num">
+                      #{caller.rank}
                     </div>
                   </div>
                   <div>
@@ -240,7 +239,6 @@ export const TopCallersLeaderboard: React.FC<TopCallersLeaderboardProps> = ({
                 <th className="py-3.5 px-4 font-bold">Caller Identity</th>
                 <th className="py-3.5 px-4 font-bold">Total Calls</th>
                 <th className="py-3.5 px-4 font-bold">Avg. ROI</th>
-                <th className="py-3.5 px-4 font-bold">Win Rate</th>
                 <th className="py-3.5 px-4 font-bold">Reward Tier</th>
                 <th className="py-3.5 px-4 font-bold">Est. Reward Pool</th>
                 <th className="py-3.5 px-4 font-bold text-right">Action</th>
@@ -315,11 +313,6 @@ export const TopCallersLeaderboard: React.FC<TopCallersLeaderboardProps> = ({
                     {/* Avg ROI */}
                     <td className="py-4 px-4 font-black text-orange-500 font-mono-num">
                       +{caller.avgRoi}%
-                    </td>
-
-                    {/* Win Rate */}
-                    <td className="py-4 px-4 font-bold text-emerald-600 dark:text-emerald-400 font-mono-num">
-                      {caller.winRate}%
                     </td>
 
                     {/* Reward Tier */}

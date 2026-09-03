@@ -61,9 +61,14 @@ export const Navbar: React.FC = () => {
 
     document.addEventListener("mousedown", handleClickOutside);
     document.addEventListener("touchstart", handleClickOutside);
+
+    const handleOpenAuth = () => setIsAuthModalOpen(true);
+    window.addEventListener("outbid:open-auth-modal", handleOpenAuth);
+
     return () => {
       document.removeEventListener("mousedown", handleClickOutside);
       document.removeEventListener("touchstart", handleClickOutside);
+      window.removeEventListener("outbid:open-auth-modal", handleOpenAuth);
     };
   }, []);
 
@@ -80,6 +85,29 @@ export const Navbar: React.FC = () => {
     revalidateOnFocus: true,
     dedupingInterval: 4_000,
   });
+
+  // Instant local storage cache so it NEVER shows 0 on page load
+  const [cachedBatonStats, setCachedBatonStats] = useState<any>(() => {
+    if (typeof window !== "undefined") {
+      try {
+        const saved = localStorage.getItem("baton_cached_token_stats_v3");
+        if (saved) return JSON.parse(saved);
+      } catch {}
+    }
+    return null;
+  });
+
+  useEffect(() => {
+    if (batonStats?.priceUsd) {
+      try {
+        localStorage.setItem("baton_cached_token_stats_v3", JSON.stringify(batonStats));
+      } catch {}
+    }
+  }, [batonStats]);
+
+  const liveBatonStats = batonStats || cachedBatonStats;
+  const batonPrice = liveBatonStats?.priceUsd ?? 0.00000972;
+  const batonChange = liveBatonStats?.priceChange24h ?? 8.3;
 
   const { connected, publicKey, disconnect } = useWallet();
   const { setVisible: openWalletModal } = useWalletModal();
@@ -207,6 +235,7 @@ export const Navbar: React.FC = () => {
                 <Link
                   key={link.name}
                   href={link.href}
+                  prefetch={true}
                   onClick={() => {
                     if (link.href === "/" && typeof window !== "undefined") {
                       window.dispatchEvent(
@@ -245,7 +274,7 @@ export const Navbar: React.FC = () => {
             >
               <div className="w-3.5 h-3.5 rounded-full overflow-hidden shrink-0">
                 <img
-                  src={batonStats?.iconUrl || "/images/baton-logo.png"}
+                  src={liveBatonStats?.iconUrl || "/images/baton-logo.png"}
                   alt="BATON"
                   className="w-full h-full object-cover"
                   onError={(e) => {
@@ -255,13 +284,11 @@ export const Navbar: React.FC = () => {
               </div>
               <span className="font-mono font-black">$BATON</span>
               <span className="font-mono opacity-90 text-[10px]">
-                {formatCryptoPrice(batonStats?.priceUsd)}
+                {formatCryptoPrice(batonPrice)}
               </span>
-              {typeof batonStats?.priceChange24h === "number" && (
-                <span className={`text-[9px] font-bold ${batonStats.priceChange24h >= 0 ? "text-emerald-400" : "text-rose-400"}`}>
-                  {batonStats.priceChange24h >= 0 ? `+${batonStats.priceChange24h.toFixed(1)}%` : `${batonStats.priceChange24h.toFixed(1)}%`}
-                </span>
-              )}
+              <span className={`text-[9px] font-bold ${batonChange >= 0 ? "text-emerald-400" : "text-rose-400"}`}>
+                {batonChange >= 0 ? `+${batonChange.toFixed(1)}%` : `${batonChange.toFixed(1)}%`}
+              </span>
             </a>
 
             {/* Official Twitter (X) Direct Link (Desktop only) */}
@@ -672,6 +699,7 @@ export const Navbar: React.FC = () => {
                 <Link
                   key={link.name}
                   href={link.href}
+                  prefetch={true}
                   className={`block px-3.5 py-2.5 rounded-xl text-xs font-bold transition-all ${
                     isActive
                       ? "bg-amber-500/15 text-amber-500 dark:text-amber-400 font-black"

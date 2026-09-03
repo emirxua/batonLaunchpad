@@ -47,6 +47,7 @@ export interface CalloutCard extends PumpCallout {
   entryMcap?: number;
   currentMcap?: number;
   currentPriceUsd?: number;
+  isLeaderboardTrade?: boolean;
 }
 
 // ─── API route response shape ────────────────────────────────────────────────

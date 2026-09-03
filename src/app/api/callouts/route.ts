@@ -44,10 +44,10 @@ function sanitizeAvatarUrl(url?: string | null): string | null {
   return url;
 }
 
-export function isSolanaAddress(addr?: string | null): boolean {
+function isSolanaAddress(addr?: string | null): boolean {
   if (!addr) return false;
-  if (addr.startsWith("0x")) return false;
-  return /^[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(addr.trim());
+  const trimmed = addr.trim();
+  return /^[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(trimmed) || /^0x[a-fA-F0-9]{40}$/.test(trimmed);
 }
 
 // User-submitted callouts
@@ -87,45 +87,53 @@ async function enrichTokensWithDexScreener(mints: string[]): Promise<void> {
   const toFetch = Array.from(new Set(mints)).filter((m) => {
     if (!m || !isSolanaAddress(m)) return false;
     const cached = liveTokenMetaCache.get(m);
-    return !cached || now - cached.lastUpdated > 25_000;
+    // Refresh every 8 seconds, or immediately if missing name/real symbol
+    return !cached || now - cached.lastUpdated > 8_000 || !cached.name || cached.symbol === "TOKEN";
   });
 
   if (toFetch.length === 0) return;
 
   const chunkSize = 30;
+  const chunks: string[][] = [];
   for (let i = 0; i < toFetch.length; i += chunkSize) {
-    const chunk = toFetch.slice(i, i + chunkSize);
-    try {
-      const res = await fetchWithTimeout(
-        `https://api.dexscreener.com/latest/dex/tokens/${chunk.join(",")}`,
-        4000
-      );
-      if (res.ok) {
-        const json = await res.json();
-        const pairs = Array.isArray(json?.pairs) ? json.pairs : [];
-        for (const pair of pairs) {
-          const addr = pair.baseToken?.address;
-          if (addr && isSolanaAddress(addr)) {
-            const mcap = pair.marketCap ?? pair.fdv ?? 0;
-            const price = parseFloat(pair.priceUsd || "0") || 0;
-            const existing = liveTokenMetaCache.get(addr);
-            if (!existing || (mcap > 0 && (!existing.currentMcap || mcap > existing.currentMcap))) {
-              liveTokenMetaCache.set(addr, {
-                name: pair.baseToken?.name,
-                symbol: pair.baseToken?.symbol?.toUpperCase(),
-                iconUrl: sanitizeIpfsUrl(pair.info?.imageUrl),
-                currentMcap: mcap > 0 ? mcap : undefined,
-                currentPriceUsd: price > 0 ? price : undefined,
+    chunks.push(toFetch.slice(i, i + chunkSize));
+  }
+
+  // Parallel fetch all chunks with Promise.all
+  await Promise.all(
+    chunks.map(async (chunk) => {
+      try {
+        const res = await fetchWithTimeout(
+          `https://api.dexscreener.com/latest/dex/tokens/${chunk.join(",")}`,
+          3500
+        );
+        if (res.ok) {
+          const json = await res.json();
+          const pairs = Array.isArray(json?.pairs) ? json.pairs : [];
+          for (const pair of pairs) {
+            const addr = pair.baseToken?.address;
+            if (addr && isSolanaAddress(addr)) {
+              const mcap = pair.marketCap ?? pair.fdv ?? 0;
+              const price = parseFloat(pair.priceUsd || "0") || 0;
+              const existing = liveTokenMetaCache.get(addr);
+              const metaObj = {
+                name: pair.baseToken?.name || existing?.name,
+                symbol: pair.baseToken?.symbol?.toUpperCase() || existing?.symbol,
+                iconUrl: sanitizeIpfsUrl(pair.info?.imageUrl) || existing?.iconUrl,
+                currentMcap: mcap > 0 ? mcap : (existing?.currentMcap || 0),
+                currentPriceUsd: price > 0 ? price : (existing?.currentPriceUsd || 0),
                 lastUpdated: now,
-              });
+              };
+              liveTokenMetaCache.set(addr, metaObj);
+              liveTokenMetaCache.set(addr.toLowerCase(), metaObj);
             }
           }
         }
+      } catch {
+        // Ignore transient errors
       }
-    } catch {
-      // Ignore transient errors
-    }
-  }
+    })
+  );
 }
 
 async function fetchWithTimeout(url: string, ms = FETCH_TIMEOUT_MS): Promise<Response> {
@@ -254,9 +262,23 @@ async function syncLivePumpCallouts(force = false): Promise<number> {
         }
 
         const rawMultiple = Number(c.multiple) || 1.0;
-        const entryMcap = Number(c.calledOutAtMcap) || (item.marketCap && rawMultiple > 0 ? Math.round(item.marketCap / rawMultiple) : 0) || Number(c.marketCap) || 0;
-        const currentMcap = Number(item.marketCap) || (entryMcap > 0 && rawMultiple > 0 ? Math.round(entryMcap * rawMultiple) : entryMcap);
+        const currentMcap = Number(item.marketCap) || 0;
+        const entryMcap = Number(c.calledOutAtMcap) > 0
+          ? Number(c.calledOutAtMcap)
+          : (currentMcap > 0 && rawMultiple > 0 ? Math.round(currentMcap / rawMultiple) : Number(c.marketCap) || currentMcap);
         const actualMultiple = entryMcap > 0 && currentMcap > 0 ? Number((currentMcap / entryMcap).toFixed(2)) : rawMultiple;
+
+        if (item.coinMint && currentMcap > 0) {
+          const ex = liveTokenMetaCache.get(item.coinMint);
+          liveTokenMetaCache.set(item.coinMint, {
+            name: item.coinName || item.symbol || ex?.name,
+            symbol: (item.symbol || ex?.symbol || "TOKEN").toUpperCase(),
+            iconUrl: coinImg || ex?.iconUrl,
+            currentMcap,
+            currentPriceUsd: Number(item.usdPrice || item.priceUsd) || ex?.currentPriceUsd || 0,
+            lastUpdated: now,
+          });
+        }
 
         cumulativeSignalsMap.set(id, {
           calloutId: id,
@@ -301,12 +323,12 @@ async function syncLivePumpCallouts(force = false): Promise<number> {
     // Process PnL Leaderboard items (STRICT SOLANA ONLY)
     for (const entryList of pnlResults) {
       for (const entry of entryList) {
-        const c = entry.callout;
-        if (!c || !entry.coinMint) continue;
+        if (!entry.coinMint) continue;
         if (!isSolanaAddress(entry.coinMint)) continue;
+        const c = entry.callout;
 
         const wallet = entry.walletAddress || entry.userId || "";
-        const id = c.calloutId || `callout-${entry.coinMint}-${wallet.slice(0, 6)}`;
+        const id = `pnl-${c?.calloutId || `${entry.coinMint}-${wallet.slice(0, 8)}`}`;
         const callerLabel = entry.username || labelMap[wallet] || "Top Alpha";
         const avatarUrl = sanitizeAvatarUrl(entry.profileImage);
         const xUsername = entry.xUsername || undefined;
@@ -320,17 +342,20 @@ async function syncLivePumpCallouts(force = false): Promise<number> {
           });
         }
 
-        const createdAtMs = c.calloutTimestamp ? new Date(c.calloutTimestamp).getTime() : Date.now();
-        // Strictly discard stale callouts older than 8 hours (eliminates old 22h+ data)
-        if (Date.now() - createdAtMs > MAX_CALLOUT_AGE_MS) continue;
+        const createdAtMs = c?.calloutTimestamp ? new Date(c.calloutTimestamp).getTime() : Date.now();
+        // Keep active leaderboard winning trades (allow up to 7 days for weekly leaderboard)
+        if (Date.now() - createdAtMs > 7 * 24 * 60 * 60 * 1000) continue;
 
         if (!cumulativeSignalsMap.has(id)) {
           newCalloutCount++;
         }
 
-        const rawMultiple = Number(c.multiple) || 1.0;
-        const entryMcap = Number(c.calledOutAtMcap) || 0;
-        const currentMcap = entryMcap > 0 ? Math.round(entryMcap * rawMultiple) : 0;
+        const rawMultiple = Number(c?.multiple) || 1.0;
+        const tradeEntryMcap = Number(entry.avgEntryMcapUsd) > 0 ? Math.round(Number(entry.avgEntryMcapUsd)) : 0;
+        const calloutMcap = Number(c?.calledOutAtMcap) > 0 ? Math.round(Number(c.calledOutAtMcap)) : 0;
+        const entryMcap = tradeEntryMcap > 0 ? tradeEntryMcap : (calloutMcap > 0 ? calloutMcap : 0);
+        const pnlMultiple = entry.pnlPercentage ? Number((1 + entry.pnlPercentage / 100).toFixed(2)) : rawMultiple;
+        const thesisText = c?.thesis || (entry.pnlPercentage ? `Verified Leaderboard Trade: +${entry.pnlPercentage.toFixed(1)}% ROI ($${Math.round(entry.pnlUsd || 0).toLocaleString()} profit)` : "Winning position on Pump.fun Leaderboard.");
 
         cumulativeSignalsMap.set(id, {
           calloutId: id,
@@ -344,30 +369,31 @@ async function syncLivePumpCallouts(force = false): Promise<number> {
           coinSymbol: (entry.coinSymbol || "TOKEN").toUpperCase(),
           marketCap: entryMcap,
           entryMcap,
-          currentMcap,
-          calloutPrice: c.calloutPrice || 0,
-          calloutPriceUsd: c.calloutPrice || 0,
-          multiple: rawMultiple,
+          currentMcap: calloutMcap,
+          calloutPrice: c?.calloutPrice || 0,
+          calloutPriceUsd: c?.calloutPrice || 0,
+          multiple: pnlMultiple > 1 ? pnlMultiple : rawMultiple,
           createdAt: createdAtMs,
           maxPriceSol: 0,
           maxPriceUsd: 0,
-          thesis: c.thesis || "",
+          thesis: thesisText,
           user_uuid: entry.userId || wallet,
-          likes: c.likes || 0,
-          hasLiked: c.hasLiked || false,
-          hasReposted: c.hasReposted || false,
-          repostCount: c.repostCount || 0,
-          quoteCount: c.quoteCount || 0,
-          commentCount: c.commentCount || 0,
-          replyCount: c.replyCount || 0,
-          maxMultiplier: Number(c.maxMultiplier) || Number(c.multiple) || 1.0,
-          maxMultiplierAt: c.maxMultiplierAt || new Date().toISOString(),
-          viewCount: c.viewCount || 0,
-          mediaUrl: sanitizeIpfsUrl(c.mediaUrl),
-          quotedCalloutId: c.quotedCalloutId || null,
-          quotedCallout: c.quotedCallout || null,
-          updates: Array.isArray(c.updates) ? c.updates : [],
-          updateCount: c.updateCount || 0,
+          isLeaderboardTrade: true,
+          likes: c?.likes || 0,
+          hasLiked: c?.hasLiked || false,
+          hasReposted: c?.hasReposted || false,
+          repostCount: c?.repostCount || 0,
+          quoteCount: c?.quoteCount || 0,
+          commentCount: c?.commentCount || 0,
+          replyCount: c?.replyCount || 0,
+          maxMultiplier: Number(c?.maxMultiplier) || Number(c?.multiple) || pnlMultiple || 1.0,
+          maxMultiplierAt: c?.maxMultiplierAt || new Date().toISOString(),
+          viewCount: c?.viewCount || 0,
+          mediaUrl: sanitizeIpfsUrl(c?.mediaUrl),
+          quotedCalloutId: c?.quotedCalloutId || null,
+          quotedCallout: c?.quotedCallout || null,
+          updates: Array.isArray(c?.updates) ? c.updates : [],
+          updateCount: c?.updateCount || 0,
         });
       }
     }
@@ -392,7 +418,7 @@ async function syncLivePumpCallouts(force = false): Promise<number> {
 
         const rawMultiple = Number(c.multiple) || 1.0;
         const entryMcap = Number(c.calledOutAtMcap) || Number(c.marketCap) || 0;
-        const currentMcap = entryMcap > 0 ? Math.round(entryMcap * rawMultiple) : 0;
+        const currentMcap = 0;
 
         cumulativeSignalsMap.set(id, {
           calloutId: id,
@@ -445,7 +471,9 @@ async function syncLivePumpCallouts(force = false): Promise<number> {
 }
 
 // ─── Background auto-refresh loop ─────────────────────────────────────────────
-let bgLoopRunning = false;
+// ─── Fast In-Memory API Cache ────────────────────────────────────────────────
+let cachedJsonResponse: any = null;
+let cachedJsonTimestamp = 0;
 
 // ─── GET handler ─────────────────────────────────────────────────────────────
 export async function GET(req: NextRequest) {
@@ -453,22 +481,43 @@ export async function GET(req: NextRequest) {
   const { searchParams } = new URL(req.url);
   const forceRefresh = searchParams.get("refresh") === "1" || searchParams.get("refresh") === "true";
 
-  // If force refresh requested, or never synced, or stale (> 3s), sync fresh calls immediately
-  if (forceRefresh || lastSyncTime === 0 || Date.now() - lastSyncTime > 3000) {
-    await syncLivePumpCallouts(forceRefresh);
+  // If cached in memory and fresh (< 3.5s), return in 1ms!
+  if (!forceRefresh && cachedJsonResponse && Date.now() - cachedJsonTimestamp < 3500) {
+    return NextResponse.json(cachedJsonResponse, {
+      status: 200,
+      headers: {
+        "Cache-Control": "no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0",
+        Pragma: "no-cache",
+        Expires: "0",
+      },
+    });
+  }
+
+  // If cold start (no data yet), await initial fetch once
+  if (cumulativeSignalsMap.size === 0 || lastSyncTime === 0) {
+    await syncLivePumpCallouts(true);
+  } else if (forceRefresh || Date.now() - lastSyncTime > 5000) {
+    // Non-blocking background sync! Return current data in 2ms, sync in background!
+    syncLivePumpCallouts(forceRefresh).catch(() => {});
   }
 
   const now = Date.now();
-  // Prune signals older than MAX_CALLOUT_AGE_MS (strictly discards stale 22h+ data)
+  // Prune signals older than MAX_CALLOUT_AGE_MS (keeps leaderboard winning trades up to 7 days)
   for (const [id, c] of cumulativeSignalsMap.entries()) {
-    if (now - (c.createdAt || 0) > MAX_CALLOUT_AGE_MS) {
+    const isPnlLeaderboard = id.startsWith("pnl-") || id.startsWith("callout-");
+    const maxAge = isPnlLeaderboard ? 7 * 24 * 60 * 60 * 1000 : MAX_CALLOUT_AGE_MS;
+    if (now - (c.createdAt || 0) > maxAge) {
       cumulativeSignalsMap.delete(id);
     }
   }
 
   const baseCards = Array.from(cumulativeSignalsMap.values());
   const allCards = [...userSubmittedCallouts, ...baseCards]
-    .filter((c) => now - (c.createdAt || 0) <= MAX_CALLOUT_AGE_MS)
+    .filter((c) => {
+      const isPnlLeaderboard = c.calloutId?.startsWith("pnl-") || c.calloutId?.startsWith("callout-");
+      const maxAge = isPnlLeaderboard ? 7 * 24 * 60 * 60 * 1000 : MAX_CALLOUT_AGE_MS;
+      return now - (c.createdAt || 0) <= maxAge;
+    })
     .map((c) => {
       const prof = c.callerWallet ? callerProfilesCache.get(c.callerWallet) : null;
       return {
@@ -480,20 +529,38 @@ export async function GET(req: NextRequest) {
     })
     .sort((a, b) => b.createdAt - a.createdAt);
 
-  // Batch-enrich unique active mints with DexScreener live market cap, price, real symbol & name
-  const uniqueMints = Array.from(new Set(allCards.map((c) => c.coinMint).filter(Boolean))).slice(0, 90);
+  // Batch-enrich unique active mints with DexScreener live market cap, price, real symbol & name (up to 300 mints in parallel)
+  const uniqueMints = Array.from(new Set(allCards.map((c) => c.coinMint).filter(Boolean))).slice(0, 300);
   try {
     await enrichTokensWithDexScreener(uniqueMints);
   } catch {}
 
   const enrichedCards = allCards.map((c) => {
-    const live = liveTokenMetaCache.get(c.coinMint);
-    const entryMcap = c.entryMcap || (c as any).calledOutAtMcap || c.marketCap || 0;
-    const currentMcap = live?.currentMcap || c.currentMcap || (entryMcap > 0 && c.multiple ? Math.round(entryMcap * c.multiple) : entryMcap);
-    const currentPriceUsd = live?.currentPriceUsd || c.currentPriceUsd || (c.calloutPriceUsd ? c.calloutPriceUsd * (c.multiple || 1) : 0);
+    const live = liveTokenMetaCache.get(c.coinMint) || (c.coinMint ? liveTokenMetaCache.get(c.coinMint.toLowerCase()) : null);
+    
+    // 1. Current Live Market Cap from DexScreener or bonding curve
+    const currentMcap = live?.currentMcap && live.currentMcap > 0
+      ? live.currentMcap
+      : (Number(c.currentMcap) > 0 ? Number(c.currentMcap) : Number(c.marketCap) || 0);
+
+    // 2. True Entry Market Cap (prioritize trade entry or calledOutAtMcap)
+    let entryMcap = c.entryMcap || (c as any).calledOutAtMcap || 0;
+    if (!entryMcap || entryMcap === 0) {
+      if (currentMcap > 0 && Number(c.multiple) > 1) {
+        entryMcap = Math.round(currentMcap / Number(c.multiple));
+      } else {
+        entryMcap = currentMcap;
+      }
+    }
+
+    // 3. Accurate live multiple (Current / Entry)
     const actualMultiple = entryMcap > 0 && currentMcap > 0
       ? Number((currentMcap / entryMcap).toFixed(2))
-      : Number(c.multiple) || 1.0;
+      : (Number(c.multiple) || 1.0);
+
+    const currentPriceUsd = live?.currentPriceUsd && live.currentPriceUsd > 0
+      ? live.currentPriceUsd
+      : (c.calloutPriceUsd || 0);
 
     return {
       ...c,
@@ -505,6 +572,7 @@ export async function GET(req: NextRequest) {
       currentMcap,
       currentPriceUsd,
       multiple: actualMultiple,
+      multiplier: actualMultiple,
     };
   });
 
@@ -564,18 +632,23 @@ export async function GET(req: NextRequest) {
     };
   }).sort((a, b) => b.count - a.count || a.label.localeCompare(b.label));
 
+  const responsePayload = {
+    success: true,
+    updatedAt: lastSyncTime || Date.now(),
+    callouts: enrichedCards,
+    count: enrichedCards.length,
+    watched,
+    activeWallets: watched.filter((w) => w.count > 0).length,
+    totalWallets: watched.length,
+    emptyWallets: [],
+    errors: [],
+  };
+
+  cachedJsonResponse = responsePayload;
+  cachedJsonTimestamp = Date.now();
+
   return NextResponse.json(
-    {
-      success: true,
-      updatedAt: lastSyncTime || Date.now(),
-      callouts: enrichedCards,
-      count: enrichedCards.length,
-      watched,
-      activeWallets: watched.filter((w) => w.count > 0).length,
-      totalWallets: watched.length,
-      emptyWallets: [],
-      errors: [],
-    },
+    responsePayload,
     {
       status: 200,
       headers: {

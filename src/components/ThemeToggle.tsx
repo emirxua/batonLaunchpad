@@ -23,7 +23,18 @@ export const ThemeToggle: React.FC = () => {
   }, [isDark, mounted]);
 
   const handleToggle = () => {
-    setTheme(isDark ? "light" : "dark");
+    if (typeof document !== "undefined") {
+      const doc = document.documentElement;
+      doc.classList.add("disable-transitions");
+      setTheme(isDark ? "light" : "dark");
+      requestAnimationFrame(() => {
+        requestAnimationFrame(() => {
+          doc.classList.remove("disable-transitions");
+        });
+      });
+    } else {
+      setTheme(isDark ? "light" : "dark");
+    }
   };
 
   if (!mounted) {

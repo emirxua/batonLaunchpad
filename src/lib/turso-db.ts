@@ -158,6 +158,19 @@ async function initDb(): Promise<void> {
       created_at INTEGER NOT NULL
     );
   `);
+
+  // 6. User Starred Token Watchlist Table
+  await client.execute(`
+    CREATE TABLE IF NOT EXISTS user_token_watchlists (
+      identifier TEXT NOT NULL,
+      mint TEXT NOT NULL,
+      created_at INTEGER NOT NULL,
+      PRIMARY KEY(identifier, mint)
+    );
+  `);
+  await client.execute(`
+    CREATE INDEX IF NOT EXISTS idx_user_token_watchlists_id ON user_token_watchlists(identifier);
+  `);
 }
 
 export function ensureInit(): Promise<void> {
@@ -676,3 +689,112 @@ export async function toggleCommentLike(commentId: string, delta: number): Promi
   const likes = res.rows.length > 0 ? Number(res.rows[0].likes) : 1;
   return { success: true, likes };
 }
+
+export async function resolveUserIdentifiers(identifier: string): Promise<string[]> {
+  await ensureInit();
+  const client = getClient();
+  const cleanId = identifier.trim().toLowerCase();
+  const ids = new Set<string>([cleanId]);
+
+  try {
+    const userRes = await client.execute({
+      sql: `SELECT id, google_id, email, wallet, username FROM users 
+            WHERE LOWER(wallet) = ? 
+               OR LOWER(email) = ? 
+               OR LOWER(id) = ? 
+               OR LOWER(username) = ? 
+               OR LOWER(google_id) = ? LIMIT 1`,
+      args: [cleanId, cleanId, cleanId, cleanId, cleanId],
+    });
+
+    if (userRes.rows.length > 0) {
+      const u = userRes.rows[0];
+      if (u.wallet) ids.add(String(u.wallet).trim().toLowerCase());
+      if (u.email) ids.add(String(u.email).trim().toLowerCase());
+      if (u.id) ids.add(String(u.id).trim().toLowerCase());
+      if (u.username) ids.add(String(u.username).trim().toLowerCase());
+      if (u.google_id) ids.add(String(u.google_id).trim().toLowerCase());
+    }
+  } catch (err) {
+    console.error("[Turso DB] Error resolving user identifiers:", err);
+  }
+
+  return Array.from(ids);
+}
+
+export async function getUserTokenWatchlist(identifier: string): Promise<string[]> {
+  await ensureInit();
+  const client = getClient();
+  const linkedIds = await resolveUserIdentifiers(identifier);
+
+  if (linkedIds.length === 0) return [];
+
+  const placeholders = linkedIds.map(() => "?").join(",");
+  const res = await client.execute({
+    sql: `SELECT DISTINCT mint FROM user_token_watchlists WHERE LOWER(identifier) IN (${placeholders}) ORDER BY created_at DESC`,
+    args: linkedIds,
+  });
+  return res.rows.map((r) => String(r.mint));
+}
+
+export async function setUserTokenWatchlist(
+  identifier: string,
+  mint: string,
+  action: "add" | "remove"
+): Promise<{ isWatchlisted: boolean; watchlist: string[] }> {
+  await ensureInit();
+  const client = getClient();
+  const cleanMint = mint.trim();
+  const linkedIds = await resolveUserIdentifiers(identifier);
+
+  if (action === "add") {
+    // Save under the primary identifier, and also any known wallet/email
+    const primaryId = identifier.trim().toLowerCase();
+    await client.execute({
+      sql: "INSERT OR IGNORE INTO user_token_watchlists (identifier, mint, created_at) VALUES (?, ?, ?)",
+      args: [primaryId, cleanMint, Date.now()],
+    });
+
+    // Also mirror to other linked identifiers if present
+    for (const otherId of linkedIds) {
+      if (otherId !== primaryId) {
+        try {
+          await client.execute({
+            sql: "INSERT OR IGNORE INTO user_token_watchlists (identifier, mint, created_at) VALUES (?, ?, ?)",
+            args: [otherId, cleanMint, Date.now()],
+          });
+        } catch {}
+      }
+    }
+  } else {
+    // Remove across ALL linked identifiers so it stays removed everywhere
+    const placeholders = linkedIds.map(() => "?").join(",");
+    await client.execute({
+      sql: `DELETE FROM user_token_watchlists WHERE LOWER(identifier) IN (${placeholders}) AND mint = ?`,
+      args: [...linkedIds, cleanMint],
+    });
+  }
+
+  const all = await getUserTokenWatchlist(identifier);
+  return { isWatchlisted: action === "add", watchlist: all };
+}
+
+export async function toggleUserTokenWatchlist(
+  identifier: string,
+  mint: string,
+  explicitAction?: "add" | "remove"
+): Promise<{ isWatchlisted: boolean; watchlist: string[] }> {
+  await ensureInit();
+  const cleanMint = mint.trim();
+
+  let action = explicitAction;
+  if (!action) {
+    const existing = await getUserTokenWatchlist(identifier);
+    const hasIt = existing.some((m) => m.toLowerCase() === cleanMint.toLowerCase());
+    action = hasIt ? "remove" : "add";
+  }
+
+  return setUserTokenWatchlist(identifier, cleanMint, action);
+}
+
+

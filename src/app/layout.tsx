@@ -5,6 +5,7 @@ import "@/styles/wallet-adapter-custom.css";
 import { ThemeProvider } from "@/components/ThemeProvider";
 import { WalletContextProvider } from "@/components/WalletContextProvider";
 import { LiveBurnToast } from "@/components/terminal/LiveBurnToast";
+import { SiteIntroSplash } from "@/components/common/SiteIntroSplash";
 import { Ticker } from "@/components/Ticker";
 
 const archivoBlack = Archivo_Black({
@@ -100,12 +101,36 @@ export default function RootLayout({
         <meta name="mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="default" />
-        <meta name="apple-mobile-web-app-title" content="Outbid" />
+        {/* Instant 0ms Synchronous Theme Resolution - Prevents any white flash/flare in dark mode */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              (function() {
+                try {
+                  var theme = localStorage.getItem('theme');
+                  var supportDarkMode = window.matchMedia('(prefers-color-scheme: dark)').matches;
+                  var isDark = theme === 'dark' || (!theme && supportDarkMode) || (theme === 'system' && supportDarkMode);
+                  var root = document.documentElement;
+                  if (isDark) {
+                    root.classList.add('dark');
+                    root.style.colorScheme = 'dark';
+                    root.style.backgroundColor = '#0B0E14';
+                  } else {
+                    root.classList.remove('dark');
+                    root.style.colorScheme = 'light';
+                    root.style.backgroundColor = '#FFFFFF';
+                  }
+                } catch (e) {}
+              })();
+            `,
+          }}
+        />
         <script src="https://accounts.google.com/gsi/client" async defer></script>
       </head>
-      <body className="bg-white dark:bg-[#0B0E14] text-zinc-900 dark:text-zinc-100 antialiased min-h-screen overflow-x-hidden selection:bg-amber-500 selection:text-black font-mono">
-        <ThemeProvider attribute="class" defaultTheme="system" enableSystem={true}>
+      <body suppressHydrationWarning className="bg-white dark:bg-[#0B0E14] text-zinc-900 dark:text-zinc-100 antialiased min-h-screen overflow-x-hidden selection:bg-amber-500 selection:text-black font-mono">
+        <ThemeProvider attribute="class" defaultTheme="system" enableSystem={true} disableTransitionOnChange>
           <WalletContextProvider>
+            <SiteIntroSplash />
             {children}
             <LiveBurnToast />
           </WalletContextProvider>

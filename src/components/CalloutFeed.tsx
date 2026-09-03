@@ -26,26 +26,32 @@ import {
   Eye,
   Bell,
   BellOff,
-  ArrowUpDown,
   Award,
   Sparkles,
+  Star,
+  Sliders,
+  Volume2,
+  VolumeX,
+  Trophy,
 } from "lucide-react";
 
 import { CallerFilterModal } from "@/components/modals/CallerFilterModal";
 import { BurnBoostModal } from "@/components/modals/BurnBoostModal";
 import { BoostAnyTokenModal } from "@/components/modals/BoostAnyTokenModal";
+import { TokenChartDrawer, DrawerTokenData } from "@/components/modals/TokenChartDrawer";
 import { CallerAvatar } from "@/components/callouts/CallerAvatar";
 import { TokenLogo } from "@/components/callouts/TokenLogo";
 import { Coin } from "@/types/coin";
-import { CalloutCallerItem } from "@/types/token";
+import { CalloutItem, CalloutCallerItem } from "@/types/token";
+import { useWatchlistTokens } from "@/hooks/useWatchlistTokens";
+import { CalloutLeaderboard } from "@/components/callouts/CalloutLeaderboard";
 
 interface CalloutFeedProps {
   onSelectToken?: (ca: string, symbol: string, name?: string, iconUrl?: string) => void;
   filterSymbol?: string;
 }
 
-type CalloutFilterTab = "all" | "2x" | "pinned";
-type CalloutSortOption = "newest" | "multiplier" | "mcap" | "winrate";
+type CalloutFilterTab = "all" | "2x" | "pinned" | "watchlist" | "leaderboard";
 
 function playSignalChime() {
   try {
@@ -92,9 +98,30 @@ export function CalloutFeed({ onSelectToken, filterSymbol }: CalloutFeedProps) {
   );
 
   const [filterTab, setFilterTab] = useState<CalloutFilterTab>("all");
-  const [sortBy, setSortBy] = useState<CalloutSortOption>("newest");
   const [soundAlertsEnabled, setSoundAlertsEnabled] = useState(false);
   const [tick, setTick] = useState(0);
+
+  // Instant 0ms cached callouts for zero page load delay
+  const [cachedCallouts, setCachedCallouts] = useState<any[]>(() => {
+    if (typeof window !== "undefined") {
+      try {
+        const saved = localStorage.getItem("baton_cached_callouts_v4");
+        if (saved) {
+          const parsed = JSON.parse(saved);
+          if (Array.isArray(parsed) && parsed.length > 0) return parsed;
+        }
+      } catch {}
+    }
+    return [];
+  });
+
+  useEffect(() => {
+    if (data?.callouts && data.callouts.length > 0) {
+      try {
+        localStorage.setItem("baton_cached_callouts_v4", JSON.stringify(data.callouts.slice(0, 90)));
+      } catch {}
+    }
+  }, [data?.callouts]);
 
   useEffect(() => {
     const timer = setInterval(() => setTick((t) => t + 1), 10_000);
@@ -113,8 +140,11 @@ export function CalloutFeed({ onSelectToken, filterSymbol }: CalloutFeedProps) {
     symbol: string;
     name?: string;
     iconUrl?: string;
+    amountSol?: string;
   } | null>(null);
+  const [drawerToken, setDrawerToken] = useState<DrawerTokenData | null>(null);
   const [boostModalCoin, setBoostModalCoin] = useState<Coin | null>(null);
+  const { isWatchlisted, toggleWatchlist, watchlist, isLoggedIn, authRequiredToast, dismissAuthToast } = useWatchlistTokens();
 
   // Play subtle sound alert when a new callout arrives (if enabled)
   useEffect(() => {
@@ -126,6 +156,9 @@ export function CalloutFeed({ onSelectToken, filterSymbol }: CalloutFeedProps) {
       }
     }
     lastCalloutIdRef.current = newestId;
+    if (typeof window !== "undefined") {
+      window.dispatchEvent(new CustomEvent("outbid:data-loaded"));
+    }
   }, [data?.callouts, soundAlertsEnabled]);
 
   // Dynamic CA Lookup on Search
@@ -264,7 +297,8 @@ export function CalloutFeed({ onSelectToken, filterSymbol }: CalloutFeedProps) {
     return map;
   }, [leaderboardData]);
 
-  const rawLiveCallouts: CalloutItem[] = (data?.callouts || []).map((c: any) => {
+  const rawList = (data?.callouts && data.callouts.length > 0) ? data.callouts : cachedCallouts;
+  const rawLiveCallouts: CalloutItem[] = rawList.map((c: any) => {
     const callerWallet = c.callerWallet || c.userId || "";
     const callerName = (c.callerLabel && c.callerLabel !== "Alpha Caller" && !c.callerLabel.toLowerCase().includes("alpha caller"))
       ? c.callerLabel
@@ -302,10 +336,18 @@ export function CalloutFeed({ onSelectToken, filterSymbol }: CalloutFeedProps) {
       tokenCA: c.coinMint || "2vdc4owf1MPz54jJCN61y3QSKqjcPpr32wJ9qKkmpump",
       tokenIconUrl,
       calloutPrice: c.calloutPriceUsd || c.calloutPrice || 0,
-      currentPrice: (c as any).currentPriceUsd || ((c.calloutPriceUsd || c.calloutPrice || 0) * (c.multiple || 1)),
+      currentPrice: (c as any).currentPriceUsd || 0,
       entryMcap: (c as any).entryMcap || c.marketCap || 0,
-      currentMcap: (c as any).currentMcap || ((c as any).entryMcap ? Math.round((c as any).entryMcap * (c.multiple || 1)) : Math.round(c.marketCap || 0)),
-      multiplier: Number((c.multiple || 1).toFixed(2)),
+      currentMcap: (c as any).currentMcap || 0,
+      multiplier: (() => {
+        const ent = Number((c as any).entryMcap) || Number(c.marketCap) || 0;
+        const cur = Number((c as any).currentMcap) || 0;
+        const raw = Number((c as any).multiple) || Number((c as any).multiplier) || 1.0;
+        if (ent > 0 && cur > 0) {
+          return Number((cur / ent).toFixed(2));
+        }
+        return Number(raw.toFixed(2));
+      })(),
       timeAgo: formatTimeAgo(c.createdAt),
       upvotes: typeof c.likes === "number" ? c.likes : (c.upvotes || 0),
       viewsCount: c.viewCount || 0,
@@ -362,9 +404,9 @@ export function CalloutFeed({ onSelectToken, filterSymbol }: CalloutFeedProps) {
     return rawLiveCallouts.filter((c) => !c.createdAt || c.createdAt >= cutoff);
   }, [rawLiveCallouts]);
 
-  // ─── Caller Track Record Stats Map (Win Rate & Peak Multiplier) ─────────────
+  // ─── Caller Track Record Stats Map (Peak Multiplier & Calls Count) ─────────────
   const callerStatsMap = useMemo(() => {
-    const stats: Record<string, { total: number; wins: number; maxMul: number; winRate: number }> = {};
+    const stats: Record<string, { total: number; maxMul: number }> = {};
     for (const c of allCallouts) {
       const keys = [
         c.callerWallet ? c.callerWallet.toLowerCase() : null,
@@ -373,26 +415,13 @@ export function CalloutFeed({ onSelectToken, filterSymbol }: CalloutFeedProps) {
 
       for (const key of keys) {
         if (!stats[key]) {
-          stats[key] = { total: 0, wins: 0, maxMul: 1, winRate: 0 };
+          stats[key] = { total: 0, maxMul: 1 };
         }
         stats[key].total++;
         const mul = Number(c.multiplier) || 1;
-        // Real on-chain win metric: callout gained value (multiplier >= 1.05)
-        if (mul >= 1.05) {
-          stats[key].wins++;
-        }
         if (mul > stats[key].maxMul) {
           stats[key].maxMul = mul;
         }
-      }
-    }
-    for (const key in stats) {
-      const s = stats[key];
-      if (key.includes("outbid") || key === "burn_engine") {
-        s.winRate = 100;
-        s.wins = s.total;
-      } else {
-        s.winRate = s.total > 0 ? Math.round((s.wins / s.total) * 100) : 0;
       }
     }
     return stats;
@@ -499,7 +528,6 @@ export function CalloutFeed({ onSelectToken, filterSymbol }: CalloutFeedProps) {
           wallet: info.wallet,
           avatarUrl: info.avatarUrl,
           xUsername: info.xUsername,
-          winRate: stats?.winRate ?? 0,
         };
       })
       .sort((a, b) => b.count - a.count || a.name.localeCompare(b.name));
@@ -522,12 +550,11 @@ export function CalloutFeed({ onSelectToken, filterSymbol }: CalloutFeedProps) {
       return list;
     }
 
-    // 2. Otherwise filter pure callouts (STRICT SOLANA CONTRACTS ONLY)
+    // 2. Otherwise filter pure callouts (Solana & Pump.fun Multi-chain contracts)
     let list = allCallouts.filter(
       (c) =>
         c.tokenCA &&
-        !c.tokenCA.startsWith("0x") &&
-        /^[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(c.tokenCA)
+        (/^[1-9A-HJ-NP-Za-km-z]{32,44}$/.test(c.tokenCA) || /^0x[a-fA-F0-9]{40}$/.test(c.tokenCA))
     );
 
     // Prop filter (e.g. from token details)
@@ -540,13 +567,32 @@ export function CalloutFeed({ onSelectToken, filterSymbol }: CalloutFeedProps) {
     // Multiple Callers filter (AND/OR across selected callers)
     if (selectedCallers.length > 0) {
       list = list.filter((c) =>
-        selectedCallers.some((sc) => sc.toLowerCase() === c.callerName.toLowerCase())
+        selectedCallers.some((sc) => {
+          const cleanSc = sc.toLowerCase().replace(/^@/, "").trim();
+          return (
+            c.callerName.toLowerCase().replace(/^@/, "").includes(cleanSc) ||
+            c.callerHandle.toLowerCase().replace(/^@/, "").includes(cleanSc) ||
+            (c.callerWallet && c.callerWallet.toLowerCase() === cleanSc) ||
+            (c.tokenSymbol && c.tokenSymbol.toLowerCase() === cleanSc)
+          );
+        })
       );
     }
 
     // Tab filter
     if (filterTab === "2x") {
       list = list.filter((c) => c.multiplier >= 2.0);
+    } else if (filterTab === "watchlist") {
+      const seenMints = new Set<string>();
+      const uniqueList: CalloutItem[] = [];
+      for (const item of list) {
+        const caLower = item.tokenCA.toLowerCase();
+        if (isWatchlisted(item.tokenCA) && !seenMints.has(caLower)) {
+          seenMints.add(caLower);
+          uniqueList.push(item);
+        }
+      }
+      list = uniqueList;
     }
 
     // Text search query
@@ -563,119 +609,21 @@ export function CalloutFeed({ onSelectToken, filterSymbol }: CalloutFeedProps) {
       );
     }
 
-    // 3. Apply Smart Sorting & Token Deduplication / Grouping
-    if (sortBy === "mcap") {
-      // Group same token calls into a single box when multiple callers call out the same token
-      const tokenGroups = new Map<string, CalloutItem[]>();
-      for (const item of list) {
-        const key = item.tokenCA.toLowerCase();
-        const arr = tokenGroups.get(key) || [];
-        arr.push(item);
-        tokenGroups.set(key, arr);
-      }
-
-      const groupedList: CalloutItem[] = [];
-      for (const [, items] of tokenGroups) {
-        if (items.length === 1) {
-          groupedList.push(items[0]);
-        } else {
-          // Sort items by latest callout
-          items.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
-          const primary = items[0];
-          const callersInfo: CalloutCallerItem[] = items.map((it) => ({
-            callerName: it.callerName,
-            callerHandle: it.callerHandle,
-            callerWallet: it.callerWallet,
-            callerAvatar: it.callerAvatar,
-            callerAvatarUrl: it.callerAvatarUrl,
-            callerXUsername: it.callerXUsername,
-            callerBadge: it.callerBadge,
-            thesis: it.thesis,
-            multiple: it.multiplier,
-            entryMcap: it.entryMcap,
-            calloutPrice: it.calloutPrice,
-            timeAgo: it.timeAgo,
-            createdAt: it.createdAt,
-            likes: it.upvotes,
-            calloutId: it.calloutId,
-          }));
-
-          const bestMul = Math.max(...items.map((it) => it.multiplier));
-          const minEntry = Math.min(...items.map((it) => it.entryMcap).filter((m) => m > 0));
-
-          groupedList.push({
-            ...primary,
-            multiplier: bestMul > 0 ? bestMul : primary.multiplier,
-            entryMcap: minEntry < Infinity ? minEntry : primary.entryMcap,
-            callers: callersInfo,
-          });
-        }
-      }
-
-      list = groupedList.sort((a, b) => b.currentMcap - a.currentMcap);
-    } else if (sortBy === "multiplier") {
-      // Group duplicate token calls into one card displaying best gain
-      const tokenGroups = new Map<string, CalloutItem[]>();
-      for (const item of list) {
-        const key = item.tokenCA.toLowerCase();
-        const arr = tokenGroups.get(key) || [];
-        arr.push(item);
-        tokenGroups.set(key, arr);
-      }
-
-      const groupedList: CalloutItem[] = [];
-      for (const [, items] of tokenGroups) {
-        if (items.length === 1) {
-          groupedList.push(items[0]);
-        } else {
-          items.sort((a, b) => b.multiplier - a.multiplier);
-          const primary = items[0];
-          const callersInfo: CalloutCallerItem[] = items.map((it) => ({
-            callerName: it.callerName,
-            callerHandle: it.callerHandle,
-            callerWallet: it.callerWallet,
-            callerAvatar: it.callerAvatar,
-            callerAvatarUrl: it.callerAvatarUrl,
-            callerXUsername: it.callerXUsername,
-            callerBadge: it.callerBadge,
-            thesis: it.thesis,
-            multiple: it.multiplier,
-            entryMcap: it.entryMcap,
-            calloutPrice: it.calloutPrice,
-            timeAgo: it.timeAgo,
-            createdAt: it.createdAt,
-            likes: it.upvotes,
-            calloutId: it.calloutId,
-          }));
-
-          groupedList.push({
-            ...primary,
-            callers: callersInfo,
-          });
-        }
-      }
-
-      list = groupedList.sort((a, b) => b.multiplier - a.multiplier);
-    } else if (sortBy === "winrate") {
-      // Sort by caller's verified Win Rate from highest to lowest
-      list = [...list].sort((a, b) => {
-        const wrA = callerStatsMap[a.callerName?.toLowerCase()]?.winRate ?? a.callerWinRate ?? 0;
-        const wrB = callerStatsMap[b.callerName?.toLowerCase()]?.winRate ?? b.callerWinRate ?? 0;
-        return wrB - wrA || (b.createdAt || 0) - (a.createdAt || 0);
-      });
+    // 3. Apply Natural Feed Sorting
+    if (filterTab === "2x") {
+      list = list.sort((a, b) => b.multiplier - a.multiplier);
     } else {
-      // Default: newest
       list = [...list].sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
     }
 
     return list;
-  }, [allCallouts, boostedCallouts, filterSymbol, selectedCallers, filterTab, searchQuery, sortBy, callerStatsMap]);
+  }, [allCallouts, boostedCallouts, filterSymbol, selectedCallers, filterTab, searchQuery, callerStatsMap, isWatchlisted, watchlist]);
 
   const [visibleCount, setVisibleCount] = useState(30);
 
   useEffect(() => {
     setVisibleCount(30);
-  }, [filterTab, selectedCallers, searchQuery, sortBy]);
+  }, [filterTab, selectedCallers, searchQuery]);
 
   const visibleCallouts = useMemo(() => {
     return filteredCallouts.slice(0, visibleCount);
@@ -701,6 +649,16 @@ export function CalloutFeed({ onSelectToken, filterSymbol }: CalloutFeedProps) {
                   label: "⚡ BOOSTED",
                   count: boostedCallouts.length,
                 },
+                {
+                  id: "watchlist",
+                  label: "⭐ WATCHLIST",
+                  count: watchlist.length,
+                },
+                {
+                  id: "leaderboard",
+                  label: "🏆 LEADERBOARD",
+                  count: 25,
+                },
               ].map((tab) => (
                 <button
                   key={tab.id}
@@ -717,35 +675,8 @@ export function CalloutFeed({ onSelectToken, filterSymbol }: CalloutFeedProps) {
               ))}
             </div>
 
-            {/* Sort Selector, Audio Alert Toggle & Search Input */}
+            {/* Audio Alert Toggle & Search Input */}
             <div className="flex items-center gap-1.5 flex-1 max-w-full justify-end flex-wrap">
-              {/* Sort Selector */}
-              <div className="flex items-center gap-0.5 bg-zinc-100 dark:bg-zinc-900/80 p-0.5 rounded-xl border border-zinc-200 dark:border-white/5 text-[10px] shrink-0">
-                <span className="px-1.5 py-1 text-zinc-400 font-bold flex items-center gap-1">
-                  <ArrowUpDown className="w-2.5 h-2.5" />
-                  <span className="hidden xl:inline">Sort:</span>
-                </span>
-                {[
-                  { id: "newest", label: "⚡ Latest" },
-                  { id: "multiplier", label: "🚀 Gain" },
-                  { id: "mcap", label: "💰 MCAP" },
-                  { id: "winrate", label: "🎯 Win Rate" },
-                ].map((s) => (
-                  <button
-                    key={s.id}
-                    type="button"
-                    onClick={() => setSortBy(s.id as CalloutSortOption)}
-                    className={`px-2 py-1 rounded-lg font-bold transition-all cursor-pointer whitespace-nowrap ${
-                      sortBy === s.id
-                        ? "bg-amber-500 text-zinc-950 font-black shadow-sm"
-                        : "text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-200"
-                    }`}
-                  >
-                    {s.label}
-                  </button>
-                ))}
-              </div>
-
               {/* Live Signal Audio Ding Alert Toggle */}
               <button
                 type="button"
@@ -867,19 +798,6 @@ export function CalloutFeed({ onSelectToken, filterSymbol }: CalloutFeedProps) {
                       <span className={`text-[9px] ${isSelected ? "text-zinc-900 font-bold" : "opacity-60"}`}>
                         ({caller.count})
                       </span>
-                      {caller.winRate > 0 && (
-                        <span
-                          className={`text-[9px] font-black px-1.5 py-0.2 rounded ${
-                            isSelected
-                              ? "bg-zinc-950 text-amber-400"
-                              : caller.winRate >= 65
-                              ? "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30"
-                              : "bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/30"
-                          }`}
-                        >
-                          {caller.winRate}% WR
-                        </span>
-                      )}
                     </button>
                   );
                 })}
@@ -926,6 +844,17 @@ export function CalloutFeed({ onSelectToken, filterSymbol }: CalloutFeedProps) {
                 >
                   <X className="w-2.5 h-2.5" />
                   <span>Clear</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSelectedCallers([]);
+                    setFilterTab("leaderboard");
+                  }}
+                  className="px-2.5 py-0.5 rounded-lg bg-amber-500 hover:bg-amber-400 text-zinc-950 font-black text-[10px] transition-all cursor-pointer flex items-center gap-1 shadow-sm ml-auto"
+                >
+                  <ChevronLeft className="w-3 h-3 stroke-[2.5]" />
+                  <span>Back to Leaderboard</span>
                 </button>
               </div>
             )}
@@ -1010,7 +939,8 @@ export function CalloutFeed({ onSelectToken, filterSymbol }: CalloutFeedProps) {
                       change24h: 0,
                       sparkline: [],
                       totalBurnedBaton: 0,
-                      burnLevel: 0,
+                      burnLevel: 0 as any,
+                      iconColor: "#f59e0b",
                       category: "Solana",
                       description: "Boosted on Outbid Terminal",
                       viewsCount: 0,
@@ -1034,26 +964,157 @@ export function CalloutFeed({ onSelectToken, filterSymbol }: CalloutFeedProps) {
           </div>
         )}
 
+        {/* Shimmering Loading Skeleton Grid (if completely cold/empty with no cache) */}
+        {filteredCallouts.length === 0 && !searchedCaResult && (isLoading || isSearchingCa) && (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {Array.from({ length: 6 }).map((_, i) => (
+              <div
+                key={i}
+                className="p-4 rounded-3xl bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-white/10 space-y-4 animate-pulse font-mono"
+              >
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-10 h-10 rounded-2xl bg-zinc-200 dark:bg-zinc-800" />
+                    <div className="space-y-1.5">
+                      <div className="w-24 h-3 rounded-full bg-zinc-200 dark:bg-zinc-800" />
+                      <div className="w-16 h-2 rounded-full bg-zinc-200 dark:bg-zinc-800" />
+                    </div>
+                  </div>
+                  <div className="w-14 h-5 rounded-full bg-zinc-200 dark:bg-zinc-800" />
+                </div>
+                <div className="h-10 rounded-xl bg-zinc-100 dark:bg-zinc-900 border border-zinc-200/50 dark:border-white/5" />
+                <div className="flex items-center justify-between pt-2 border-t border-zinc-100 dark:border-white/5">
+                  <div className="w-20 h-3 rounded-full bg-zinc-200 dark:bg-zinc-800" />
+                  <div className="w-24 h-6 rounded-xl bg-amber-500/20" />
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+
         {/* Empty state */}
-        {filteredCallouts.length === 0 && !searchedCaResult && (
+        {filteredCallouts.length === 0 && !searchedCaResult && !isLoading && !isSearchingCa && (
           <div className="py-12 bg-white dark:bg-zinc-950 rounded-2xl border border-zinc-200 dark:border-white/10 text-center text-xs text-zinc-500 font-mono space-y-1.5">
-            {isLoading || isSearchingCa ? (
-              <p>Fetching live Solana token data…</p>
-            ) : filterTab === "pinned" ? (
+            {filterTab === "pinned" ? (
               <>
                 <p className="text-zinc-300 font-bold">No boosted coins yet.</p>
                 <p className="text-[11px] text-zinc-500">
                   Burn $BATON via Burn-to-Rank to feature and rank any coin here. Only burns completed on Outbid Terminal are eligible.
                 </p>
               </>
+            ) : filterTab === "watchlist" && !isLoggedIn ? (
+              <div className="py-8 px-4 space-y-3 max-w-md mx-auto">
+                <div className="w-12 h-12 rounded-2xl bg-amber-500/15 border border-amber-500/30 text-amber-500 flex items-center justify-center mx-auto shadow-sm">
+                  <Star className="w-6 h-6 fill-current" />
+                </div>
+                <h3 className="text-base font-black text-zinc-900 dark:text-white uppercase tracking-tight">
+                  Sign In to Access Watchlist
+                </h3>
+                <p className="text-xs text-zinc-500">
+                  Connect your Solana wallet or sign in with Google to view and sync your personal watchlist across all your devices.
+                </p>
+                <button
+                  type="button"
+                  onClick={() => window.dispatchEvent(new CustomEvent("outbid:open-auth-modal"))}
+                  className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-zinc-950 font-black text-xs uppercase tracking-wider transition-all cursor-pointer active:scale-95 shadow-md shadow-amber-500/20"
+                >
+                  Sign In (Google / Wallet)
+                </button>
+              </div>
+            ) : filterTab === "watchlist" ? (
+              <div className="py-6 px-4 space-y-2.5">
+                <div className="w-12 h-12 rounded-2xl bg-amber-500/15 border border-amber-500/30 text-amber-500 flex items-center justify-center mx-auto shadow-sm">
+                  <Star className="w-6 h-6 fill-current" />
+                </div>
+                <h3 className="text-sm font-black text-zinc-900 dark:text-white uppercase tracking-tight">
+                  Your Watchlist is Empty
+                </h3>
+                <p className="text-xs text-zinc-500 max-w-sm mx-auto">
+                  Click the <strong className="text-amber-500">⭐ star icon</strong> on any token card to add it to your personal watchlist radar.
+                </p>
+                <button
+                  type="button"
+                  onClick={() => setFilterTab("all")}
+                  className="px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-zinc-950 font-black text-xs transition-all uppercase cursor-pointer active:scale-95 shadow-md"
+                >
+                  Browse All Callouts
+                </button>
+              </div>
+            ) : selectedCallers.length > 0 ? (
+              <div className="py-8 px-4 text-center space-y-3">
+                <div className="w-10 h-10 mx-auto rounded-xl bg-amber-500/15 text-amber-500 flex items-center justify-center">
+                  <Trophy className="w-5 h-5" />
+                </div>
+                <h4 className="text-sm font-black text-zinc-900 dark:text-white">
+                  Leaderboard Trader: @{selectedCallers[0]}
+                </h4>
+                <p className="text-xs text-zinc-400 max-w-sm mx-auto">
+                  This caller is ranked from their on-chain trading profits. View their verified winning coin and net PnL directly in the Leaderboard.
+                </p>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSelectedCallers([]);
+                    setFilterTab("leaderboard");
+                  }}
+                  className="px-4 py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-zinc-950 font-black text-xs flex items-center gap-1.5 mx-auto transition-all cursor-pointer shadow-md active:scale-95"
+                >
+                  <ChevronLeft className="w-4 h-4 stroke-[2.5]" />
+                  <span>Back to Leaderboard</span>
+                </button>
+              </div>
             ) : (
               <p>No callouts matching current filters.</p>
             )}
           </div>
         )}
 
-        {/* ── Callout Cards Grid ────────────────────────────────────────── */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        {/* Active Caller Filter Banner */}
+        {selectedCallers.length > 0 && filterTab !== "leaderboard" && (
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2.5 px-3.5 py-2.5 rounded-2xl bg-amber-500/10 border border-amber-500/30 text-amber-500 dark:text-amber-400 text-xs font-bold font-mono shadow-sm">
+            <div className="flex items-center gap-2 min-w-0">
+              <Sparkles className="w-4 h-4 shrink-0 text-amber-400" />
+              <span className="truncate">
+                Showing callouts by: <strong className="text-amber-300">@{selectedCallers.join(", @")}</strong> ({filteredCallouts.length} calls)
+              </span>
+            </div>
+            <div className="flex items-center gap-2 shrink-0 self-end sm:self-auto">
+              <button
+                type="button"
+                onClick={() => {
+                  setSelectedCallers([]);
+                  setFilterTab("leaderboard");
+                }}
+                className="px-3 py-1.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-zinc-950 font-black text-[11px] flex items-center gap-1.5 transition-all cursor-pointer shadow-sm active:scale-95"
+              >
+                <ChevronLeft className="w-4 h-4 stroke-[2.5]" />
+                <span>Back to Leaderboard</span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setSelectedCallers([])}
+                className="px-2.5 py-1.5 rounded-xl bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 text-[11px] font-black transition-colors cursor-pointer shrink-0 active:scale-95"
+              >
+                Clear Filter ✕
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* ── Callout Content: Leaderboard Tab OR Cards Grid ──────────────── */}
+        {filterTab === "leaderboard" ? (
+          <CalloutLeaderboard
+            onSelectCaller={(callerName) => {
+              setSelectedCallers([callerName]);
+              setFilterTab("all");
+            }}
+            onSelectToken={(mint, symbol) => {
+              if (onSelectToken) onSelectToken(mint, symbol || "TOKEN");
+            }}
+          />
+        ) : (
+          <>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {visibleCallouts.map((item) => {
             const percentGain = Math.round((item.multiplier - 1) * 100);
             const isProfit = percentGain >= 0;
@@ -1062,18 +1123,17 @@ export function CalloutFeed({ onSelectToken, filterSymbol }: CalloutFeedProps) {
               <div
                 key={item.id}
                 onClick={() => {
-                  if (onSelectToken) {
-                    onSelectToken(item.tokenCA, item.tokenSymbol, item.tokenName, item.tokenIconUrl);
-                  } else {
-                    setSwapModalToken({
-                      mint: item.tokenCA,
-                      symbol: item.tokenSymbol,
-                      name: item.tokenName,
-                      iconUrl: item.tokenIconUrl,
-                    });
-                  }
+                  setDrawerToken({
+                    mint: item.tokenCA,
+                    symbol: item.tokenSymbol,
+                    name: item.tokenName,
+                    iconUrl: item.tokenIconUrl,
+                    priceUsd: item.currentPrice,
+                    marketCap: item.currentMcap,
+                    thesis: item.thesis,
+                  });
                 }}
-                className="group bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-white/10 hover:border-amber-500/50 rounded-2xl p-4 sm:p-5 flex flex-col justify-between gap-3.5 shadow-md hover:shadow-xl hover:shadow-amber-500/5 transition-all cursor-pointer relative overflow-hidden h-full"
+                className="group card-virtualized bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-white/10 hover:border-amber-500/50 rounded-2xl p-4 sm:p-5 flex flex-col justify-between gap-3.5 shadow-md hover:shadow-xl hover:shadow-amber-500/5 transition-all cursor-pointer relative overflow-hidden h-full"
               >
                 {/* Top Accent Gradient Line on Hover */}
                 <div className="absolute top-0 left-0 right-0 h-[2px] bg-gradient-to-r from-amber-500 via-orange-500 to-amber-500 opacity-0 group-hover:opacity-100 transition-opacity" />
@@ -1120,35 +1180,6 @@ export function CalloutFeed({ onSelectToken, filterSymbol }: CalloutFeedProps) {
                             </div>
                           )}
                         </span>
-                        {(() => {
-                          const isOutbid =
-                            item.callerName?.toLowerCase().includes("outbid") ||
-                            item.callerHandle?.toLowerCase().includes("outbid") ||
-                            item.callerHandle === "burn_engine";
-
-                          const s = (item.callerWallet && callerStatsMap[item.callerWallet.toLowerCase()]) || callerStatsMap[item.callerName?.toLowerCase()];
-                          
-                          // Outbid Terminal strictly 100% WR; all other callers use real calculated on-chain stats
-                          const winRate = isOutbid ? 100 : (s && s.total > 0 ? s.winRate : (item.multiplier >= 1.05 ? 100 : 0));
-                          const isHigh = winRate >= 50;
-
-                          return (
-                            <span
-                              className={`text-[9px] px-1.5 py-0.5 rounded font-black shrink-0 border ${
-                                isHigh
-                                  ? "bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border-emerald-500/30"
-                                  : "bg-amber-500/15 text-amber-600 dark:text-amber-400 border-amber-500/30"
-                              }`}
-                              title={
-                                isOutbid
-                                  ? "Outbid Terminal Verified Engine: 100% WR"
-                                  : `Verified On-Chain Real-Time Win Rate: ${winRate}% (${s?.wins ?? (winRate === 100 ? 1 : 0)}/${s?.total ?? 1} profitable calls)`
-                              }
-                            >
-                              🎯 {winRate}% WR
-                            </span>
-                          );
-                        })()}
                         {item.callers && item.callers.length > 1 && (
                           <span className="text-[9px] px-1.5 py-0.5 rounded-full bg-purple-500/20 text-purple-600 dark:text-purple-400 border border-purple-500/30 font-black shrink-0">
                             👥 {item.callers.length}
@@ -1197,6 +1228,22 @@ export function CalloutFeed({ onSelectToken, filterSymbol }: CalloutFeedProps) {
                     <span className="text-[10px] text-zinc-500 font-bold bg-zinc-100 dark:bg-zinc-900 px-1.5 py-0.5 rounded border border-zinc-200 dark:border-white/5 shrink-0">
                       {item.timeAgo}
                     </span>
+
+                    {/* Star / Watchlist toggle */}
+                    <button
+                      type="button"
+                      onClick={(e) => toggleWatchlist(item.tokenCA, e)}
+                      className="p-1 rounded-md hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors cursor-pointer"
+                      title={isWatchlisted(item.tokenCA) ? "Remove from Watchlist" : "Add to Watchlist"}
+                    >
+                      <Star
+                        className={`w-3.5 h-3.5 transition-colors ${
+                          isWatchlisted(item.tokenCA)
+                            ? "fill-amber-400 text-amber-400"
+                            : "text-zinc-400 hover:text-amber-400"
+                        }`}
+                      />
+                    </button>
                   </div>
                 </div>
 
@@ -1360,7 +1407,7 @@ export function CalloutFeed({ onSelectToken, filterSymbol }: CalloutFeedProps) {
                   <div className="bg-zinc-50/70 dark:bg-zinc-900/40 border border-zinc-200/50 dark:border-white/5 rounded-xl p-2.5 space-y-1.5">
                     {item.callers && item.callers.length > 1 ? (
                       <div className="space-y-1.5">
-                        {item.callers.slice(0, 3).map((c, cIdx) => (
+                        {item.callers.slice(0, 3).map((c: any, cIdx: number) => (
                           <div key={cIdx} className="text-xs text-zinc-600 dark:text-zinc-300 leading-snug">
                             <span className="font-black text-amber-500 font-mono mr-1.5 not-italic">@{c.callerHandle}:</span>
                             <span className="italic">&ldquo;{c.thesis || "Send it."}&rdquo;</span>
@@ -1418,27 +1465,31 @@ export function CalloutFeed({ onSelectToken, filterSymbol }: CalloutFeedProps) {
                   </div>
                 </div>
 
-                {/* ── Bottom Row: Prices, Discuss, Upvote & Quick Buy Button ── */}
-                {/* ── Bottom Row: Prices, Discuss, Upvote & Quick Buy Button ── */}
-                <div className="pt-2.5 border-t border-zinc-100 dark:border-white/5 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
-                  <div className="flex items-center justify-between sm:justify-start gap-3 sm:gap-4 text-xs">
-                    <div>
-                      <span className="text-[9px] text-zinc-500 uppercase block font-medium">Entry MC</span>
-                      <span className="font-bold text-zinc-700 dark:text-zinc-300 font-mono">
-                        {formatCurrency(item.entryMcap)}
-                      </span>
+                {/* ── Bottom Section: MCAP & Actions ── */}
+                <div className="pt-2.5 border-t border-zinc-200/80 dark:border-white/10 space-y-2">
+                  {/* Sub-row 1: Entry & Current MCAP + Social Buttons */}
+                  <div className="flex items-center justify-between gap-2">
+                    {/* Market Caps */}
+                    <div className="flex items-center gap-2.5 text-xs shrink-0">
+                      <div>
+                        <span className="text-[9px] text-zinc-500 uppercase block font-semibold leading-tight">Entry MC</span>
+                        <span className="font-bold text-zinc-900 dark:text-zinc-200 font-mono text-[11px]">
+                          {item.entryMcap > 0 ? formatCurrency(item.entryMcap) : "—"}
+                        </span>
+                      </div>
+                      {item.currentMcap > 0 && (
+                        <div>
+                          <span className="text-[9px] text-zinc-500 uppercase block font-semibold leading-tight">Current MC</span>
+                          <span className="font-black text-emerald-600 dark:text-emerald-400 font-mono text-[11px]">
+                            {formatCurrency(item.currentMcap)}
+                          </span>
+                        </div>
+                      )}
                     </div>
-                    <div>
-                      <span className="text-[9px] text-zinc-500 uppercase block font-medium">Current MC</span>
-                      <span className="font-extrabold text-emerald-500 dark:text-emerald-400 font-mono">
-                        {formatCurrency(item.currentMcap)}
-                      </span>
-                    </div>
-                  </div>
 
-                  <div className="flex items-center justify-between sm:justify-end gap-1.5 w-full sm:w-auto">
-                    <div className="flex items-center gap-1.5">
-                      {/* Boost / Burn to Leaderboard Button */}
+                    {/* Boost, Discuss, Upvote */}
+                    <div className="flex items-center gap-1 shrink-0">
+                      {/* Boost / Burn */}
                       <button
                         type="button"
                         onClick={(e) => {
@@ -1453,59 +1504,98 @@ export function CalloutFeed({ onSelectToken, filterSymbol }: CalloutFeedProps) {
                           });
                           setIsBoostAnyOpen(true);
                         }}
-                        className="px-2.5 py-1 rounded-lg bg-gradient-to-r from-amber-500/15 to-orange-500/15 hover:from-amber-500/25 hover:to-orange-500/25 text-amber-500 dark:text-amber-400 border border-amber-500/30 text-[10px] font-extrabold flex items-center gap-1 transition-all cursor-pointer active:scale-95 shadow-sm shrink-0"
-                        title={`Burn $BATON to rank $${item.tokenSymbol} on Leaderboard`}
+                        className="px-2 py-1 rounded-lg bg-orange-500/10 hover:bg-orange-500/20 text-orange-600 dark:text-orange-400 border border-orange-500/30 text-[10px] font-black flex items-center gap-1 transition-all cursor-pointer active:scale-95 shadow-sm"
+                        title={`Burn $BATON to rank $${item.tokenSymbol}`}
                       >
                         <Flame className="w-3 h-3 fill-current text-orange-500" />
                         <span>Boost</span>
                       </button>
 
-                      {/* Discuss / Comments Button */}
+                      {/* Discuss */}
                       <button
                         type="button"
                         onClick={(e) => handleOpenDiscussion(item, e)}
-                        className="px-2 py-1 rounded-lg bg-zinc-100 dark:bg-zinc-900 hover:bg-amber-500/10 text-zinc-600 dark:text-zinc-400 hover:text-amber-400 border border-zinc-200 dark:border-white/5 text-[10px] font-bold flex items-center gap-1 transition-all cursor-pointer"
+                        className="px-2 py-1 rounded-lg bg-zinc-100 dark:bg-zinc-900 hover:bg-amber-500/10 text-zinc-600 dark:text-zinc-400 hover:text-amber-500 border border-zinc-200 dark:border-white/10 text-[10px] font-bold flex items-center gap-1 transition-all cursor-pointer"
                         title="Open discussion thread"
                       >
-                        <MessageSquare className="w-3 h-3 text-amber-400" />
+                        <MessageSquare className="w-3 h-3 text-amber-500" />
                         <span>Discuss</span>
                       </button>
 
-                      {/* Upvote Button */}
+                      {/* Upvote */}
                       <button
                         type="button"
                         onClick={(e) => handleUpvote(item, e)}
-                        className={`px-2 py-1 rounded-lg border text-[11px] font-bold flex items-center gap-1.5 transition-all cursor-pointer ${
+                        className={`px-2 py-1 rounded-lg border text-[10px] font-bold flex items-center gap-1 transition-all cursor-pointer ${
                           likedCalloutsMap[item.id]
-                            ? "bg-amber-500/20 text-amber-400 border-amber-500/40 shadow-sm"
-                            : "bg-zinc-100 dark:bg-zinc-900 hover:bg-amber-500/10 text-zinc-600 dark:text-zinc-400 hover:text-amber-400 border-zinc-200 dark:border-white/5"
+                            ? "bg-amber-500/20 text-amber-500 dark:text-amber-400 border-amber-500/40 shadow-sm"
+                            : "bg-zinc-100 dark:bg-zinc-900 hover:bg-amber-500/10 text-zinc-600 dark:text-zinc-400 hover:text-amber-500 border-zinc-200 dark:border-white/10"
                         }`}
                       >
-                        <ThumbsUp className={`w-3 h-3 ${likedCalloutsMap[item.id] ? "fill-current text-amber-400" : ""}`} />
+                        <ThumbsUp className={`w-3 h-3 ${likedCalloutsMap[item.id] ? "fill-current text-amber-500" : ""}`} />
                         <span>{Math.max(0, item.upvotes + (likesDeltaMap[item.id] || 0))}</span>
                       </button>
                     </div>
+                  </div>
 
-                    {/* Quick Buy CTA -> Opens Instant Jupiter Swap Modal */}
+                  {/* Sub-row 2: Trading Action Bar (Quick Snipe + Instant Buy) */}
+                  <div className="flex items-center gap-1.5 pt-0.5">
+                    {/* Quick Snipe 0.1 SOL */}
                     <button
                       type="button"
                       onClick={(e) => {
                         e.stopPropagation();
-                        if (onSelectToken) {
-                          onSelectToken(item.tokenCA, item.tokenSymbol, item.tokenName, item.tokenIconUrl);
-                        } else {
-                          setSwapModalToken({
-                            mint: item.tokenCA,
-                            symbol: item.tokenSymbol,
-                            name: item.tokenName,
-                            iconUrl: item.tokenIconUrl,
-                          });
-                        }
+                        setSwapModalToken({
+                          mint: item.tokenCA,
+                          symbol: item.tokenSymbol,
+                          name: item.tokenName,
+                          iconUrl: item.tokenIconUrl,
+                          amountSol: "0.1",
+                        });
                       }}
-                      className="px-3 py-1 rounded-lg bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-zinc-950 font-black text-xs flex items-center gap-1 shadow-md shadow-amber-500/20 transition-all uppercase tracking-wider cursor-pointer active:scale-95 shrink-0"
+                      className="flex-1 py-1.5 px-2 rounded-xl bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/30 text-amber-600 dark:text-amber-400 text-[11px] font-black flex items-center justify-center gap-1 transition-all cursor-pointer active:scale-95 shadow-sm"
+                      title="Quick Buy 0.1 SOL with Jupiter"
+                    >
+                      <Zap className="w-3 h-3 fill-current" />
+                      <span>0.1 SOL</span>
+                    </button>
+
+                    {/* Quick Snipe 0.5 SOL */}
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setSwapModalToken({
+                          mint: item.tokenCA,
+                          symbol: item.tokenSymbol,
+                          name: item.tokenName,
+                          iconUrl: item.tokenIconUrl,
+                          amountSol: "0.5",
+                        });
+                      }}
+                      className="flex-1 py-1.5 px-2 rounded-xl bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/30 text-amber-600 dark:text-amber-400 text-[11px] font-black flex items-center justify-center gap-1 transition-all cursor-pointer active:scale-95 shadow-sm"
+                      title="Quick Buy 0.5 SOL with Jupiter"
+                    >
+                      <Zap className="w-3 h-3 fill-current" />
+                      <span>0.5 SOL</span>
+                    </button>
+
+                    {/* Full Swap Button */}
+                    <button
+                      type="button"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setSwapModalToken({
+                          mint: item.tokenCA,
+                          symbol: item.tokenSymbol,
+                          name: item.tokenName,
+                          iconUrl: item.tokenIconUrl,
+                        });
+                      }}
+                      className="flex-[1.2] py-1.5 px-3 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-zinc-950 font-black text-[11px] flex items-center justify-center gap-1 shadow-md shadow-amber-500/20 transition-all uppercase tracking-wider cursor-pointer active:scale-95"
                     >
                       <Zap className="w-3.5 h-3.5 fill-current" />
-                      <span>Quick Buy</span>
+                      <span>Buy / Swap</span>
                     </button>
                   </div>
                 </div>
@@ -1528,6 +1618,8 @@ export function CalloutFeed({ onSelectToken, filterSymbol }: CalloutFeedProps) {
               </span>
             </button>
           </div>
+        )}
+          </>
         )}
       </div>
 
@@ -1678,6 +1770,83 @@ export function CalloutFeed({ onSelectToken, filterSymbol }: CalloutFeedProps) {
           mutate();
         }}
       />
+
+      {/* ── Slide-Over Interactive Token Chart Drawer ─────────────────── */}
+      {drawerToken && (
+        <TokenChartDrawer
+          isOpen={Boolean(drawerToken)}
+          onClose={() => setDrawerToken(null)}
+          token={drawerToken}
+          onQuickBuy={(mint, symbol, amt, name, iconUrl) => {
+            setSwapModalToken({
+              mint,
+              symbol,
+              name,
+              iconUrl,
+              amountSol: amt,
+            });
+          }}
+          onBoostToken={(mint, symbol, name, iconUrl, mcap) => {
+            setSelectedBoostToken({
+              mint,
+              symbol,
+              name: name || symbol,
+              iconUrl,
+              marketCap: mcap,
+            });
+            setIsBoostAnyOpen(true);
+          }}
+        />
+      )}
+
+      {/* ── Jupiter Instant Swap Modal ─────────────────────────────────── */}
+      {swapModalToken && (
+        <JupiterSwapModal
+          isOpen={Boolean(swapModalToken)}
+          onClose={() => setSwapModalToken(null)}
+          targetMint={swapModalToken.mint}
+          targetSymbol={swapModalToken.symbol}
+          targetName={swapModalToken.name}
+          targetIconUrl={swapModalToken.iconUrl}
+          initialInputAmount={swapModalToken.amountSol}
+        />
+      )}
+
+      {/* ── Auth Required Watchlist Toast Notification ── */}
+      {authRequiredToast && (
+        <div className="fixed bottom-6 right-6 z-50 max-w-sm p-4 rounded-2xl bg-zinc-950 border border-amber-500/40 text-white shadow-2xl shadow-amber-500/10 flex items-start gap-3 animate-in slide-in-from-bottom-5 duration-200">
+          <div className="w-8 h-8 rounded-xl bg-amber-500/20 border border-amber-500/40 text-amber-400 flex items-center justify-center shrink-0">
+            <Star className="w-4 h-4 fill-current" />
+          </div>
+          <div className="flex-1 min-w-0 space-y-1">
+            <h4 className="text-xs font-black text-amber-400 uppercase tracking-wide">
+              Sign In Required
+            </h4>
+            <p className="text-[11px] text-zinc-400 leading-tight">
+              Please connect your Solana wallet or sign in with Google to save tokens to your personal watchlist.
+            </p>
+            <div className="pt-1 flex items-center gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                  dismissAuthToast();
+                  window.dispatchEvent(new CustomEvent("outbid:open-auth-modal"));
+                }}
+                className="px-3 py-1 rounded-lg bg-amber-500 hover:bg-amber-400 text-zinc-950 font-black text-[10px] uppercase tracking-wider transition-all"
+              >
+                Sign In Now
+              </button>
+              <button
+                type="button"
+                onClick={dismissAuthToast}
+                className="px-2 py-1 text-[10px] text-zinc-400 hover:text-white transition-colors"
+              >
+                Dismiss
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </>
   );
 }

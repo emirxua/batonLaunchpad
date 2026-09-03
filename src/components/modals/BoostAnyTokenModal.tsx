@@ -61,6 +61,8 @@ export function BoostAnyTokenModal({
   const [searchQuery, setSearchQuery] = useState("");
   const [isSearching, setIsSearching] = useState(false);
   const [selectedToken, setSelectedToken] = useState<SearchedToken | null>(null);
+  const [searchResults, setSearchResults] = useState<SearchedToken[]>([]);
+  const [showDropdown, setShowDropdown] = useState(false);
   const [burnAmount, setBurnAmount] = useState<number | "">("");
   const [burning, setBurning] = useState(false);
   const [txSignature, setTxSignature] = useState<string | null>(null);
@@ -85,6 +87,8 @@ export function BoostAnyTokenModal({
         setSearchQuery("");
         setSelectedToken(null);
       }
+      setSearchResults([]);
+      setShowDropdown(false);
       setBurnAmount("");
       setErrorMessage(null);
       setTxSignature(null);
@@ -97,6 +101,8 @@ export function BoostAnyTokenModal({
     if (!trimmed) {
       setIsSearching(false);
       setSelectedToken(null);
+      setSearchResults([]);
+      setShowDropdown(false);
       return;
     }
 
@@ -131,30 +137,47 @@ export function BoostAnyTokenModal({
           const data = await res.json();
           if (!active) return;
 
-          const match = Array.isArray(data.results) && data.results.length > 0
-            ? data.results[0]
-            : data.mint
-            ? data
-            : null;
-
-          if (match && (match.mint || match.ca)) {
-            const mcap = match.marketCap || match.mcap || match.usd_market_cap || 0;
-            const price = match.priceUsd || match.price || 0;
-            setSelectedToken({
-              mint: match.mint || match.ca,
-              name: match.name || "Solana Token",
-              symbol: (match.symbol || "TOKEN").toUpperCase(),
-              iconUrl: match.iconUrl || match.image_uri,
-              priceUsd: price,
-              marketCap: mcap,
-              volume24h: match.volume24h || 0,
-              liquidityUsd: match.liquidityUsd || 0,
+          const list: SearchedToken[] = [];
+          if (Array.isArray(data.results) && data.results.length > 0) {
+            for (const match of data.results) {
+              if (match && (match.mint || match.ca)) {
+                list.push({
+                  mint: match.mint || match.ca,
+                  name: match.name || "Solana Token",
+                  symbol: (match.symbol || "TOKEN").toUpperCase(),
+                  iconUrl: match.iconUrl || match.image_uri,
+                  priceUsd: match.priceUsd || match.price || 0,
+                  marketCap: match.marketCap || match.mcap || match.usd_market_cap || 0,
+                  volume24h: match.volume24h || 0,
+                  liquidityUsd: match.liquidityUsd || 0,
+                });
+              }
+            }
+          } else if (data.mint || data.ca) {
+            list.push({
+              mint: data.mint || data.ca,
+              name: data.name || "Solana Token",
+              symbol: (data.symbol || "TOKEN").toUpperCase(),
+              iconUrl: data.iconUrl || data.image_uri,
+              priceUsd: data.priceUsd || data.price || 0,
+              marketCap: data.marketCap || data.mcap || 0,
+              volume24h: data.volume24h || 0,
+              liquidityUsd: data.liquidityUsd || 0,
             });
+          }
+
+          setSearchResults(list);
+          if (list.length > 0) {
+            setShowDropdown(true);
+            // Auto-select if exact CA or first result when none selected
+            if (trimmed.length >= 32 || !selectedToken) {
+              setSelectedToken(list[0]);
+            }
           }
         })
         .catch(() => {
           if (active && trimmed.length >= 32) {
-            setSelectedToken({
+            const fallbackToken: SearchedToken = {
               mint: trimmed,
               name: "Solana Token",
               symbol: "SOLANA",
@@ -162,7 +185,9 @@ export function BoostAnyTokenModal({
               marketCap: 0,
               volume24h: 0,
               liquidityUsd: 0,
-            });
+            };
+            setSelectedToken(fallbackToken);
+            setSearchResults([fallbackToken]);
           }
         })
         .finally(() => {
@@ -175,6 +200,8 @@ export function BoostAnyTokenModal({
       };
     } else {
       setSelectedToken(null);
+      setSearchResults([]);
+      setShowDropdown(false);
     }
   }, [searchQuery, initialToken]);
 
@@ -287,12 +314,17 @@ export function BoostAnyTokenModal({
   return (
     <div
       onClick={onClose}
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-md animate-in fade-in duration-150 font-mono select-none cursor-pointer"
+      className="fixed inset-0 z-[99999] flex items-end sm:items-center justify-center p-0 sm:p-4 bg-black/90 backdrop-blur-md animate-in fade-in duration-150 font-mono select-none cursor-pointer"
     >
       <div
         onClick={(e) => e.stopPropagation()}
-        className="bg-white dark:bg-[#0c0d14] border border-amber-500/40 rounded-3xl w-full max-w-lg p-6 sm:p-7 space-y-5 shadow-2xl shadow-amber-500/10 relative overflow-hidden cursor-default"
+        className="bg-white dark:bg-[#0c0d14] border border-amber-500/40 rounded-t-3xl sm:rounded-3xl w-full max-w-lg p-5 sm:p-7 space-y-4 sm:space-y-5 shadow-2xl shadow-amber-500/10 relative overflow-visible cursor-default max-h-[92dvh] overflow-y-auto animate-in slide-in-from-bottom-4 sm:zoom-in-95 duration-200"
       >
+        {/* Mobile Drag Handle */}
+        <div className="sm:hidden -mt-1 pb-1 flex justify-center cursor-grab active:cursor-grabbing">
+          <div className="w-12 h-1 rounded-full bg-zinc-300 dark:bg-zinc-700/80" />
+        </div>
+
         <div className="absolute top-0 right-0 -mr-24 -mt-24 w-72 h-72 bg-gradient-to-br from-amber-500/15 via-orange-500/10 to-transparent rounded-full blur-3xl pointer-events-none" />
 
         {/* ── Header ─────────────────────────────────────────────────── */}
@@ -314,12 +346,12 @@ export function BoostAnyTokenModal({
         </div>
 
         {/* ── Step 1: Search / Paste Token CA ─────────────────────────── */}
-        <div className="space-y-2">
+        <div className="space-y-2 relative">
           <label className="text-xs font-bold text-zinc-700 dark:text-zinc-300 uppercase tracking-wider flex items-center justify-between">
             <span>1. Target Solana Contract Address (CA)</span>
             {isSearching && (
               <span className="text-[10px] text-amber-500 animate-pulse font-bold">
-                Fetching DexScreener...
+                Searching DexScreener...
               </span>
             )}
           </label>
@@ -329,14 +361,25 @@ export function BoostAnyTokenModal({
             <input
               type="text"
               value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Paste Token Mint CA or type name..."
+              onFocus={() => {
+                if (searchResults.length > 0) setShowDropdown(true);
+              }}
+              onChange={(e) => {
+                setSearchQuery(e.target.value);
+                setShowDropdown(true);
+              }}
+              placeholder="Paste Token Mint CA or type token name/symbol..."
               className="w-full bg-zinc-50 dark:bg-zinc-900/90 border border-zinc-200 dark:border-white/10 rounded-2xl pl-10 pr-10 py-3 text-xs font-mono text-zinc-950 dark:text-white outline-none focus:border-amber-500 transition-colors placeholder:text-zinc-500"
             />
             {searchQuery && (
               <button
                 type="button"
-                onClick={() => setSearchQuery("")}
+                onClick={() => {
+                  setSearchQuery("");
+                  setSelectedToken(null);
+                  setSearchResults([]);
+                  setShowDropdown(false);
+                }}
                 className="absolute right-3.5 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-600 dark:hover:text-white transition-colors cursor-pointer"
                 title="Clear input"
               >
@@ -345,11 +388,71 @@ export function BoostAnyTokenModal({
             )}
           </div>
 
+          {/* Floating Dropdown Search Results */}
+          {showDropdown && searchResults.length > 0 && (
+            <div className="max-h-56 overflow-y-auto rounded-2xl bg-zinc-50 dark:bg-[#12131A] border border-amber-500/40 shadow-2xl p-1.5 space-y-1 font-mono">
+              <div className="px-2.5 py-1 text-[10px] uppercase font-bold text-amber-500 flex items-center justify-between border-b border-zinc-200 dark:border-white/5 pb-1 mb-1">
+                <span>Matching Tokens ({searchResults.length})</span>
+                <span className="text-zinc-400">Click to choose</span>
+              </div>
+              {searchResults.map((t) => (
+                <div
+                  key={t.mint}
+                  onClick={() => {
+                    setSelectedToken(t);
+                    setSearchQuery(t.mint);
+                    setShowDropdown(false);
+                  }}
+                  className={`flex items-center justify-between gap-3 p-2 rounded-xl transition-all cursor-pointer ${
+                    selectedToken?.mint.toLowerCase() === t.mint.toLowerCase()
+                      ? "bg-amber-500/20 border border-amber-500/40 text-amber-400"
+                      : "hover:bg-zinc-200/60 dark:hover:bg-white/5 text-zinc-900 dark:text-zinc-200"
+                  }`}
+                >
+                  <div className="flex items-center gap-2.5 min-w-0">
+                    {t.iconUrl ? (
+                      <img
+                        src={t.iconUrl}
+                        alt={t.symbol}
+                        className="w-7 h-7 rounded-lg object-cover shrink-0 border border-zinc-200 dark:border-white/10"
+                      />
+                    ) : (
+                      <div className="w-7 h-7 rounded-lg bg-amber-500/20 text-amber-500 font-black text-xs flex items-center justify-center shrink-0">
+                        {t.symbol.slice(0, 2)}
+                      </div>
+                    )}
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-1.5">
+                        <span className="font-bold text-xs text-zinc-950 dark:text-white truncate">
+                          {t.name}
+                        </span>
+                        <span className="px-1 py-0.2 rounded bg-amber-500/15 text-amber-500 text-[9px] font-bold">
+                          ${t.symbol}
+                        </span>
+                      </div>
+                      <span className="text-[10px] text-zinc-400 font-mono truncate block">
+                        {t.mint.slice(0, 6)}…{t.mint.slice(-4)}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="text-right shrink-0 text-xs">
+                    {t.marketCap > 0 && (
+                      <span className="font-bold text-zinc-800 dark:text-zinc-200 block text-[11px]">
+                        MC: {formatCurrency(t.marketCap)}
+                      </span>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
           {/* Edit / Change Token Hint Notice */}
-          <div className="flex items-start gap-2 text-[11px] text-amber-700 dark:text-amber-300 bg-amber-500/10 border border-amber-500/25 px-3.5 py-2.5 rounded-2xl font-mono leading-relaxed">
+          <div className="flex items-start gap-2 text-[11px] text-amber-700 dark:text-amber-300 bg-amber-500/10 border border-amber-500/25 px-3.5 py-2 rounded-2xl font-mono leading-relaxed">
             <Sparkles className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" />
             <span>
-              Want to boost a different token? Clear the address above and paste any token&apos;s <strong>Contract Address (CA)</strong> or search by <strong>name</strong>.
+              Type any token <strong>name</strong>, <strong>symbol</strong>, or paste its <strong>Contract Address (CA)</strong> to select.
             </span>
           </div>
         </div>

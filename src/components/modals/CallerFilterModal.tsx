@@ -11,7 +11,6 @@ export interface CallerInfo {
   avatarUrl?: string;
   xUsername?: string;
   wallet?: string;
-  winRate?: number;
 }
 
 interface CallerFilterModalProps {
@@ -66,12 +65,6 @@ export function CallerFilterModal({
           "pnut_deployer",
         ].includes(c.name.toLowerCase()) || c.badge?.includes("Whitelist") || c.count > 0
       )
-      .map((c) => c.name);
-  }, [allCallers]);
-
-  const highWrCallers = useMemo(() => {
-    return allCallers
-      .filter((c) => typeof c.winRate === "number" && c.winRate >= 50)
       .map((c) => c.name);
   }, [allCallers]);
 
@@ -154,17 +147,6 @@ export function CallerFilterModal({
                   <span>Top Alpha ({whitelistCallers.length})</span>
                 </button>
               )}
-
-              {highWrCallers.length > 0 && (
-                <button
-                  type="button"
-                  onClick={() => onSelectAll(highWrCallers)}
-                  className="px-2.5 py-1 rounded-lg bg-emerald-500/15 hover:bg-emerald-500/25 border border-emerald-500/30 text-emerald-400 text-[11px] font-bold transition-all cursor-pointer flex items-center gap-1"
-                >
-                  <Sparkles className="w-3 h-3 text-emerald-400" />
-                  <span>🎯 High Win Rate ({highWrCallers.length})</span>
-                </button>
-              )}
             </div>
 
             {selectedCallers.length > 0 && (
@@ -236,17 +218,6 @@ export function CallerFilterModal({
                           {isAlpha && (
                             <span className="text-[9px] px-1.5 py-0.2 rounded bg-amber-500/20 text-amber-400 font-bold">
                               ★ Alpha
-                            </span>
-                          )}
-                          {typeof caller.winRate === "number" && caller.winRate > 0 && (
-                            <span
-                              className={`text-[9px] px-1.5 py-0.2 rounded font-black ${
-                                caller.winRate >= 65
-                                  ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/30"
-                                  : "bg-amber-500/20 text-amber-400 border border-amber-500/30"
-                              }`}
-                            >
-                              🎯 {caller.winRate}% WR
                             </span>
                           )}
                         </div>

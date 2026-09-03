@@ -30,6 +30,7 @@ interface JupiterSwapWidgetProps {
   targetSymbol?: string;
   targetIconUrl?: string;
   defaultOutputMint?: string;
+  initialInputAmount?: string;
   isModal?: boolean;
 }
 
@@ -63,6 +64,7 @@ export function JupiterSwapWidget({
   targetSymbol,
   targetIconUrl,
   defaultOutputMint,
+  initialInputAmount,
   isModal = false,
 }: JupiterSwapWidgetProps) {
   const initialMint =
@@ -210,7 +212,13 @@ export function JupiterSwapWidget({
 
   // Swap input & execution state
   const [isReverse, setIsReverse] = useState(false);
-  const [inputAmount, setInputAmount] = useState("0.5");
+  const [inputAmount, setInputAmount] = useState(initialInputAmount || "0.5");
+
+  useEffect(() => {
+    if (initialInputAmount) {
+      setInputAmount(initialInputAmount);
+    }
+  }, [initialInputAmount]);
   const [swapping, setSwapping] = useState(false);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [txSuccess, setTxSuccess] = useState<string | null>(null);
@@ -1120,8 +1128,15 @@ export function JupiterSwapWidget({
           {/* ── Swap Action Button ───────────────────────────────────────── */}
           <button
             type="button"
-            onClick={handleExecuteSwap}
-            disabled={swapping || isInsufficientBalance}
+            onClick={(e) => {
+              e.stopPropagation();
+              if (!connected || !publicKey) {
+                setVisible(true);
+                return;
+              }
+              handleExecuteSwap();
+            }}
+            disabled={swapping || (connected && isInsufficientBalance)}
             className={`w-full py-3 rounded-lg font-bold text-xs uppercase tracking-wider transition-all flex items-center justify-center gap-2 cursor-pointer shadow-lg ${
               !connected
                 ? "bg-amber-500 hover:bg-amber-400 text-zinc-950 shadow-amber-500/20"

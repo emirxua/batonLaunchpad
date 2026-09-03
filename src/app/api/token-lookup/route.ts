@@ -19,7 +19,7 @@ const lookupCache = new Map<string, { data: LookupResult | LookupResult[]; time:
 
 const BATON_MINT = "2vdc4owf1MPz54jJCN61y3QSKqjcPpr32wJ9qKkmpump";
 
-export function normalizeTokenImageUrl(url?: string | null): string | null {
+function normalizeTokenImageUrl(url?: string | null): string | null {
   if (!url) return null;
   const trimmed = url.trim();
   if (!trimmed) return null;
