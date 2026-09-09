@@ -1,50 +1,34 @@
-# dependencies
-/node_modules
-/.pnp
-.pnp.js
-.yarn/install-state.gz
-
-# testing
-/coverage
-
-# next.js
-/.next/
-/out/
-
-# production
-/build
-
-# misc
+# OS
 .DS_Store
-*.pem
+Thumbs.db
 
-# debug
+# IDE / editor
+.idea/
+.vscode/
+*.swp
+*~
+
+# Logs
+*.log
 npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
 
-# local env files
-.env*.local
-.env.local
+# Local test artifacts
+/tmp/
+
+# Secrets
 .env
 
-# vercel
+# Optional: if you ever add node / build
+node_modules/
+dist/
+build/
+
+# Local Netlify folder
+.netlify
+
+# Python
+__pycache__/
+*.pyc
+
 .vercel
-
-# typescript
-*.tsbuildinfo
-next-env.d.ts
-
-# custom cache
-.npm-cache/
 .env*
-.data/
-workers/shard-*.js
-scripts/deploy-shards.js
-workers/deploy-results.json
-workers/deploy-workers.js
-workers/generate-shards.js
-workers/get-worker-urls.js
-workers/setup-subdomains.js
-*.db
-*.db-journal

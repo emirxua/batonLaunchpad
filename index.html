@@ -1,0 +1,1043 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <title>BATON — The Origin of Pump.fun | $BATON on Solana</title>
+  <meta name="description" content="Baton is the name Pump.fun started with. Baton Corporation Ltd is the legal entity behind Pump.fun. $BATON puts that name back on Solana. (CA: 2vdc4owf1MPz54jJCN61y3QSKqjcPpr32wJ9qKkmpump)">
+  <link rel="icon" href="assets/baton-main.jpg" type="image/jpeg">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=JetBrains+Mono:wght@400;500;600;700;800&family=Space+Grotesk:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  
+  <!-- Instant Theme Detection (Prevents FOUC) -->
+  <script>
+    (function() {
+      try {
+        var stored = localStorage.getItem('theme');
+        var prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+        var isDark = stored === 'dark' || (!stored && prefersDark);
+        var root = document.documentElement;
+        if (isDark) {
+          root.classList.add('dark');
+          root.classList.remove('light');
+        } else {
+          root.classList.add('light');
+          root.classList.remove('dark');
+        }
+      } catch(e) {}
+    })();
+  </script>
+
+  <link rel="stylesheet" href="styles.css?v=8.1">
+</head>
+<body>
+
+  <!-- ULTRA-PREMIUM $BATON INTRO GATEWAY -->
+  <aside id="introGate" class="intro-gate" aria-label="System Intro">
+    <div class="intro-backdrop" aria-hidden="true"></div>
+    <div class="intro-card">
+      
+      <!-- Main HQ Mascot with Ambient Pulse -->
+      <div class="intro-logo-wrap">
+        <div class="intro-pulse-ring" aria-hidden="true"></div>
+        <img src="assets/baton-main.jpg" alt="Pump.fun HQ Baton Corporation" width="84" height="84" class="intro-flower-img" style="border-radius:14px; object-fit:cover;">
+      </div>
+
+      <!-- Brand Identity -->
+      <div class="intro-header">
+        <h1 class="intro-title">BATON CORPORATION LTD</h1>
+        <div class="intro-pill-group">
+          <span class="intro-pill"><span class="pulse-radar-dot"></span>SOLANA MINT</span>
+          <span class="intro-pill intro-pill-burn">100% LP BURNED</span>
+          <span class="intro-pill intro-pill-tax">0% TAX</span>
+          <span class="intro-pill" style="background:rgba(16,185,129,0.18); color:var(--accent-green);">PUMP.FUN ORIGIN</span>
+        </div>
+        <p class="intro-quote">"Pump.fun’s first name. Alon’s company on the paperwork. Baton Corporation builds Pump.fun. $BATON is the name that came first."</p>
+      </div>
+
+      <!-- Interactive Contract Address (CA) Box -->
+      <div class="intro-ca-box">
+        <div class="intro-ca-top">
+          <span class="intro-ca-lbl">OFFICIAL CONTRACT (CA)</span>
+          <span class="intro-ca-badge">SOLANA SPL</span>
+        </div>
+        <div class="intro-ca-row">
+          <code class="intro-ca-code" id="introCaCode" title="2vdc4owf1MPz54jJCN61y3QSKqjcPpr32wJ9qKkmpump">2vdc4owf1MPz54jJCN61y3QSKqjcPpr32wJ9qKkmpump</code>
+          <button type="button" id="introCopyCaBtn" class="intro-copy-btn" onclick="copyMainCA()" title="Copy Contract Address">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>
+            <span id="introCopyTxt">COPY CA</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Quick DEX Links -->
+      <div class="intro-quick-links">
+        <a href="https://pump.fun/coin/2vdc4owf1MPz54jJCN61y3QSKqjcPpr32wJ9qKkmpump" target="_blank" rel="noopener noreferrer" class="intro-dex-link" title="Trade on Pump.fun">💊 Pump.fun</a>
+        <a href="https://dexscreener.com/solana/2vdc4owf1mpz54jjcn61y3qskqjcppr32wj9qkkmpump" target="_blank" rel="noopener noreferrer" class="intro-dex-link" title="DexScreener Chart">🦅 DexScreener</a>
+        <a href="https://jup.ag/tokens/2vdc4owf1MPz54jJCN61y3QSKqjcPpr32wJ9qKkmpump" target="_blank" rel="noopener noreferrer" class="intro-dex-link" title="Swap on Jupiter">🪐 Jupiter</a>
+      </div>
+
+      <!-- Action Button & Progress Bar -->
+      <div class="intro-action-box">
+        <button type="button" id="introEnterBtn" class="intro-enter-btn" autofocus>
+          <span>ENTER $BATON</span>
+          <span class="btn-kbd">↵</span>
+        </button>
+        <div class="intro-progress-bar-wrap" title="Auto-entering in 3.2s...">
+          <div id="introProgressBar" class="intro-progress-bar"></div>
+        </div>
+      </div>
+
+    </div>
+  </aside>
+
+  <!-- Ambient subtle background glow -->
+  <div class="ambient-mesh" aria-hidden="true"></div>
+
+  <!-- TOP HEADER / TICKER BAR -->
+  <header class="top-nav">
+    <div class="nav-container">
+      
+      <!-- Brand Link & outbid.bond -->
+      <div class="nav-left">
+        <a href="#terminal" class="brand-badge-link" id="brandHomeBtn" title="Reset to Baton Origin">
+          <div class="logo-box">
+            <img src="assets/baton-main.jpg" alt="Baton Logo" width="30" height="30" class="logo-flower" style="border-radius:6px; object-fit:cover;">
+            <span class="status-dot-pulse"></span>
+          </div>
+          <span class="brand-txt">baton</span>
+        </a>
+        <a href="https://www.outbid.bond/" target="_blank" rel="noopener noreferrer" class="brand-sub-link" title="Visit outbid.bond">outbid.bond ↗</a>
+      </div>
+
+      <!-- Compact Live Ticker Tape (Direct Pump.fun Link) -->
+      <div class="nav-center">
+        <a href="https://pump.fun/coin/2vdc4owf1MPz54jJCN61y3QSKqjcPpr32wJ9qKkmpump" target="_blank" rel="noopener noreferrer" class="ticker-tape" title="Open $BATON on Pump.fun">
+          <div class="ticker-seg">
+            <span class="seg-dot"></span>
+            <span class="seg-token">$BATON</span>
+          </div>
+          <div class="ticker-seg">
+            <span class="seg-lbl">PRICE</span>
+            <span id="tickerPrice" class="seg-val">—</span>
+          </div>
+          <div class="ticker-seg">
+            <span class="seg-lbl">24H</span>
+            <span id="tickerChange" class="seg-val change-neutral">—</span>
+          </div>
+          <div class="ticker-seg hide-mobile">
+            <span class="seg-lbl">MCAP</span>
+            <span id="tickerMcap" class="seg-val">—</span>
+          </div>
+          <div class="ticker-seg hide-mobile">
+            <span class="seg-lbl">24H VOL</span>
+            <span id="tickerVol" class="seg-val">—</span>
+          </div>
+        </a>
+      </div>
+
+      <!-- Action Buttons -->
+      <div class="nav-right">
+        <!-- Copy CA Button -->
+        <button id="headerCopyCaBtn" class="btn-copy-ca" title="Copy $BATON Contract Address">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>
+          <span class="ca-abbr">2vdc...pump</span>
+          <span class="copy-lbl">COPY</span>
+        </button>
+
+        <!-- Theme Toggle (☀️ Light / 🌙 Dark) -->
+        <button id="themeToggleBtn" class="btn-icon" title="Toggle Light / Dark Mode" aria-label="Toggle Theme">
+          <span class="theme-icon-sun">☀️</span>
+          <span class="theme-icon-moon">🌙</span>
+        </button>
+
+        <!-- Audio Alert Toggle -->
+        <button id="signalAudioBtn" class="btn-icon" title="Toggle Signal Sounds" aria-label="Toggle Sound">
+          <svg id="audioIconOn" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>
+          <svg id="audioIconOff" class="hidden" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8.66 8.66A6 6 0 0 1 18 8c0 7 3 9 3 9H3s1.54-1.03 2.5-4.5"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/><line x1="2" x2="22" y1="2" y2="22"/></svg>
+        </button>
+
+        <!-- Lore X Link -->
+        <a href="https://x.com/batonoutbid" target="_blank" rel="noopener noreferrer" class="btn-icon" title="@batonoutbid on X">
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>
+        </a>
+      </div>
+
+    </div>
+  </header>
+
+  <!-- TELEMETRY STRIP (MINIMALIST & CLEAN) -->
+  <div class="telemetry-bar">
+    <div class="telemetry-inner">
+      <a href="https://pump.fun/coin/2vdc4owf1MPz54jJCN61y3QSKqjcPpr32wJ9qKkmpump" target="_blank" rel="noopener noreferrer" class="telem-item telem-token-link" title="Open $BATON on Pump.fun">
+        <span class="telem-dot"></span>
+        <span class="telem-lbl">TOKEN:</span>
+        <span class="telem-val color-orange">$BATON ↗</span>
+      </a>
+      <div class="telem-item">
+        <span class="telem-lbl">ENTITY:</span>
+        <span class="telem-val color-cyan">Baton Corporation Ltd (#14743013)</span>
+      </div>
+      <div class="telem-item hide-mobile">
+        <span class="telem-lbl">FOUNDER:</span>
+        <span class="telem-val">Alon Cohen (@a1lon9)</span>
+      </div>
+      <div class="telem-item hide-mobile">
+        <span class="telem-lbl">HQ:</span>
+        <span class="telem-val color-gold">82a James Carter Rd, Mildenhall, UK</span>
+      </div>
+      <div class="telem-item">
+        <span class="telem-lbl">LIQUIDITY:</span>
+        <span id="heroLiqVal" class="telem-val color-green">100% Burned LP (PumpSwap)</span>
+      </div>
+      <div class="telem-item telem-quote-item">
+        <span class="telem-lbl">PREV HANDLE:</span>
+        <span class="telem-quote">@batonfinance → @pumpdotfun</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- PRO 2-COLUMN TERMINAL WORKSPACE -->
+  <main class="terminal-deck" id="terminal">
+    <div class="deck-grid">
+
+      <!-- =============================================================== -->
+      <!-- LEFT / PRIMARY STAGE (CALLOUTS / TRENDING / LORE)               -->
+      <!-- =============================================================== -->
+      <section class="stage-primary">
+        
+        <!-- Navigation Tab Switcher -->
+        <div class="stage-tabs-header">
+          <div class="tabs-slider">
+            <button type="button" class="tab-btn active" data-tab="tab-coin" id="navBtnCoin">
+              <img src="assets/baton-main.jpg" width="22" height="14" class="tab-flower-icon" alt="" style="border-radius:3px; object-fit:cover;">
+              <span>$BATON</span>
+              <span class="pill-badge pill-badge-hot">ORIGIN</span>
+            </button>
+
+            <button type="button" class="tab-btn" data-tab="tab-callouts" id="navBtnCallouts">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M4.9 19.1C1 15.2 1 8.8 4.9 4.9"/><path d="M7.8 16.2c-2.3-2.3-2.3-6.1 0-8.5"/><circle cx="12" cy="12" r="2"/><path d="M16.2 7.8c2.3 2.3 2.3 6.1 0 8.5"/><path d="M19.1 4.9C23 8.8 23 15.1 19.1 19"/></svg>
+              <span>Alpha Callouts</span>
+              <span class="pill-badge" id="calloutCountBadge">LIVE</span>
+            </button>
+
+            <button type="button" class="tab-btn" data-tab="tab-trending" id="navBtnTrending">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z"/></svg>
+              <span>Trending Trenches</span>
+            </button>
+
+            <button type="button" class="tab-btn" data-tab="tab-lore" id="navBtnLore">
+              <span class="flower-emoji">🌸</span>
+              <span>flowerOS &amp; Game</span>
+            </button>
+          </div>
+
+          <button type="button" id="deckRefreshBtn" class="btn-icon" title="Refresh Live Stream" aria-label="Refresh">
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M21 2v6h-6"/><path d="M3 12a9 9 0 0 1 15-6.7L21 8"/><path d="M3 22v-6h6"/><path d="M21 12a9 9 0 0 1-15 6.7L3 16"/></svg>
+          </button>
+        </div>
+
+        <!-- =============================================================== -->
+        <!-- PANE 1: $BATON OFFICIAL ORIGIN DOSSIER & EVIDENCE HUB           -->
+        <!-- =============================================================== -->
+        <div id="tab-coin" class="stage-pane active">
+          
+          <!-- HERO VISUAL (MAIN PUMP.FUN HQ PHOTO) -->
+          <div class="coin-hero-visual" onclick="openImageModal('assets/baton-main.jpg', '$BATON: Pump.fun HQ (Baton Corporation Ltd)', 'https://pump.fun/coin/2vdc4owf1MPz54jJCN61y3QSKqjcPpr32wJ9qKkmpump')">
+            <img src="assets/baton-main.jpg" alt="Pump.fun HQ - Baton Corporation Ltd" class="coin-hero-img">
+            <div class="coin-hero-tags">
+              <span class="hero-tag-pill">⚡ Solana SPL</span>
+              <span class="hero-tag-pill tag-accent">Pump.fun Origin Story</span>
+              <span class="hero-tag-pill tag-green">100% LP Burned</span>
+              <span class="hero-tag-pill">0% Tax</span>
+              <span class="hero-tag-pill" style="background:rgba(255,102,0,0.2); color:var(--accent-gold);">On The Paperwork</span>
+            </div>
+          </div>
+
+          <!-- COIN IDENTITY & CORPORATE ROOTS -->
+          <div class="coin-profile-card">
+            <div class="coin-profile-top">
+              <div class="coin-pfp-wrap" onclick="openImageModal('assets/baton-main.jpg', '$BATON Mascot', 'https://pump.fun/coin/2vdc4owf1MPz54jJCN61y3QSKqjcPpr32wJ9qKkmpump')">
+                <img src="assets/baton-main.jpg" alt="$BATON" width="76" height="76" class="coin-pfp-img" style="object-fit:cover;">
+                <span class="status-pulse-dot" title="On-Chain Verified"></span>
+              </div>
+              <div class="coin-titles">
+                <div class="coin-sym-row">
+                  <h2 class="coin-main-sym">$BATON</h2>
+                  <span class="coin-net-tag">SOLANA</span>
+                  <span class="coin-status-pill">PUMP.FUN ORIGIN</span>
+                </div>
+                <div class="coin-meta-name">Baton Corporation Ltd · $BATON</div>
+              </div>
+            </div>
+
+            <!-- ORIGIN THESIS QUOTE -->
+            <blockquote class="takeover-quote-box">
+              <div class="quote-eyebrow">PUMP.FUN’S FIRST NAME · ALON’S COMPANY ON THE PAPERWORK</div>
+              <p class="quote-main">“Baton is the name Pump.fun started with. Before the pill logo, the same company was Baton Corporation. The account that became @pumpdotfun was @batonfinance. The launchpad ate the cycle. The legal name stayed on the paperwork. $BATON puts that name back on Solana.”</p>
+              <p class="quote-sub">“Baton Corporation builds Pump.fun. $BATON is the name that came first.”</p>
+              <footer class="quote-author">— Official Origin Thesis · Public Legal Record</footer>
+            </blockquote>
+
+            <!-- CONTRACT & PAIR BAR -->
+            <div class="coin-ca-highlight-box">
+              <div class="ca-h-row">
+                <div class="ca-h-info">
+                  <span class="ca-h-lbl">OFFICIAL CONTRACT (CA):</span>
+                  <code class="ca-h-val" id="coinShowcaseCa">2vdc4owf1MPz54jJCN61y3QSKqjcPpr32wJ9qKkmpump</code>
+                </div>
+                <button type="button" class="btn-ca-copy-glow" onclick="copyMainCA()">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>
+                  <span>COPY CA</span>
+                </button>
+              </div>
+              <div class="ca-sub-details">
+                <div class="ca-sub-item">
+                  <span class="lbl">Primary Pair (PumpSwap):</span>
+                  <a href="https://dexscreener.com/solana/5wg14qetnz2xo1rbccdud7pyqkbko2luj8nmrtpwimmx" target="_blank" rel="noopener noreferrer" class="val-link" title="PumpSwap Liquidity Pair">5Wg14qETNz2xo1rBCCDUd7PyQKbKo2Luj8nmrtpwimMx ↗</a>
+                </div>
+                <div class="ca-sub-item">
+                  <span class="lbl">Graduated Bonding Curve:</span>
+                  <span class="val-mono">Pump.fun Graduated · 100% Burned LP</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- INTERACTIVE ALPHA CALLOUTS TRANSITION BRIDGE -->
+          <div class="callout-bridge-card">
+            <div class="bridge-top">
+              <div class="bridge-left">
+                <div class="bridge-pill">
+                  <span class="pulse-radar-dot"></span>
+                  <span>SOLANA ALPHA RADAR</span>
+                </div>
+                <h3 class="bridge-title">Ready to Hunt On-Chain Solana Alpha?</h3>
+                <p class="bridge-desc">
+                  Explore real-time callouts across the Solana trenches, track 2x–100x multipliers, and monitor live trading signals directly in our outbid terminal.
+                </p>
+              </div>
+              <div class="bridge-actions">
+                <button type="button" class="btn-bridge-enter" onclick="jumpToCallouts('all')">
+                  <span>ENTER CALLOUTS</span>
+                  <span class="btn-kbd">↵</span>
+                </button>
+                <button type="button" class="btn-bridge-chart" onclick="openChartModal('2vdc4owf1MPz54jJCN61y3QSKqjcPpr32wJ9qKkmpump', '$BATON')">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M3 3v18h18"/><path d="m19 9-5 5-4-4-3 3"/></svg>
+                  <span>LIVE CANDLES</span>
+                </button>
+              </div>
+            </div>
+
+            <!-- Quick Filter Jump Buttons -->
+            <div class="bridge-chips-row">
+              <span class="bridge-chips-lbl">Quick Filter:</span>
+              <div class="bridge-chips">
+                <button type="button" class="b-chip" onclick="jumpToCallouts('all')">All Signals</button>
+                <button type="button" class="b-chip chip-hot" onclick="jumpToCallouts('2x')">🚀 2x+ Calls</button>
+                <button type="button" class="b-chip chip-fire" onclick="jumpToCallouts('5x')">🔥 5x+ Calls</button>
+                <button type="button" class="b-chip chip-crown" onclick="jumpToCallouts('10x')">👑 10x+ Calls</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- TOKENOMICS & COMPANY SPECIFICATIONS -->
+          <div class="coin-section-heading">
+            <span class="section-badge">TOKENOMICS &amp; SPECS</span>
+            <h3>Supply &amp; Corporate Architecture</h3>
+          </div>
+          <div class="tokenomics-grid-cards">
+            <div class="tok-card">
+              <span class="tok-label">TOTAL SUPPLY</span>
+              <div class="tok-value-huge font-mono">1,000,000,000</div>
+              <span class="tok-sub">1 Billion Fixed Supply ($BATON)</span>
+            </div>
+            <div class="tok-card">
+              <span class="tok-label">TAX</span>
+              <div class="tok-value-huge color-green">0% / 0%</div>
+              <span class="tok-sub">Zero Buy / Zero Sell Tax</span>
+            </div>
+            <div class="tok-card">
+              <span class="tok-label">LIQUIDITY</span>
+              <div class="tok-value-huge color-gold">100% BURNED</div>
+              <span class="tok-sub">Graduated Pump.fun Bonding Curve</span>
+            </div>
+            <div class="tok-card">
+              <span class="tok-label">ENTITY</span>
+              <div class="tok-value-huge color-purple">BATON CORP</div>
+              <span class="tok-sub">Baton Corporation Ltd (UK #14743013)</span>
+            </div>
+            <div class="tok-card">
+              <span class="tok-label">LAUNCH DATE</span>
+              <div class="tok-value-huge">19 JAN 2024</div>
+              <span class="tok-sub">Pump.fun Platform Release</span>
+            </div>
+            <div class="tok-card">
+              <span class="tok-label">CO-FOUNDERS</span>
+              <div class="tok-value-huge color-orange">ALON &amp; TEAM</div>
+              <span class="tok-sub">Alon Cohen, Dylan Kerler, Noah Tweedale</span>
+            </div>
+          </div>
+
+          <!-- MARKET NOTE -->
+          <div class="market-disclosure-pill">
+            <span class="disc-icon">⚡</span>
+            <div class="disc-text">
+              Across DexScreener, Pump.fun, and Jupiter, <strong>$BATON</strong> represents the foundational name and underlying corporate identity of Pump.fun, tradeable on Solana with 100% burned LP and zero tax.
+            </div>
+          </div>
+
+          <!-- ALL 7 OFFICIAL LIVE LOOKUP LINKS -->
+          <div class="coin-section-heading">
+            <span class="section-badge">OFFICIAL LINKS</span>
+            <h3>Live DEX &amp; Trading Portals</h3>
+          </div>
+          <div class="official-links-grid">
+            <a href="https://dexscreener.com/solana/2vdc4owf1mpz54jjcn61y3qskqjcppr32wj9qkkmpump" target="_blank" rel="noopener noreferrer" class="link-card-box">
+              <div class="link-card-left">
+                <span class="link-icon">🦅</span>
+                <div>
+                  <strong>DexScreener</strong>
+                  <span>Real-time charts, candles, depth &amp; trades</span>
+                </div>
+              </div>
+              <span class="link-arrow">↗</span>
+            </a>
+
+            <a href="https://pump.fun/coin/2vdc4owf1MPz54jJCN61y3QSKqjcPpr32wJ9qKkmpump" target="_blank" rel="noopener noreferrer" class="link-card-box">
+              <div class="link-card-left">
+                <span class="link-icon">💊</span>
+                <div>
+                  <strong>Pump.fun</strong>
+                  <span>Original graduated bonding curve &amp; threads</span>
+                </div>
+              </div>
+              <span class="link-arrow">↗</span>
+            </a>
+
+            <a href="https://jup.ag/tokens/2vdc4owf1MPz54jJCN61y3QSKqjcPpr32wJ9qKkmpump" target="_blank" rel="noopener noreferrer" class="link-card-box">
+              <div class="link-card-left">
+                <span class="link-icon">🪐</span>
+                <div>
+                  <strong>Jupiter</strong>
+                  <span>Best-route Solana DEX aggregator swap</span>
+                </div>
+              </div>
+              <span class="link-arrow">↗</span>
+            </a>
+
+            <a href="https://www.geckoterminal.com/solana/pools/5Wg14qETNz2xo1rBCCDUd7PyQKbKo2Luj8nmrtpwimMx" target="_blank" rel="noopener noreferrer" class="link-card-box">
+              <div class="link-card-left">
+                <span class="link-icon">🦎</span>
+                <div>
+                  <strong>GeckoTerminal</strong>
+                  <span>PumpSwap pool liquidity tracker (Baton / SOL)</span>
+                </div>
+              </div>
+              <span class="link-arrow">↗</span>
+            </a>
+
+            <a href="https://solscan.io/token/2vdc4owf1MPz54jJCN61y3QSKqjcPpr32wJ9qKkmpump" target="_blank" rel="noopener noreferrer" class="link-card-box">
+              <div class="link-card-left">
+                <span class="link-icon">☀️</span>
+                <div>
+                  <strong>Solscan</strong>
+                  <span>Solana blockchain explorer token profile</span>
+                </div>
+              </div>
+              <span class="link-arrow">↗</span>
+            </a>
+
+            <a href="https://buybaton.netlify.app/baton#top" target="_blank" rel="noopener noreferrer" class="link-card-box">
+              <div class="link-card-left">
+                <span class="link-icon">📖</span>
+                <div>
+                  <strong>Project Documentation</strong>
+                  <span>Official story, relay manifesto &amp; community guide</span>
+                </div>
+              </div>
+              <span class="link-arrow">↗</span>
+            </a>
+
+            <a href="https://www.outbid.bond/" target="_blank" rel="noopener noreferrer" class="link-card-box highlight-scanner">
+              <div class="link-card-left">
+                <span class="link-icon">🎯</span>
+                <div>
+                  <strong>Outbid Alpha Terminal</strong>
+                  <span>Live trench scanning &amp; callouts engine</span>
+                </div>
+              </div>
+              <span class="link-arrow">→</span>
+            </a>
+          </div>
+
+          <!-- THE VISUAL EVIDENCE DOSSIER (ALL 4 USER PROOFS) -->
+          <div class="coin-section-heading">
+            <span class="section-badge">THE EVIDENCE TRAIL</span>
+            <h3>Public Record &amp; Corporate Proofs</h3>
+            <p class="section-subtext">Verified court documents, UK corporate registries, handle history, and physical headquarters.</p>
+          </div>
+
+          <div class="tweet-photos-grid">
+            
+            <!-- PROOF 1: PUMP.FUN HQ PHOTO -->
+            <div class="tweet-photo-card" onclick="openImageModal('assets/baton-main.jpg', 'Pump.fun HQ (82a James Carter Rd, Mildenhall, UK)', 'https://x.com/batonoutbid/status/2023297186830696656')">
+              <div class="tweet-card-top">
+                <div class="tweet-meta-left">
+                  <span class="tweet-badge-date">PHYSICAL HQ</span>
+                  <span class="tweet-badge-target">82a James Carter Road, Mildenhall, UK · Unit A 82</span>
+                </div>
+                <span class="btn-x-micro">INSPECT ↗</span>
+              </div>
+              <div class="tweet-img-container">
+                <img src="assets/baton-main.jpg" alt="Pump.fun HQ and Baton Corporation address" class="tweet-screenshot-img">
+              </div>
+              <div class="tweet-caption-box">
+                <p class="tweet-quote-text">“Pump.fun HQ · Door labeled @pumpdotfun Prev: batonfinance · Unit A 82”</p>
+                <div class="tweet-action-line">
+                  <span class="tweet-views">Official Registered Office</span>
+                  <a href="https://x.com/batonoutbid/status/2023297186830696656" target="_blank" rel="noopener noreferrer" class="tweet-direct-link" onclick="event.stopPropagation()">View Lore Post ↗</a>
+                </div>
+              </div>
+            </div>
+
+            <!-- PROOF 2: DIGITAL FOOTPRINT / TWITTER HANDLE HISTORY -->
+            <div class="tweet-photo-card" onclick="openImageModal('assets/baton-proof-handle.jpg', 'Digital Footprint: @pumpdotfun previously @batonfinance', 'https://x.com/batonoutbid')">
+              <div class="tweet-card-top">
+                <div class="tweet-meta-left">
+                  <span class="tweet-badge-date">HANDLE HISTORY</span>
+                  <span class="tweet-badge-target">@pumpdotfun previous name: @batonfinance</span>
+                </div>
+                <span class="btn-x-micro">INSPECT ↗</span>
+              </div>
+              <div class="tweet-img-container">
+                <img src="assets/baton-proof-handle.jpg" alt="Twitter handle history showing batonfinance to pumpdotfun" class="tweet-screenshot-img">
+              </div>
+              <div class="tweet-caption-box">
+                <p class="tweet-quote-text">“Before adopting its current social media identity, Pump.fun operated on Twitter under the handle @batonfinance. Baton is the original DNA.”</p>
+                <div class="tweet-action-line">
+                  <span class="tweet-views">Digital Continuity Verified</span>
+                  <a href="https://x.com/batonoutbid" target="_blank" rel="noopener noreferrer" class="tweet-direct-link" onclick="event.stopPropagation()">View on X ↗</a>
+                </div>
+              </div>
+            </div>
+
+            <!-- PROOF 3: UK COMPANIES HOUSE REGISTRY -->
+            <div class="tweet-photo-card" onclick="openImageModal('assets/baton-proof-companies-house.png', 'UK Companies House: BATON CORPORATION LTD (#14743013)', 'https://find-and-update.company-information.service.gov.uk/company/14743013')">
+              <div class="tweet-card-top">
+                <div class="tweet-meta-left">
+                  <span class="tweet-badge-date">COMPANIES HOUSE</span>
+                  <span class="tweet-badge-target">Company #14743013 · Registered in England &amp; Wales</span>
+                </div>
+                <span class="btn-x-micro">INSPECT ↗</span>
+              </div>
+              <div class="tweet-img-container">
+                <img src="assets/baton-proof-companies-house.png" alt="UK Companies House filing for Baton Corporation Ltd" class="tweet-screenshot-img">
+              </div>
+              <div class="tweet-caption-box">
+                <p class="tweet-quote-text">“Baton Corporation Ltd · Director: COHEN, Alon, Mr. (COO) · Director: KERLER, Dylan, Mr. · Address: 82a James Carter Road, Mildenhall”</p>
+                <div class="tweet-action-line">
+                  <span class="tweet-views">Public Government Record</span>
+                  <a href="https://find-and-update.company-information.service.gov.uk/company/14743013" target="_blank" rel="noopener noreferrer" class="tweet-direct-link" onclick="event.stopPropagation()">Companies House ↗</a>
+                </div>
+              </div>
+            </div>
+
+            <!-- PROOF 4: SDNY FEDERAL COURT DOCKET -->
+            <div class="tweet-photo-card" onclick="openImageModal('assets/baton-proof-court.png', 'SDNY Federal Court Complaint: Aguilar v. Baton Corporation Ltd', 'https://dockets.justia.com/docket/new-york/nysdce/1:2025cv00880/636248')">
+              <div class="tweet-card-top">
+                <div class="tweet-meta-left">
+                  <span class="tweet-badge-date">SDNY COURT DOCKET</span>
+                  <span class="tweet-badge-target">Case No. 1:25-cv-00880-CM · Southern District of New York</span>
+                </div>
+                <span class="btn-x-micro">INSPECT ↗</span>
+              </div>
+              <div class="tweet-img-container">
+                <img src="assets/baton-proof-court.png" alt="United States District Court Complaint Aguilar v. Baton Corporation Ltd d/b/a Pump.Fun" class="tweet-screenshot-img">
+              </div>
+              <div class="tweet-caption-box">
+                <p class="tweet-quote-text">“BATON CORPORATION LTD, d/b/a PUMP.FUN, ALON COHEN, DYLAN KERLER, NOAH BERNHARD HUGO TWEEDALE... Defendants.”</p>
+                <div class="tweet-action-line">
+                  <span class="tweet-views">Federal Legal Filing</span>
+                  <a href="https://dockets.justia.com/docket/new-york/nysdce/1:2025cv00880/636248" target="_blank" rel="noopener noreferrer" class="tweet-direct-link" onclick="event.stopPropagation()">Justia Docket ↗</a>
+                </div>
+              </div>
+            </div>
+
+          </div>
+
+          <!-- ALON COHEN (@A1LON9) OFFICIAL HIRING POSTS -->
+          <div class="coin-section-heading">
+            <span class="section-badge">ALON COHEN POSTS</span>
+            <h3>Executive Hiring for Baton Corporation</h3>
+            <p class="section-subtext">Alon Cohen (@a1lon9) is the co-founder and public face of Pump.fun. He names Baton Corporation in his own verified posts.</p>
+          </div>
+
+          <div class="tweet-timeline-container">
+            <div class="timeline-track">
+
+              <!-- HIRE 1: 24 JUNE 2026 -->
+              <div class="timeline-entry highlight-takeover">
+                <div class="tl-bullet gold"></div>
+                <div class="tl-content">
+                  <div class="tl-head">
+                    <span class="tl-date">24 June 2026</span>
+                    <a href="https://x.com/a1lon9/status/2069815387881939090" target="_blank" rel="noopener noreferrer" class="tl-link">x.com/a1lon9/status/2069815387881939090 ↗</a>
+                  </div>
+                  <p class="tl-text">
+                    “We're hiring a Chief Legal Officer for <strong>Baton Corporation</strong>, the development company behind Pump fun. We've built one of the fastest growing crypto platforms in history, with ambitions to create a global consumer brand that tokenizes the world's highest potential, early-stage ideas. We're offering <strong>$1m - $5m base salary</strong>.”
+                  </p>
+                  <span class="tl-note">— Alon Cohen (@a1lon9), Co-Founder of Pump.fun</span>
+                </div>
+              </div>
+
+              <!-- HIRE 2: 13 FEBRUARY 2026 -->
+              <div class="timeline-entry">
+                <div class="tl-bullet"></div>
+                <div class="tl-content">
+                  <div class="tl-head">
+                    <span class="tl-date">13 February 2026</span>
+                    <a href="https://x.com/a1lon9/status/2022368567677591990" target="_blank" rel="noopener noreferrer" class="tl-link">x.com/a1lon9/status/2022368567677591990 ↗</a>
+                  </div>
+                  <p class="tl-text">
+                    “We’re hiring software engineers, data scientists and machine learning engineers for <strong>Baton Corporation</strong>, the development company behind Pump fun. We helped develop one of the fastest growing crypto platforms in history, with ambitions to create a global consumer brand that tokenizes the world’s highest potential, early-stage ideas. With roles ranging between <strong>$300k-$1.5m in base salary + ~$75k-$500k in $PUMP tokens</strong>, we offer some of the most competitive compensation packages across every level of seniority.”
+                  </p>
+                  <span class="tl-note">— Alon Cohen (@a1lon9), Co-Founder of Pump.fun</span>
+                </div>
+              </div>
+
+              <!-- HIRE 3: 22 JULY & 18 AUGUST 2026 -->
+              <div class="timeline-entry">
+                <div class="tl-bullet"></div>
+                <div class="tl-content">
+                  <div class="tl-head">
+                    <span class="tl-date">22 July 2026 &amp; 18 August 2026</span>
+                    <span class="tl-tag-takeover">CORPORATE CONSISTENCY</span>
+                  </div>
+                  <p class="tl-text">
+                    Same wording in subsequent high-level hires: Growth Marketing Lead (22 July 2026) and Social / Video Lead roles (18 August 2026). The company name never changes — it is <strong>Baton Corporation</strong>.
+                  </p>
+                </div>
+              </div>
+
+              <!-- LORE POST 1: 16 FEB 2026 -->
+              <div class="timeline-entry">
+                <div class="tl-bullet"></div>
+                <div class="tl-content">
+                  <div class="tl-head">
+                    <span class="tl-date">16 February 2026</span>
+                    <a href="https://x.com/batonoutbid/status/2023297186830696656" target="_blank" rel="noopener noreferrer" class="tl-link">x.com/batonoutbid/status/2023297186830696656 ↗</a>
+                  </div>
+                  <p class="tl-text">
+                    “Most people are missing the biggest narrative on Solana right now. <strong>$BATON</strong> is the origin story of the ecosystem's most successful platform. The clip on that post is the handoff: Pump.fun HQ, the mascot, the golden baton with the platform name on it. The baton does not stay in one hand.”
+                  </p>
+                  <span class="tl-note">— @batonoutbid</span>
+                </div>
+              </div>
+
+              <!-- LORE POST 2: 13 APRIL 2026 -->
+              <div class="timeline-entry">
+                <div class="tl-bullet"></div>
+                <div class="tl-content">
+                  <div class="tl-head">
+                    <span class="tl-date">13 April 2026</span>
+                    <a href="https://x.com/batonoutbid/status/2043663465303142410" target="_blank" rel="noopener noreferrer" class="tl-link">x.com/batonoutbid/status/2043663465303142410 ↗</a>
+                  </div>
+                  <p class="tl-text">
+                    “Lore is the deepest. Don’t bet against pumpfun and @a1lon9. <strong>$baton</strong>”
+                  </p>
+                  <span class="tl-note">— @batonoutbid</span>
+                </div>
+              </div>
+
+            </div>
+          </div>
+
+          <!-- THE ORIGIN & LORE NARRATIVE DECK -->
+          <div class="coin-section-heading">
+            <span class="section-badge">THE NARRATIVE</span>
+            <h3>How Baton Became Pump.fun</h3>
+          </div>
+
+          <div class="lore-narrative-deck">
+            
+            <div class="narrative-card">
+              <div class="narrative-badge">ORIGIN STORY</div>
+              <h4>From Baton Finance to the Meme Supercycle</h4>
+              <p>
+                <strong>Baton Finance (@batonfinance)</strong> started in the testnet era focusing on NFT yield farming and experimental smart contracts. The core engineering team — Alon Cohen, Noah Tweedale, and Dylan Kerler — incorporated <strong>Baton Corporation Ltd</strong> in the United Kingdom.
+              </p>
+              <p>
+                When they shifted focus to instant bonding curve token creation, they created a new consumer-facing interface: <strong>Pump.fun</strong>. The launchpad ate the entire cycle, becoming the most profitable protocol in Solana history. But while the consumer front-end adopted the pill logo, the corporate and legal entity on the paperwork remained <strong>Baton Corporation Ltd</strong>.
+              </p>
+            </div>
+
+            <div class="narrative-card">
+              <div class="narrative-badge">THE CASHCAT ANALOGY</div>
+              <h4>The First Name, On-Chain</h4>
+              <p>
+                CashCat is to an unused corporate name what <strong>$BATON</strong> is to Pump.fun: the first name, brought back to life directly on-chain.
+              </p>
+              <p>
+                $BATON puts that historic name back on Solana as a fair-launch community token. No team allocation promised, 100% burned LP, and the deepest narrative lore in the entire Solana ecosystem.
+              </p>
+            </div>
+
+            <div class="narrative-card">
+              <div class="narrative-badge">THE RELAY</div>
+              <h4>Pick It Up. Pass It On.</h4>
+              <p>
+                A relay runner does not hold the baton forever; they take the handoff, sprint full speed, and pass it to the next runner. The community under @batonoutbid and @buybaton carries this narrative across the trenches.
+              </p>
+              <div class="mascot-action-strip">
+                <a href="https://pump.fun/coin/2vdc4owf1MPz54jJCN61y3QSKqjcPpr32wJ9qKkmpump" target="_blank" rel="noopener noreferrer" class="btn-accent">💊 Trade on Pump.fun</a>
+                <button type="button" class="btn-subtle" onclick="copyMainCA()">📋 Copy Contract Address</button>
+              </div>
+            </div>
+
+          </div>
+
+        </div>
+
+        <!-- PANE 2: ALPHA CALLOUTS -->
+        <div id="tab-callouts" class="stage-pane">
+          
+          <!-- Filter Controls & Search -->
+          <div class="control-row">
+            <div class="filter-chips" id="calloutFilters">
+              <button type="button" class="chip-item active" data-filter="all">All</button>
+              <button type="button" class="chip-item" data-filter="2x">🚀 2x+</button>
+              <button type="button" class="chip-item" data-filter="5x">🔥 5x+</button>
+              <button type="button" class="chip-item" data-filter="10x">👑 10x+</button>
+              <button type="button" class="chip-item hide-mobile" data-filter="recent">⏱️ 1h</button>
+            </div>
+
+            <div class="search-wrap">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+              <input type="text" id="calloutSearchInput" placeholder="Filter ticker, coin, caller..." autocomplete="off">
+            </div>
+          </div>
+
+          <!-- Cards Grid Stream -->
+          <div class="callouts-grid" id="calloutsGrid">
+            <!-- Skeleton cards while loading -->
+            <div class="callout-card skeleton"><div class="sk-line sk-h24"></div><div class="sk-line sk-h40"></div><div class="sk-line sk-h24"></div></div>
+            <div class="callout-card skeleton"><div class="sk-line sk-h24"></div><div class="sk-line sk-h40"></div><div class="sk-line sk-h24"></div></div>
+            <div class="callout-card skeleton"><div class="sk-line sk-h24"></div><div class="sk-line sk-h40"></div><div class="sk-line sk-h24"></div></div>
+          </div>
+
+          <!-- Empty State -->
+          <div id="calloutsEmptyState" class="empty-state hidden">
+            <span class="empty-emoji">🌸</span>
+            <h4>No signals match this filter</h4>
+            <p>Try switching filter pills or resetting the search query.</p>
+            <button type="button" class="btn-reset" onclick="resetCalloutFilters()">Reset Filters</button>
+          </div>
+
+        </div>
+
+        <!-- PANE 2: TRENDING TRENCHES -->
+        <div id="tab-trending" class="stage-pane">
+          
+          <div class="control-row">
+            <div class="filter-chips" id="trendingFilters">
+              <button type="button" class="chip-item active" data-tfilter="all">All</button>
+              <button type="button" class="chip-item" data-tfilter="gainers">🔥 Gainers</button>
+              <button type="button" class="chip-item" data-tfilter="volume">💎 Volume</button>
+              <button type="button" class="chip-item hide-mobile" data-tfilter="mcap">🏛️ Mcap</button>
+            </div>
+
+            <div class="search-wrap">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+              <input type="text" id="trendingSearchInput" placeholder="Search tokens..." autocomplete="off">
+            </div>
+          </div>
+
+          <div class="trending-grid" id="trendingGrid">
+            <!-- Rendered via app.js -->
+            <div class="trend-card skeleton"><div class="sk-line sk-h32"></div><div class="sk-line sk-h24"></div></div>
+            <div class="trend-card skeleton"><div class="sk-line sk-h32"></div><div class="sk-line sk-h24"></div></div>
+          </div>
+
+        </div>
+
+        <!-- PANE 3: FLOWEROS LORE & GAME -->
+        <div id="tab-lore" class="stage-pane">
+          
+          <!-- Lore Overview Card -->
+          <div class="lore-panel">
+            <div class="lore-content">
+              <span class="lore-tag">🌸 flowerOS v2.0 Protocol</span>
+              <h2 class="lore-head">Humanity Escape Simulator</h2>
+              <blockquote class="quote-box">
+                "Any given AI company is destined to become the opposite of its name — Anthropic will, ironically, be Misanthropic."
+                <footer>— Elon Musk, Jan 22, 2026</footer>
+              </blockquote>
+              <p class="lore-desc">
+                A crying flower deployed on Solana that hates small talk, dodges humans, and pumps on-chain. Zero tax, liquidity burned forever.
+              </p>
+              <div class="lore-btns">
+                <button type="button" class="btn-accent" onclick="scrollToGame()">🎮 Play Runner Game</button>
+                <button type="button" class="btn-subtle" onclick="copyMainCA()">📋 Copy Contract</button>
+              </div>
+            </div>
+
+            <div class="lore-visual">
+              <img src="assets/flower.png" alt="Crying flower mascot" width="130" height="130" class="flower-mascot-anim">
+              <span class="flower-caption">Crying in the trenches 24/7</span>
+            </div>
+          </div>
+
+          <!-- Runner Game Canvas -->
+          <div class="game-box" id="game">
+            <div class="game-bar">
+              <div>
+                <h3>MISANTHROPIC RUN</h3>
+                <p>Endless runner. Dodge humans, collect stars.</p>
+              </div>
+              <div class="game-metrics">
+                <div>Score: <strong id="scoreDisplay">0</strong></div>
+                <div>Pump: <strong id="pumpDisplay">0</strong></div>
+                <div>Best: <strong id="highScoreDisplay">0</strong></div>
+              </div>
+            </div>
+
+            <div class="game-screen">
+              <canvas id="gameCanvas" width="800" height="300"></canvas>
+              <div id="gameOverlay" class="screen-overlay">
+                <p>DODGE HUMANS · COLLECT STARS · ESCAPE EARTH</p>
+                <button type="button" id="startGame" class="btn-accent">START RUN</button>
+              </div>
+              <div id="gameOverOverlay" class="screen-overlay hidden">
+                <p id="deathMessage">Human Interaction Inevitable. Game Over.</p>
+                <p class="game-over-stats">Score: <strong id="finalScore">0</strong> · Stars: <strong id="finalPump">0</strong></p>
+                <button type="button" id="restartGame" class="btn-accent">TRY AGAIN</button>
+              </div>
+            </div>
+
+            <div class="game-actions">
+              <button type="button" id="autoPlayBtn" class="btn-subtle">∞ AUTO (Infinite Star Collector)</button>
+              <button type="button" id="shareScoreBtn" class="btn-subtle">⤴ Share Score on X</button>
+            </div>
+          </div>
+
+          <!-- Tokenomics Strip -->
+          <div class="tokenomics-row">
+            <div class="tok-pill">
+              <span class="lbl">TOTAL SUPPLY</span>
+              <strong class="val">1,000,000,000</strong>
+            </div>
+            <div class="tok-pill">
+              <span class="lbl">TAX</span>
+              <strong class="val color-green">0% TAX</strong>
+            </div>
+            <div class="tok-pill">
+              <span class="lbl">LIQUIDITY / LP</span>
+              <strong class="val color-gold">Pump.fun Coin (100% Burned)</strong>
+            </div>
+            <div class="tok-pill">
+              <span class="lbl">CHAIN</span>
+              <strong class="val color-purple">SOLANA</strong>
+            </div>
+          </div>
+
+        </div>
+
+      </section>
+
+      <!-- =============================================================== -->
+      <!-- RIGHT / SIDEBAR DECK (ALWAYS ACCESSIBLE TRADING WIDGETS)        -->
+      <!-- =============================================================== -->
+      <aside class="stage-sidebar">
+        
+        <!-- CARD 1: ON-CHAIN SURVEILLANCE RADAR (MONITORING ONLY) -->
+        <div class="sidebar-box radar-box" id="sidebarRadar">
+          <div class="box-head">
+            <div class="box-title">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="9"/><path d="M12 3a9 9 0 0 1 9 9"/><path d="M12 12l5 -3"/><circle cx="12" cy="12" r="2"/></svg>
+              <span>TOKEN RADAR</span>
+            </div>
+            <span class="dex-pill">SURVEILLANCE</span>
+          </div>
+
+          <!-- Active Monitored Token -->
+          <div class="radar-token-header">
+            <a href="https://pump.fun/coin/2vdc4owf1MPz54jJCN61y3QSKqjcPpr32wJ9qKkmpump" target="_blank" rel="noopener noreferrer" class="radar-token-meta radar-token-link" title="Open $BATON on Pump.fun">
+              <img src="assets/baton-main.jpg" alt="Token Logo" width="34" height="24" id="radarTargetImg" class="radar-avatar" style="border-radius:4px; object-fit:cover;">
+              <div class="radar-token-titles">
+                <div class="radar-token-sym-row">
+                  <span class="radar-sym" id="radarTargetSymbol">$BATON</span>
+                  <span class="radar-net-pill">SOLANA</span>
+                </div>
+                <span class="radar-name" id="radarTargetName">Baton Corporation Ltd</span>
+              </div>
+            </a>
+            <span class="radar-live-badge" id="radarLiveBadge">MONITORING</span>
+          </div>
+
+          <!-- Live On-Chain Telemetry Grid -->
+          <div class="radar-stats-grid">
+            <div class="radar-stat-cell">
+              <span class="r-lbl">REAL-TIME PRICE</span>
+              <span class="r-val" id="radarPrice">—</span>
+            </div>
+            <div class="radar-stat-cell">
+              <span class="r-lbl">24H CHANGE</span>
+              <span class="r-val change-neutral" id="radarChange">—</span>
+            </div>
+            <div class="radar-stat-cell">
+              <span class="r-lbl">MARKET CAP</span>
+              <span class="r-val" id="radarMcap">—</span>
+            </div>
+            <div class="radar-stat-cell">
+              <span class="r-lbl">24H VOLUME</span>
+              <span class="r-val" id="radarVol">—</span>
+            </div>
+            <div class="radar-stat-cell full-width">
+              <span class="r-lbl">LIQUIDITY / LP</span>
+              <span class="r-val color-green" id="radarLiq">100% Burned LP (PumpSwap)</span>
+            </div>
+            <div class="radar-stat-cell full-width">
+              <span class="r-lbl">CONTRACT (MINT)</span>
+              <div class="r-ca-row">
+                <span class="r-val font-mono" id="radarTargetCa">2vdc...pump</span>
+                <button type="button" id="copyRadarCaBtn" class="btn-inline-copy">COPY</button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Observation Tools: Chart & Direct Explorers -->
+          <button type="button" id="radarOpenChartBtn" class="btn-radar-chart" title="View DexScreener Live Candle Chart">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M3 3v18h18"/><path d="m19 9-5 5-4-4-3 3"/></svg>
+            <span>EXPAND LIVE CANDLE CHART</span>
+          </button>
+
+          <div class="radar-sub-links">
+            <a href="https://dexscreener.com/solana/2vdc4owf1mpz54jjcn61y3qskqjcppr32wj9qkkmpump" id="radarDexLink" target="_blank" rel="noopener noreferrer">DexScreener ↗</a>
+            <a href="https://solscan.io/token/2vdc4owf1MPz54jJCN61y3QSKqjcPpr32wJ9qKkmpump" id="radarSolscanLink" target="_blank" rel="noopener noreferrer">Solscan ↗</a>
+            <a href="https://pump.fun/coin/2vdc4owf1MPz54jJCN61y3QSKqjcPpr32wJ9qKkmpump" id="radarPumpLink" target="_blank" rel="noopener noreferrer">Pump.fun ↗</a>
+          </div>
+        </div>
+
+        <!-- CARD 2: FLOWEROS CHAT -->
+        <div class="sidebar-box chat-box">
+          <div class="box-head">
+            <div class="box-title">
+              <span class="flower-emoji">🌸</span>
+              <span>TALK TO FLOWEROS</span>
+            </div>
+            <span class="online-tag">ONLINE</span>
+          </div>
+
+          <div class="chat-thread" id="chatMessages">
+            <div class="chat-row bot">
+              <span class="author">flowerOS:</span>
+              <p>Baton Corporation builds Pump.fun. $BATON is the name that came first. Why are you staring at me instead of passing the baton?</p>
+            </div>
+          </div>
+
+          <div class="chat-input-row">
+            <input type="text" id="chatInput" placeholder="Ask about $BATON..." autocomplete="off">
+            <button type="button" id="chatSendBtn" class="btn-chat-send">SEND</button>
+          </div>
+        </div>
+
+        <!-- CARD 3: CONTRACT BADGE -->
+        <div class="sidebar-box ca-box">
+          <span class="ca-eyebrow">OFFICIAL SOLANA CONTRACT (CA)</span>
+          <code class="ca-raw-text">2vdc4owf1MPz54jJCN61y3QSKqjcPpr32wJ9qKkmpump</code>
+          <button type="button" class="btn-copy-full" onclick="copyMainCA()">📋 COPY CONTRACT ADDRESS</button>
+        </div>
+
+      </aside>
+
+    </div>
+  </main>
+
+  <!-- MOBILE BOTTOM DOCK -->
+  <nav class="mobile-dock" aria-label="Mobile Navigation">
+    <button type="button" class="dock-btn active" data-tab="tab-coin">
+      <img src="assets/baton-main.jpg" width="18" height="12" class="dock-icon-img" alt="" style="border-radius:2px; object-fit:cover;">
+      <span>$BATON</span>
+    </button>
+    <button type="button" class="dock-btn" data-tab="tab-callouts">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M4.9 19.1C1 15.2 1 8.8 4.9 4.9"/><path d="M7.8 16.2c-2.3-2.3-2.3-6.1 0-8.5"/><circle cx="12" cy="12" r="2"/><path d="M16.2 7.8c2.3 2.3 2.3 6.1 0 8.5"/><path d="M19.1 4.9C23 8.8 23 15.1 19.1 19"/></svg>
+      <span>Callouts</span>
+    </button>
+    <button type="button" class="dock-btn" data-tab="tab-trending">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z"/></svg>
+      <span>Trending</span>
+    </button>
+    <button type="button" class="dock-btn" onclick="scrollToSidebarRadar()">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="12" cy="12" r="9"/><path d="M12 3a9 9 0 0 1 9 9"/><path d="M12 12l5 -3"/><circle cx="12" cy="12" r="2"/></svg>
+      <span class="color-gold">Radar</span>
+    </button>
+    <button type="button" class="dock-btn" data-tab="tab-lore">
+      <span class="flower-emoji">🌸</span>
+      <span>Game</span>
+    </button>
+  </nav>
+
+  <!-- DEXSCREENER CHART MODAL -->
+  <div id="chartModal" class="chart-modal hidden" role="dialog" aria-modal="true">
+    <div class="modal-backdrop" onclick="closeChartModal()"></div>
+    <div class="modal-container">
+      <div class="modal-bar">
+        <div class="modal-title">
+          <span class="ping-dot"></span>
+          <h3 id="modalChartTitle">DexScreener Live Chart</h3>
+        </div>
+        <button type="button" class="btn-close-modal" onclick="closeChartModal()">✕</button>
+      </div>
+      <div class="modal-iframe-box">
+        <iframe id="dexChartIframe" src="" frameborder="0" allowfullscreen></iframe>
+      </div>
+    </div>
+  </div>
+
+  <!-- IMAGE / PROOF ZOOM LIGHTBOX MODAL -->
+  <div id="imageModal" class="image-modal hidden" role="dialog" aria-modal="true" onclick="closeImageModal()">
+    <div class="image-modal-backdrop"></div>
+    <div class="image-modal-container" onclick="event.stopPropagation()">
+      <div class="image-modal-bar">
+        <span id="imageModalTitle" class="image-modal-title">Inspection</span>
+        <button type="button" class="btn-close-modal" onclick="closeImageModal()">✕</button>
+      </div>
+      <div class="image-modal-body">
+        <img id="imageModalImg" src="" alt="Enlarged preview" class="image-modal-img">
+      </div>
+      <div class="image-modal-footer">
+        <a id="imageModalLink" href="#" target="_blank" rel="noopener noreferrer" class="btn-modal-action">View Evidence ↗</a>
+        <button type="button" class="btn-modal-close" onclick="closeImageModal()">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- FLOATING TOAST -->
+  <div id="termToast" class="toast-pill" aria-live="polite"></div>
+
+  <!-- FOOTER -->
+  <footer class="terminal-footer">
+    <div class="footer-inner">
+      <div class="footer-brand">
+        <img src="assets/baton-main.jpg" alt="Baton Logo" width="22" height="14" style="border-radius:3px; object-fit:cover;">
+        <span>$BATON Terminal · Baton Corporation Ltd</span>
+      </div>
+      <div class="footer-meta hide-mobile">
+        <span>Powered by Solana, DexScreener &amp; Pump.fun feeds · Zero mock data</span>
+      </div>
+      <div class="footer-links">
+        <a href="https://x.com/batonoutbid" target="_blank" rel="noopener noreferrer">@batonoutbid</a>
+        <a href="https://solscan.io/token/2vdc4owf1MPz54jJCN61y3QSKqjcPpr32wJ9qKkmpump" target="_blank" rel="noopener noreferrer">Solscan</a>
+        <a href="https://pump.fun/coin/2vdc4owf1MPz54jJCN61y3QSKqjcPpr32wJ9qKkmpump" target="_blank" rel="noopener noreferrer">Pump.fun</a>
+      </div>
+    </div>
+  </footer>
+
+  <!-- Scripts -->
+  <script src="game.js?v=8.0" defer></script>
+  <script src="chatbot.js?v=8.0" defer></script>
+  <script src="app.js?v=8.0" defer></script>
+</body>
+</html>

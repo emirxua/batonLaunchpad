@@ -1,0 +1,26 @@
+[build]
+  publish = "."
+  functions = "netlify/functions"
+
+[dev]
+  framework = "#static"
+
+[[redirects]]
+  from = "/api/callouts"
+  to = "/.netlify/functions/callouts"
+  status = 200
+
+[[redirects]]
+  from = "/api/trending"
+  to = "/.netlify/functions/trending"
+  status = 200
+
+[[redirects]]
+  from = "/api/coins"
+  to = "/.netlify/functions/trending"
+  status = 200
+
+[[redirects]]
+  from = "/api/token-stats"
+  to = "/.netlify/functions/token-stats"
+  status = 200
