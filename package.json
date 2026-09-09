@@ -1,4 +1,10 @@
 {
+  "name": "baton",
+  "version": "1.0.0",
+  "scripts": {
+    "build": "echo 'Static build ready'",
+    "vercel-build": "echo 'Static build ready'"
+  },
   "dependencies": {
     "groq-sdk": "^1.2.1"
   }
