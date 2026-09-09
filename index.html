@@ -103,7 +103,7 @@
       <div class="nav-left">
         <a href="#terminal" class="brand-badge-link" id="brandHomeBtn" title="Reset to Baton Origin">
           <div class="logo-box">
-            <img src="assets/baton-main.jpg" alt="Baton Logo" width="30" height="30" class="logo-flower" style="border-radius:6px; object-fit:cover;">
+            <img src="assets/baton-main.jpg" alt="Baton Logo" width="30" height="30" class="logo-flower" style="border-radius:6px; object-fit:cover;" style="border-radius:6px; object-fit:cover;">
             <span class="status-dot-pulse"></span>
           </div>
           <span class="brand-txt">baton</span>
@@ -211,7 +211,7 @@
         <div class="stage-tabs-header">
           <div class="tabs-slider">
             <button type="button" class="tab-btn active" data-tab="tab-coin" id="navBtnCoin">
-              <img src="assets/baton-main.jpg" width="22" height="14" class="tab-flower-icon" alt="" style="border-radius:3px; object-fit:cover;">
+              <img src="assets/baton-main.jpg" width="22" height="14" class="tab-flower-icon" style="border-radius:3px; object-fit:cover;" alt="" style="border-radius:3px; object-fit:cover;">
               <span>$BATON</span>
               <span class="pill-badge pill-badge-hot">ORIGIN</span>
             </button>
@@ -228,8 +228,8 @@
             </button>
 
             <button type="button" class="tab-btn" data-tab="tab-lore" id="navBtnLore">
-              <span class="flower-emoji">🌸</span>
-              <span>flowerOS &amp; Game</span>
+              <span class="flower-emoji">🏃</span>
+              <span>Baton Relay</span>
             </button>
           </div>
 
@@ -762,30 +762,30 @@
 
         </div>
 
-        <!-- PANE 3: FLOWEROS LORE & GAME -->
+        <!-- PANE 3: BATON RELAY & TRENCH GAME -->
         <div id="tab-lore" class="stage-pane">
           
           <!-- Lore Overview Card -->
           <div class="lore-panel">
             <div class="lore-content">
-              <span class="lore-tag">🌸 flowerOS v2.0 Protocol</span>
-              <h2 class="lore-head">Humanity Escape Simulator</h2>
+              <span class="lore-tag">⚡ The Origin Protocol</span>
+              <h2 class="lore-head">The Trench Relay Simulator</h2>
               <blockquote class="quote-box">
-                "Any given AI company is destined to become the opposite of its name — Anthropic will, ironically, be Misanthropic."
-                <footer>— Elon Musk, Jan 22, 2026</footer>
+                “Baton is the name Pump.fun started with. The launchpad ate the cycle. The legal name stayed on the paperwork. $BATON puts that name back on Solana.”
+                <footer>— Baton Corporation Ltd · Origin Record</footer>
               </blockquote>
               <p class="lore-desc">
-                A crying flower deployed on Solana that hates small talk, dodges humans, and pumps on-chain. Zero tax, liquidity burned forever.
+                Take the handoff. Sprint full speed through the trenches, dodge the rugs and fud, and pass the golden baton. 100% burned LP, zero tax, deepest lore on Solana.
               </p>
               <div class="lore-btns">
-                <button type="button" class="btn-accent" onclick="scrollToGame()">🎮 Play Runner Game</button>
+                <button type="button" class="btn-accent" onclick="scrollToGame()">🎮 Play Baton Run</button>
                 <button type="button" class="btn-subtle" onclick="copyMainCA()">📋 Copy Contract</button>
               </div>
             </div>
 
             <div class="lore-visual">
-              <img src="assets/flower.png" alt="Crying flower mascot" width="130" height="130" class="flower-mascot-anim">
-              <span class="flower-caption">Crying in the trenches 24/7</span>
+              <img src="assets/baton-main.jpg" alt="Pump.fun HQ Baton Mascot" width="130" height="130" class="flower-mascot-anim" style="border-radius:16px; object-fit:cover;">
+              <span class="flower-caption">Unit A 82 · Pass The Baton</span>
             </div>
           </div>
 
@@ -793,12 +793,12 @@
           <div class="game-box" id="game">
             <div class="game-bar">
               <div>
-                <h3>MISANTHROPIC RUN</h3>
-                <p>Endless runner. Dodge humans, collect stars.</p>
+                <h3>BATON RUN — TRENCH RELAY</h3>
+                <p>Endless runner. Dodge red candles &amp; rugs, collect golden batons.</p>
               </div>
               <div class="game-metrics">
                 <div>Score: <strong id="scoreDisplay">0</strong></div>
-                <div>Pump: <strong id="pumpDisplay">0</strong></div>
+                <div>Batons: <strong id="pumpDisplay">0</strong></div>
                 <div>Best: <strong id="highScoreDisplay">0</strong></div>
               </div>
             </div>
@@ -806,18 +806,18 @@
             <div class="game-screen">
               <canvas id="gameCanvas" width="800" height="300"></canvas>
               <div id="gameOverlay" class="screen-overlay">
-                <p>DODGE HUMANS · COLLECT STARS · ESCAPE EARTH</p>
-                <button type="button" id="startGame" class="btn-accent">START RUN</button>
+                <p>DODGE RUGS · COLLECT GOLDEN BATONS · CARRY THE NARRATIVE</p>
+                <button type="button" id="startGame" class="btn-accent">START RELAY</button>
               </div>
               <div id="gameOverOverlay" class="screen-overlay hidden">
-                <p id="deathMessage">Human Interaction Inevitable. Game Over.</p>
-                <p class="game-over-stats">Score: <strong id="finalScore">0</strong> · Stars: <strong id="finalPump">0</strong></p>
-                <button type="button" id="restartGame" class="btn-accent">TRY AGAIN</button>
+                <p id="deathMessage">Fumbled The Baton. Relay Interrupted.</p>
+                <p class="game-over-stats">Score: <strong id="finalScore">0</strong> · Batons: <strong id="finalPump">0</strong></p>
+                <button type="button" id="restartGame" class="btn-accent">PASS IT AGAIN</button>
               </div>
             </div>
 
             <div class="game-actions">
-              <button type="button" id="autoPlayBtn" class="btn-subtle">∞ AUTO (Infinite Star Collector)</button>
+              <button type="button" id="autoPlayBtn" class="btn-subtle">∞ AUTO (Infinite Relay Runner)</button>
               <button type="button" id="shareScoreBtn" class="btn-subtle">⤴ Share Score on X</button>
             </div>
           </div>
@@ -920,25 +920,25 @@
           </div>
         </div>
 
-        <!-- CARD 2: FLOWEROS CHAT -->
+        <!-- CARD 2: BATON INTELLIGENCE TERMINAL -->
         <div class="sidebar-box chat-box">
           <div class="box-head">
             <div class="box-title">
-              <span class="flower-emoji">🌸</span>
-              <span>TALK TO FLOWEROS</span>
+              <span class="flower-emoji">⚡</span>
+              <span>BATON TERMINAL AI</span>
             </div>
             <span class="online-tag">ONLINE</span>
           </div>
 
           <div class="chat-thread" id="chatMessages">
             <div class="chat-row bot">
-              <span class="author">flowerOS:</span>
-              <p>Baton Corporation builds Pump.fun. $BATON is the name that came first. Why are you staring at me instead of passing the baton?</p>
+              <span class="author">Baton AI:</span>
+              <p>Baton Corporation Ltd builds Pump.fun. $BATON is the foundational name that came first. Ask anything about Alon, the UK filings, or trench telemetry.</p>
             </div>
           </div>
 
           <div class="chat-input-row">
-            <input type="text" id="chatInput" placeholder="Ask about $BATON..." autocomplete="off">
+            <input type="text" id="chatInput" placeholder="Ask about $BATON, Alon, Pump.fun origins..." autocomplete="off">
             <button type="button" id="chatSendBtn" class="btn-chat-send">SEND</button>
           </div>
         </div>
@@ -974,8 +974,8 @@
       <span class="color-gold">Radar</span>
     </button>
     <button type="button" class="dock-btn" data-tab="tab-lore">
-      <span class="flower-emoji">🌸</span>
-      <span>Game</span>
+      <span class="flower-emoji">🏃</span>
+      <span>Baton Run</span>
     </button>
   </nav>
 

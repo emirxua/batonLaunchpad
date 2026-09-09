@@ -24,10 +24,10 @@
   let renderScale = 1;
 
   const ENGLISH_DEATH_MESSAGES = [
-    'Human interaction inevitable. Game Over.',
-    'Caught by a small-talk enthusiast. Unfortunate.',
-    'You touched a human. Escape failed.',
-    'Social battery fully depleted. Game Over.',
+    'Dropped the baton in the trenches. Game Over.',
+    'Hit by an unverified rug pull. Relay interrupted.',
+    'Caught in a sudden red candle wick. Game Over.',
+    'Fumbled the handoff. Pass it again.',
   ];
 
   function getDeathMessages() {
@@ -38,7 +38,7 @@
   let flowerImgReady = false;
   flowerImg.onload = () => { flowerImgReady = true; };
   flowerImg.onerror = () => { flowerImgReady = false; console.warn('flower img failed, using fallback circle'); };
-  flowerImg.src = 'assets/flower.png';
+  flowerImg.src = 'assets/baton-main.jpg';
 
   let state = 'idle';
   let frame = 0;
@@ -46,7 +46,7 @@
   let pump = 0;
   function getStoredScore() {
     try {
-      return localStorage.getItem('misanthropic_high') || localStorage.getItem('misanthrope_high') || '0';
+      return localStorage.getItem('baton_relay_high') || localStorage.getItem('baton_high') || '0';
     } catch { return '0'; }
   }
   let highScore = parseInt(getStoredScore(), 10);
@@ -123,7 +123,7 @@
     state = 'dead';
     if (score > highScore) {
       highScore = score;
-      localStorage.setItem('misanthropic_high', String(highScore));
+      localStorage.setItem('baton_relay_high', String(highScore));
     }
     const msgs = getDeathMessages();
     if (deathMsgEl) deathMsgEl.textContent = msgs[Math.floor(Math.random() * msgs.length)];
@@ -557,7 +557,7 @@
   const shareScoreBtn = document.getElementById('shareScoreBtn');
   if (shareScoreBtn) {
     shareScoreBtn.addEventListener('click', () => {
-      const text = `I scored ${score} avoiding humans on $MISANTHROPIC Runner! 🌸 Run on @getmisanthropic: https://getmisanthropic.xyz`;
+      const text = `I scored ${score} passing the baton on $BATON Relay! ⚡ Join the Pump.fun origin runner: https://outbid.bond`;
       window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}`, '_blank');
     });
   }

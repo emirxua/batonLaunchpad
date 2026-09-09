@@ -472,15 +472,42 @@ async function fetchCallouts() {
       }
     } catch {}
 
-    // 2. Upstream fallback with cache-buster
+    // 2. Direct Pump.fun client-side fallback if /api/callouts fails
     if (!rawCallouts || rawCallouts.length === 0) {
       try {
-        const res = await fetch(`https://www.outbid.bond/api/callouts?${cacheBuster}`, {
+        const res = await fetch(`https://frontend-api-v3.pump.fun/home-feed?pageSize=100&chain=solana&_t=${Date.now()}`, {
           cache: 'no-store'
         });
         if (res.ok) {
           const data = await res.json();
-          rawCallouts = data.callouts || [];
+          const coins = Array.isArray(data?.coins) ? data.coins : [];
+          rawCallouts = coins.filter(c => c && c.coinMint).map(item => {
+            const pos = item.position || {};
+            const c = pos.callout || {};
+            const callerX = pos.xUsername || null;
+            const callerWallet = pos.walletAddress || '';
+            const callerName = pos.userName || (callerX ? '@' + callerX : (callerWallet ? callerWallet.slice(0, 4) + '...' + callerWallet.slice(-4) : 'Alpha Caller'));
+            const entryMcap = Number(c.calledOutAtMcap || item.marketCap || 15000);
+            const currMcap = Number(item.marketCap || entryMcap || 15000);
+            const mult = Number(c.multiple || (entryMcap > 0 && currMcap > 0 ? currMcap / entryMcap : 1));
+            return {
+              calloutId: c.calloutId || (item.coinMint + '_' + (pos.walletAddress || item.symbol)),
+              coinMint: item.coinMint,
+              coinSymbol: item.symbol || 'TOKEN',
+              coinName: item.coinName || item.symbol,
+              mediaUrl: item.coinImage,
+              callerLabel: callerName,
+              callerXUsername: callerX,
+              callerWallet: callerWallet,
+              callerAvatarUrl: pos.xProfileImage || pos.profileImage,
+              calledOutAtMcap: entryMcap,
+              currentMcap: currMcap,
+              multiplier: mult,
+              multiple: mult,
+              thesis: c.thesis || null,
+              createdAt: c.calloutTimestamp ? new Date(c.calloutTimestamp).getTime() : Date.now()
+            };
+          });
         }
       } catch {}
     }
@@ -1007,7 +1034,7 @@ function renderTrendingGrid() {
    4. SIDEBAR RADAR SURVEILLANCE (OBSERVATION TERMINAL ENGINE)
    ========================================================================== */
 function updateRadarDOM() {
-  if (dom.radarTargetImg) dom.radarTargetImg.src = state.radarImg || 'assets/flower.png';
+  if (dom.radarTargetImg) dom.radarTargetImg.src = state.radarImg || 'assets/baton-main.jpg';
   if (dom.radarTargetSymbol) dom.radarTargetSymbol.textContent = state.radarSymbol;
   if (dom.radarTargetName) dom.radarTargetName.textContent = state.radarName;
   if (dom.radarTargetCa) dom.radarTargetCa.textContent = fmtShortAddr(state.radarMint);
@@ -1035,7 +1062,7 @@ async function inspectTokenRadar(mint, symbol, imgUrl, name, price, chgText, chg
   state.radarMint = mint;
   state.radarSymbol = '$' + symbol.replace('$', '');
   state.radarName = name || symbol;
-  state.radarImg = imgUrl || 'assets/flower.png';
+  state.radarImg = imgUrl || 'assets/baton-main.jpg';
   state.radarPrice = price || '—';
   state.radarChange = chgText || '—';
   state.radarChangeCls = chgCls || 'change-neutral';

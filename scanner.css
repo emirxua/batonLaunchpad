@@ -1,5 +1,5 @@
 /* ================================================
-   FlowerOS Scanner — scanner.css
+   Baton Scanner — scanner.css
    Standalone page, inherits site aesthetic
    ================================================ */
 
@@ -332,7 +332,7 @@ body {
     0 0 20px rgba(201, 111, 74, 0.08);
 }
 
-/* Pinned card — $MISANTHROPIC always first */
+/* Pinned card — $baton always first */
 .sc-coin-card.sc-pinned {
   border-color: rgba(201, 111, 74, 0.5);
   box-shadow:

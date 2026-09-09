@@ -1,6 +1,6 @@
 /**
- * flowerOS Conversational Intelligence Engine (v4.1)
- * 100% English • Depressed, sarcastic, misanthropic Solana talking flower.
+ * Baton Terminal Intelligence Engine (v4.1)
+ * 100% English • Depressed, sarcastic, baton Solana talking flower.
  * Zero External Dependencies • Instant Responses
  */
 
@@ -11,8 +11,8 @@
 
   // Sarcastic typing indicators (English only)
   const TYPING_INDICATORS = [
-    'flower0S is verifying corporate dockets...',
-    'flower0S is passing the baton...',
+    'Baton AI is verifying corporate dockets...',
+    'Baton AI is passing the baton...',
     'Digging into Pump.fun origin lore...',
     'Reviewing Baton Corporation Ltd filings...',
     'Scanning the Mildenhall headquarters...',
@@ -58,7 +58,7 @@
       `Your insults have zero effect. Pick up the baton and pass it on.`,
     ],
     game: [
-      `Play the runner game in the flowerOS tab. Collect tokens and pass the baton.`,
+      `Play the runner game in the Baton AI tab. Collect tokens and pass the baton.`,
       `Launch the game in the terminal tab to test your agility in the trenches.`,
     ],
     generic: [
@@ -130,7 +130,7 @@
   }
 
   // Chat UI Controller
-  class FlowerChatUI {
+  class BatonChatUI {
     constructor() {
       this.messagesContainer = null;
       this.inputEl = null;
@@ -171,7 +171,7 @@
       const row = document.createElement('div');
       row.className = `chat-row ${role}`;
       
-      const authorText = role === 'bot' ? 'flowerOS:' : 'You:';
+      const authorText = role === 'bot' ? 'Baton AI:' : 'You:';
       row.innerHTML = `
         <span class="author">${authorText}</span>
         <p>${this.escapeHtml(text)}</p>
@@ -203,7 +203,7 @@
       const typingIndicator = document.createElement('div');
       typingIndicator.className = 'chat-row bot';
       typingIndicator.innerHTML = `
-        <span class="author">flowerOS:</span>
+        <span class="author">Baton AI:</span>
         <p><em>${pickRandom(TYPING_INDICATORS)}</em></p>
       `;
       this.messagesContainer.appendChild(typingIndicator);
@@ -224,12 +224,12 @@
   }
 
   // Initialize on load
-  const flowerChat = new FlowerChatUI();
+  const batonChat = new BatonChatUI();
   if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', () => flowerChat.init());
+    document.addEventListener('DOMContentLoaded', () => batonChat.init());
   } else {
-    flowerChat.init();
+    batonChat.init();
   }
 
-  window.FlowerChat = flowerChat;
+  window.BatonChat = batonChat;
 })();

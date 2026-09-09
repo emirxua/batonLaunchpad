@@ -1,5 +1,5 @@
 /**
- * FlowerOS Scanner — scanner.js  (v2 — full data edition)
+ * Baton Scanner — scanner.js  (v2 — full data edition)
  *
  * API Strategy:
  *   PRIMARY (2-step DexScreener):
@@ -26,7 +26,7 @@
 const REFRESH_INTERVAL_MS = 5_000;    // auto-refresh every 5s
 const MANUAL_COOLDOWN_MS  = 10_000;
 const FETCH_TIMEOUT_MS    = 9_000;
-const LOG                 = '[FlowerOS Scanner]';
+const LOG                 = '[Baton Scanner]';
 
 /* $BATON — always pinned first */
 const BATON_CA        = '2vdc4owf1MPz54jJCN61y3QSKqjcPpr32wJ9qKkmpump';
@@ -378,7 +378,7 @@ async function strategyDexProfiles() {
 
 
 /* ============================================================
-   $MISANTHROPIC — always pinned at position 0
+   $baton — always pinned at position 0
    ============================================================ */
 async function fetchMisCoin() {
   try {
@@ -390,9 +390,9 @@ async function fetchMisCoin() {
 
     const mc = pair.marketCap ?? pair.fdv ?? null;
     return {
-      name:        'Misanthropic',
-      symbol:      'MISANTHROPIC',
-      description: 'The crying flower. Born from an Elon tweet. Zero tax. Solana.',
+      name:        'baton',
+      symbol:      'baton',
+      description: 'Baton Corporation Ltd. Pump.fun origin coin. 100% burned LP.',
       logoUrl:     MIS_LOGO,
       marketCap:   mc ? Number(mc) : null,
       volume24h:   pair.volume?.h24 ? Number(pair.volume.h24) : null,
@@ -401,11 +401,11 @@ async function fetchMisCoin() {
       _pinned:     true,
     };
   } catch (err) {
-    console.warn(`${LOG} MISANTHROPIC fetch failed, using static fallback:`, err.message);
+    console.warn(`${LOG} baton fetch failed, using static fallback:`, err.message);
     return {
-      name:        'Misanthropic',
-      symbol:      'MISANTHROPIC',
-      description: 'The crying flower. Born from an Elon tweet. Zero tax. Solana.',
+      name:        'baton',
+      symbol:      'baton',
+      description: 'Baton Corporation Ltd. Pump.fun origin coin. 100% burned LP.',
       logoUrl:     MIS_LOGO,
       marketCap:   null,
       volume24h:   null,
@@ -449,9 +449,9 @@ async function fetchTrendingData() {
   // Trending list (may be empty if all strategies failed)
   let trending = trendingResult.status === 'fulfilled' ? trendingResult.value : [];
 
-  // Remove $MISANTHROPIC if it appears in the trending list (avoid duplicate)
+  // Remove $baton if it appears in the trending list (avoid duplicate)
   trending = trending.filter(
-    t => t.symbol?.toUpperCase() !== 'MISANTHROPIC' &&
+    t => t.symbol?.toUpperCase() !== 'baton' &&
          !t.dexUrl?.includes(MIS_PAIR_SLUG) &&
          !t.dexUrl?.includes(MIS_CA)
   );
@@ -496,7 +496,7 @@ function buildCoinCard(token) {
     `${token.name}${token.symbol ? ' ($' + token.symbol + ')' : ''} — open on DexScreener`
   );
 
-  // Pinned badge (only for $MISANTHROPIC)
+  // Pinned badge (only for $baton)
   const pinnedBadgeHtml = token._pinned
     ? `<div class="sc-pinned-badge">🌸 Our Coin</div>`
     : '';

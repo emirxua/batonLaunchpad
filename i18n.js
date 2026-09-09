@@ -58,7 +58,7 @@ const BUTTONS_EN = [
     emoji: '🌸',
     label: 'Who are you?',
     responses: [
-      'I am the $MISANTHROPIC mascot. CV: cry, pump, cry again.',
+      'I am the $baton mascot. CV: cry, pump, cry again.',
       'A flower. A coin. A disappointment. All three.',
       'Born from an Elon tweet. Mother: irony. Father: crypto Twitter.',
     ],
@@ -66,14 +66,14 @@ const BUTTONS_EN = [
 ];
 
 const EN = {
-  metaTitle: '$MISANTHROPIC - Humanity Escape Simulator',
-  metaDesc: 'Elon said it: Anthropic becomes Misanthropic. Solana meme coin. CA inside. Chat with the crying flower.',
+  metaTitle: '$baton - Humanity Escape Simulator',
+  metaDesc: 'Elon said it: Anthropic becomes baton. Solana meme coin. CA inside. Chat with the crying flower.',
   nav: { quiz: 'Quiz', game: 'Game', buy: 'Buy', chat: 'Chat' },
   hero: {
     badge: 'Solana · pump.fun · Elon-certified irony',
-    title: 'Misanthropic',
+    title: 'baton',
     tagline: 'Crying flower. Miserable coin. Happy holders.',
-    quote: '"Any given AI company is destined to become the opposite of its name - Anthropic will, ironically, be Misanthropic."',
+    quote: '"Any given AI company is destined to become the opposite of its name - Anthropic will, ironically, be baton."',
     quoteCite: '- Elon Musk, Jan 22, 2026',
     copyCa: '📋 Copy CA',
     playGame: '🎮 Play Game',
@@ -103,7 +103,7 @@ const EN = {
     intro: 'Hello. I am a crying flower forced to talk to you.',
   },
   game: {
-    title: 'MISANTHROPIC RUN',
+    title: 'baton RUN',
     sub: 'Dodge humans, collect every star, shed tears. Endless runner.',
     score: 'Score',
     pump: 'Pump',
@@ -132,7 +132,7 @@ const EN = {
     step2t: 'Get SOL',
     step2d: 'Buy SOL on an exchange and send it to your wallet. Even misanthropes pay gas.',
     step3t: 'Swap on pump.fun',
-    step3d: 'Paste the CA, swap SOL for $MISANTHROPIC, then avoid society.',
+    step3d: 'Paste the CA, swap SOL for $baton, then avoid society.',
   },
   tokenomics: {
     title: 'Tokenomics',
@@ -158,8 +158,8 @@ const EN = {
   },
   faq: {
     title: 'FAQ',
-    q1: 'What is $MISANTHROPIC?',
-    a1: 'A Solana meme coin born from Elon Musk calling Anthropic "Misanthropic."',
+    q1: 'What is $baton?',
+    a1: 'A Solana meme coin born from Elon Musk calling Anthropic "baton."',
     q2: 'Is this financial advice?',
     a2: 'No. This is emotional damage packaged as a token.',
     q3: 'Why is the flower crying?',
@@ -180,7 +180,7 @@ const EN = {
     o4d: 'Meme coin. Not financial advice. Cultural trauma only.',
   },
   footer: {
-    tag: '$MISANTHROPIC - We hate people, we love charts.',
+    tag: '$baton - We hate people, we love charts.',
     rights: 'No rights reserved. No humans harmed (we wish).',
   },
   chat: {
@@ -202,7 +202,7 @@ const EN = {
     chatDesc: 'Regretful AI. Zero small talk. Full chat mode.',
     chatAction: 'REGRET EVERYTHING →',
     introFoot: 'Three protocols. Zero humans. Pick your misery.',
-    protoGameHead: 'MISANTHROPIC RUN',
+    protoGameHead: 'baton RUN',
     protoGameDesc: 'Dodge humans. Collect every star. AUTO mode is god-tier.',
     protoChatHead: 'CRYING FLOWER CHAT',
     protoChatDesc: 'Regretful AI. Zero small talk.',
@@ -217,7 +217,7 @@ const EN = {
     fullChatClose: 'CLOSE',
     fullChatPlaceholder: 'Message the flower...',
   },
-  ticker: ['🌸 MISANTHROPIC', '💧 Tears = Liquidity', '🚀 Born from an Elon tweet', '😤 We hate people, we love pumps', '⛓️ Solana'],
+  ticker: ['🌸 baton', '💧 Tears = Liquidity', '🚀 Born from an Elon tweet', '😤 We hate people, we love pumps', '⛓️ Solana'],
   buttons: BUTTONS_EN,
 };
 
@@ -260,7 +260,7 @@ class I18nController {
 
   getStoredLang() {
     try {
-      return localStorage.getItem('lang') || localStorage.getItem('misanthropic_lang') || 'en';
+      return localStorage.getItem('lang') || localStorage.getItem('baton_lang') || 'en';
     } catch {
       return 'en';
     }
@@ -269,7 +269,7 @@ class I18nController {
   storeLang(code) {
     try {
       localStorage.setItem('lang', code);
-      localStorage.setItem('misanthropic_lang', code);
+      localStorage.setItem('baton_lang', code);
     } catch {
       // Ignore storage failures.
     }

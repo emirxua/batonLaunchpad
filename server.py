@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Misanthropic Alpha Terminal Local Server
+Baton Alpha Terminal Local Server
 Serves static frontend files and proxies real-time pump.fun & DexScreener APIs with CORS.
 Zero external dependencies (uses standard library only).
 """
@@ -21,7 +21,7 @@ SSL_CTX = ssl._create_unverified_context()
 
 USER_AGENT = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0.0.0 Safari/537.36"
 
-class MisanthropicHandler(http.server.SimpleHTTPRequestHandler):
+class BatonHandler(http.server.SimpleHTTPRequestHandler):
     def end_headers(self):
         # Enable CORS for all local requests
         self.send_header("Access-Control-Allow-Origin", "*")
@@ -238,7 +238,7 @@ class MisanthropicHandler(http.server.SimpleHTTPRequestHandler):
 
 if __name__ == "__main__":
     os.chdir(os.path.dirname(os.path.abspath(__file__)))
-    server = http.server.ThreadingHTTPServer(("", PORT), MisanthropicHandler)
+    server = http.server.ThreadingHTTPServer(("", PORT), BatonHandler)
     print(f"🔥 BATON Alpha Terminal running at http://127.0.0.1:{PORT}")
     try:
         server.serve_forever()
